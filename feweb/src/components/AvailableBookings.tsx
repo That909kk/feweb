@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAvailableBookings } from '../hooks/useAvailableBookings';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
-import { CheckCircle, AlertCircle, Calendar, Clock, MapPin } from 'lucide-react';
+import { CheckCircle, AlertCircle, Calendar, Clock, MapPin, X } from 'lucide-react';
 import type { EmployeeData } from '../types/api';
 
 // Success Modal Component
@@ -25,7 +25,7 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, assignment
       // Auto close after 2 seconds
       const timer = setTimeout(() => {
         onClose();
-      }, 2000);
+      }, 100);
 
       return () => clearTimeout(timer);
     }
@@ -35,7 +35,13 @@ const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, assignment
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl">
+      <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl relative">
+        <button
+          onClick={onClose}
+          className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 bg-gray-100 hover:bg-gray-200 rounded-full p-1 transition-colors"
+        >
+          <X className="w-4 h-4" />
+        </button>
         <div className="text-center">
           <div className="bg-green-100 p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
             <CheckCircle className="w-8 h-8 text-green-600" />
