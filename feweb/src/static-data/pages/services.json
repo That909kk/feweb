@@ -1,0 +1,94 @@
+{
+  "vi": {
+    "title": "Dịch vụ",
+    "subtitle": "Tìm và đặt dịch vụ giúp việc gia đình",
+    "search": {
+      "placeholder": "Tìm kiếm dịch vụ",
+      "button": "Tìm kiếm"
+    },
+    "filters": {
+      "title": "Bộ lọc",
+      "category": "Danh mục",
+      "price": "Giá tiền",
+      "rating": "Đánh giá",
+      "allCategories": "Tất cả danh mục",
+      "apply": "Áp dụng",
+      "reset": "Đặt lại"
+    },
+    "serviceCard": {
+      "from": "Từ",
+      "perHour": "/ giờ",
+      "perUnit": "/ đơn vị",
+      "estimateTime": "Thời gian ước tính:",
+      "hours": "giờ",
+      "viewDetails": "Xem chi tiết",
+      "book": "Đặt ngay"
+    },
+    "serviceDetail": {
+      "description": "Mô tả",
+      "options": "Tùy chọn dịch vụ",
+      "quantity": "Số lượng",
+      "price": "Giá dịch vụ",
+      "basePrice": "Giá cơ bản",
+      "optionsPrice": "Phụ thu tùy chọn",
+      "totalPrice": "Tổng cộng",
+      "calculatePrice": "Tính giá",
+      "bookNow": "Đặt dịch vụ",
+      "addToCart": "Thêm vào giỏ hàng"
+    },
+    "messages": {
+      "loadingServices": "Đang tải dịch vụ...",
+      "noServices": "Không tìm thấy dịch vụ nào",
+      "errorLoading": "Lỗi khi tải dịch vụ. Vui lòng thử lại sau.",
+      "calculatingPrice": "Đang tính giá...",
+      "priceCalculated": "Đã tính giá thành công",
+      "errorCalculating": "Lỗi khi tính giá. Vui lòng thử lại."
+    }
+  },
+  "en": {
+    "title": "Services",
+    "subtitle": "Find and book housekeeping services",
+    "search": {
+      "placeholder": "Search services",
+      "button": "Search"
+    },
+    "filters": {
+      "title": "Filters",
+      "category": "Category",
+      "price": "Price",
+      "rating": "Rating",
+      "allCategories": "All categories",
+      "apply": "Apply",
+      "reset": "Reset"
+    },
+    "serviceCard": {
+      "from": "From",
+      "perHour": "/ hour",
+      "perUnit": "/ unit",
+      "estimateTime": "Estimated time:",
+      "hours": "hours",
+      "viewDetails": "View details",
+      "book": "Book now"
+    },
+    "serviceDetail": {
+      "description": "Description",
+      "options": "Service options",
+      "quantity": "Quantity",
+      "price": "Service price",
+      "basePrice": "Base price",
+      "optionsPrice": "Options surcharge",
+      "totalPrice": "Total",
+      "calculatePrice": "Calculate price",
+      "bookNow": "Book service",
+      "addToCart": "Add to cart"
+    },
+    "messages": {
+      "loadingServices": "Loading services...",
+      "noServices": "No services found",
+      "errorLoading": "Error loading services. Please try again later.",
+      "calculatingPrice": "Calculating price...",
+      "priceCalculated": "Price calculated successfully",
+      "errorCalculating": "Error calculating price. Please try again."
+    }
+  }
+}

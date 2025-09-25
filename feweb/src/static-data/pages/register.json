@@ -1,0 +1,142 @@
+{
+  "vi": {
+    "title": "Đăng ký tài khoản",
+    "subtitle": "Tạo tài khoản mới để sử dụng dịch vụ của chúng tôi",
+    "form": {
+      "username": {
+        "label": "Tên đăng nhập",
+        "placeholder": "Nhập tên đăng nhập (3-50 ký tự)",
+        "helperText": "Chỉ được sử dụng chữ cái, số và dấu gạch dưới"
+      },
+      "password": {
+        "label": "Mật khẩu",
+        "placeholder": "Nhập mật khẩu (tối thiểu 6 ký tự)",
+        "helperText": "Mật khẩu phải có ít nhất 6 ký tự"
+      },
+      "confirmPassword": {
+        "label": "Xác nhận mật khẩu",
+        "placeholder": "Nhập lại mật khẩu"
+      },
+      "fullName": {
+        "label": "Họ và tên",
+        "placeholder": "Nhập họ và tên đầy đủ",
+        "helperText": "Chỉ được sử dụng chữ cái và khoảng trắng"
+      },
+      "email": {
+        "label": "Email",
+        "placeholder": "Nhập địa chỉ email",
+        "helperText": "Email sẽ được sử dụng để đăng nhập và nhận thông báo"
+      },
+      "phoneNumber": {
+        "label": "Số điện thoại",
+        "placeholder": "Nhập số điện thoại",
+        "helperText": "Ví dụ: +84123456789 hoặc 0123456789"
+      },
+      "role": {
+        "label": "Loại tài khoản",
+        "options": {
+          "CUSTOMER": "Khách hàng",
+          "EMPLOYEE": "Nhân viên"
+        }
+      }
+    },
+    "actions": {
+      "register": "Đăng ký",
+      "cancel": "Hủy",
+      "login": "Đã có tài khoản? Đăng nhập"
+    },
+    "messages": {
+      "registering": "Đang đăng ký...",
+      "registerSuccess": "Đăng ký thành công! Bạn có thể đăng nhập ngay bây giờ.",
+      "registerError": "Đăng ký thất bại. Vui lòng thử lại.",
+      "validationErrors": {
+        "usernameRequired": "Tên đăng nhập không được để trống",
+        "usernameLength": "Tên đăng nhập phải có từ 3 đến 50 ký tự",
+        "usernameFormat": "Tên đăng nhập chỉ được chứa chữ cái, số và dấu gạch dưới",
+        "passwordRequired": "Mật khẩu không được để trống",
+        "passwordLength": "Mật khẩu phải có ít nhất 6 ký tự",
+        "confirmPasswordRequired": "Vui lòng xác nhận mật khẩu",
+        "passwordMismatch": "Mật khẩu xác nhận không khớp",
+        "fullNameRequired": "Họ và tên không được để trống",
+        "fullNameFormat": "Họ và tên chỉ được chứa chữ cái và khoảng trắng",
+        "fullNameLength": "Họ và tên không được vượt quá 100 ký tự",
+        "emailRequired": "Email không được để trống",
+        "emailFormat": "Email không đúng định dạng",
+        "emailLength": "Email không được vượt quá 255 ký tự",
+        "phoneRequired": "Số điện thoại không được để trống",
+        "phoneFormat": "Số điện thoại không đúng định dạng",
+        "roleRequired": "Vui lòng chọn loại tài khoản"
+      }
+    }
+  },
+  "en": {
+    "title": "Create Account",
+    "subtitle": "Create a new account to use our services",
+    "form": {
+      "username": {
+        "label": "Username",
+        "placeholder": "Enter username (3-50 characters)",
+        "helperText": "Only letters, numbers and underscores allowed"
+      },
+      "password": {
+        "label": "Password",
+        "placeholder": "Enter password (minimum 6 characters)",
+        "helperText": "Password must be at least 6 characters"
+      },
+      "confirmPassword": {
+        "label": "Confirm Password",
+        "placeholder": "Re-enter password"
+      },
+      "fullName": {
+        "label": "Full Name",
+        "placeholder": "Enter your full name",
+        "helperText": "Only letters and spaces allowed"
+      },
+      "email": {
+        "label": "Email",
+        "placeholder": "Enter email address",
+        "helperText": "Email will be used for login and notifications"
+      },
+      "phoneNumber": {
+        "label": "Phone Number",
+        "placeholder": "Enter phone number",
+        "helperText": "Example: +84123456789 or 0123456789"
+      },
+      "role": {
+        "label": "Account Type",
+        "options": {
+          "CUSTOMER": "Customer",
+          "EMPLOYEE": "Employee"
+        }
+      }
+    },
+    "actions": {
+      "register": "Register",
+      "cancel": "Cancel",
+      "login": "Already have an account? Login"
+    },
+    "messages": {
+      "registering": "Registering...",
+      "registerSuccess": "Registration successful! You can login now.",
+      "registerError": "Registration failed. Please try again.",
+      "validationErrors": {
+        "usernameRequired": "Username is required",
+        "usernameLength": "Username must be 3-50 characters",
+        "usernameFormat": "Username can only contain letters, numbers and underscores",
+        "passwordRequired": "Password is required",
+        "passwordLength": "Password must be at least 6 characters",
+        "confirmPasswordRequired": "Please confirm password",
+        "passwordMismatch": "Passwords do not match",
+        "fullNameRequired": "Full name is required",
+        "fullNameFormat": "Full name can only contain letters and spaces",
+        "fullNameLength": "Full name cannot exceed 100 characters",
+        "emailRequired": "Email is required",
+        "emailFormat": "Invalid email format",
+        "emailLength": "Email cannot exceed 255 characters",
+        "phoneRequired": "Phone number is required",
+        "phoneFormat": "Invalid phone number format",
+        "roleRequired": "Please select account type"
+      }
+    }
+  }
+}

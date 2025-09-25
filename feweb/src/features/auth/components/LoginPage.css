@@ -1,0 +1,577 @@
+/* LoginPage - Modern & Beautiful Design */
+.login-container {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.figma-frame {
+  position: relative;
+  width: 1533px;
+  height: 863px;
+  background: #FFFFFF;
+  flex-shrink: 0;
+  max-width: 95vw;
+  max-height: 95vh;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+/* Background Layers - Enhanced */
+.bg-layer-1 {
+  position: absolute;
+  left: -239px;
+  top: -22px;
+  width: 748px;
+  height: 1024px;
+  background: linear-gradient(135deg, rgba(255, 153, 0, 0.2) 0%, rgba(255, 153, 0, 0.1) 100%);
+}
+
+.bg-layer-2 {
+  position: absolute;
+  left: -5px;
+  top: -6px;
+  width: 741px;
+  height: 1143px;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+
+.bg-layer-3 {
+  position: absolute;
+  left: -5px;
+  top: 0px;
+  width: 741px;
+  height: 863px;
+  background: linear-gradient(135deg, rgba(255, 153, 0, 0.15) 0%, rgba(255, 153, 0, 0.25) 100%);
+}
+
+/* Login Form Group - Enhanced */
+.login-form-group {
+  position: absolute;
+  left: 902px;
+  top: 130px;
+  width: 480px;
+  height: 603.5px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  padding: 40px;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+}
+
+/* Greeting Text - Enhanced */
+.greeting-text {
+  position: absolute;
+  left: 121px;
+  top: -20px;
+  width: 160px;
+  height: 24px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 18px;
+  line-height: 24px;
+  color: #2c3e50;
+  text-align: center;
+}
+
+/* Tab Navigation - Modern Design */
+.tab-navigation {
+  position: absolute;
+  left: 19px;
+  top: 28px;
+  width: 329px;
+  height: 59px;
+}
+
+.tab-bg-black {
+  position: absolute;
+  left: 0px;
+  top: 0px;
+  width: 329px;
+  height: 59px;
+  background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+  border-radius: 33px;
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.tab-bg-white {
+  position: absolute;
+  top: 5px;
+  width: 134px;
+  height: 48px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
+  border-radius: 33px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.tab-bg-white.login-active {
+  left: 7px;
+}
+
+.tab-bg-white.register-active {
+  left: 188px;
+}
+
+.tab-login {
+  position: absolute;
+  left: 41px;
+  top: 11px;
+  width: 65px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 36px;
+  color: #2c3e50;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-register {
+  position: absolute;
+  left: 197px;
+  top: 11px;
+  width: 99px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 24px;
+  line-height: 36px;
+  color: #2c3e50;
+  cursor: pointer;
+  z-index: 10;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.tab-login:not(.active), .tab-register:not(.active) {
+  color: #ffffff;
+  opacity: 0.9;
+}
+
+.tab-login:hover, .tab-register:hover {
+  transform: translateY(-1px);
+}
+
+/* Form Fields */
+.username-field {
+  position: absolute;
+  left: 0px;
+  top: 176px;
+  width: 480px;
+  height: 105px;
+}
+
+.password-field {
+  position: absolute;
+  left: 0px;
+  top: 317px;
+  width: 480px;
+  height: 105px;
+}
+
+.field-label {
+  position: absolute;
+  left: 0px;
+  top: -3px;
+  width: 240px;
+  height: 36px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  font-size: 24px;
+  line-height: 36px;
+  color: #2c3e50;
+}
+
+.field-input-container {
+  position: absolute;
+  left: 0px;
+  top: 35px;
+  width: 480px;
+  height: 70px;
+}
+
+.field-input {
+  width: 100%;
+  height: 100%;
+  padding: 20px 24px;
+  border: 2.5px solid #e2e8f0;
+  border-radius: 15px;
+  background: rgba(255, 255, 255, 0.9);
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
+  font-size: 22px;
+  line-height: 33px;
+  color: #2c3e50;
+  outline: none;
+  box-sizing: border-box;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(5px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+}
+
+.field-input:focus {
+  border-color: #3498db;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 0 0 4px rgba(52, 152, 219, 0.1), 0 4px 15px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.field-input::placeholder {
+  color: #94a3b8;
+  opacity: 0.8;
+}
+
+/* Password Field Eye Icon */
+.password-eye {
+  position: absolute;
+  right: 18px;
+  top: 25px;
+  width: 25px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+/* Terms Text */
+.terms-text {
+  position: absolute;
+  left: 0px;
+  top: 484.5px;
+  width: 388px;
+  height: 24px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+  color: #64748b;
+}
+
+/* Login Button - Modern Design */
+.login-button {
+  position: absolute;
+  left: 0px;
+  top: 523.5px;
+  width: 480px;
+  height: 80px;
+  background: linear-gradient(135deg, #3498db 0%, #2980b9 100%);
+  border-radius: 15px;
+  border: none;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 600;
+  font-size: 30px;
+  line-height: 45px;
+  text-align: center;
+  color: #FFFFFF;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 6px 20px rgba(52, 152, 219, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.login-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 12px 30px rgba(52, 152, 219, 0.4);
+}
+
+.login-button:active {
+  transform: translateY(-1px);
+}
+
+.login-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s;
+}
+
+.login-button:hover::before {
+  left: 100%;
+}
+
+/* Forgot Password - Enhanced */
+.forgot-password {
+  position: absolute;
+  left: 342px;
+  top: 426px;
+  width: 121px;
+  height: 19px;
+  border: none;
+  background: transparent;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  font-size: 13px;
+  line-height: 19.5px;
+  color: #3498db;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+}
+
+.forgot-password:hover {
+  color: #2980b9;
+  transform: translateY(-1px);
+}
+
+/* Mobile Responsive */
+@media (max-width: 1600px) {
+  .figma-frame {
+    transform: scale(0.9);
+    transform-origin: center center;
+  }
+}
+
+@media (max-width: 1400px) {
+  .figma-frame {
+    transform: scale(0.8);
+  }
+}
+
+@media (max-width: 1200px) {
+  .figma-frame {
+    transform: scale(0.7);
+  }
+}
+
+@media (max-width: 1024px) {
+  .login-container {
+    display: block;
+    transform: none;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  .figma-frame {
+    display: none;
+  }
+  
+  .mobile-login {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    position: relative;
+    padding: 20px;
+    box-sizing: border-box;
+  }
+  
+  .mobile-bg {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-size: cover;
+    background-position: center;
+    opacity: 0.3;
+    z-index: 1;
+  }
+  
+  .mobile-bg-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(255, 153, 0, 0.1);
+    z-index: 2;
+  }
+  
+  .mobile-content {
+    position: relative;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.98);
+    padding: 40px 30px;
+    border-radius: 20px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 450px;
+    margin: auto;
+  }
+}
+
+@media (min-width: 1025px) {
+  .mobile-login {
+    display: none;
+  }
+}
+
+/* Mobile Tab Navigation */
+.mobile-tab-nav {
+  position: relative;
+  background: #000000;
+  border-radius: 25px;
+  padding: 4px;
+  margin-bottom: 30px;
+}
+
+.mobile-tab-bg {
+  position: absolute;
+  top: 4px;
+  width: 50%;
+  height: calc(100% - 8px);
+  background: #FFFFFF;
+  border-radius: 21px;
+  transition: left 0.3s ease;
+}
+
+.mobile-tab-bg.login {
+  left: 4px;
+}
+
+.mobile-tab-bg.register {
+  right: 4px;
+  left: auto;
+}
+
+.mobile-tab-buttons {
+  position: relative;
+  display: flex;
+  z-index: 10;
+}
+
+.mobile-tab-btn {
+  flex: 1;
+  height: 48px;
+  border: none;
+  background: transparent;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  font-size: 18px;
+  color: #FF9900;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Mobile Form Styles */
+.mobile-form-group {
+  margin-bottom: 24px;
+}
+
+.mobile-label {
+  display: block;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
+  font-size: 20px;
+  color: #000000;
+  margin-bottom: 8px;
+}
+
+.mobile-input {
+  width: 100%;
+  height: 64px;
+  padding: 0 16px;
+  border: 2px solid #D2D2D2;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
+  font-size: 18px;
+  color: #000000;
+  background: #FFFFFF;
+  box-sizing: border-box;
+}
+
+.mobile-input:focus {
+  outline: none;
+  border-color: #FF9900;
+}
+
+.mobile-input::placeholder {
+  color: #D2D2D2;
+}
+
+.mobile-password-container {
+  position: relative;
+}
+
+.mobile-password-eye {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 24px;
+  height: 20px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  padding: 0;
+}
+
+.mobile-terms {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  color: #000000;
+  text-align: center;
+  margin: 20px 0;
+}
+
+.mobile-submit {
+  width: 100%;
+  height: 64px;
+  background: #FF9900;
+  border: none;
+  border-radius: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  font-size: 24px;
+  color: #FAFAFA;
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.mobile-submit:hover {
+  opacity: 0.9;
+}
+
+.mobile-forgot {
+  text-align: center;
+  margin-top: 16px;
+}
+
+.mobile-forgot button {
+  border: none;
+  background: transparent;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  color: #B0B0B0;
+  cursor: pointer;
+}
+
+.mobile-forgot button:hover {
+  opacity: 0.7;
+}
+
+.mobile-greeting {
+  text-align: center;
+  font-family: 'Poppins', sans-serif;
+  font-weight: 400;
+  font-size: 18px;
+  color: #000000;
+  margin-bottom: 24px;
+}

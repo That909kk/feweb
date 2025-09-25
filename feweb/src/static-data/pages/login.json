@@ -1,0 +1,48 @@
+{
+  "vi": {
+    "title": "Đăng nhập",
+    "greeting": "Xin chào, Khách hàng đã xác minh",
+    "tabs": {
+      "login": "Đăng nhập",
+      "register": "Đăng ký"
+    },
+    "form": {
+      "username": {
+        "label": "Tên đăng nhập",
+        "placeholder": "Username"
+      },
+      "password": {
+        "label": "Mật khẩu",
+        "placeholder": "Mật khẩu đã thay đổi"
+      }
+    },
+    "actions": {
+      "login": "Đăng nhập",
+      "forgotPassword": "Quên mật khẩu ?"
+    },
+    "terms": "Bằng cách đăng ký, bạn đồng ý với các điều khoản và điều kiện"
+  },
+  "en": {
+    "title": "Login",
+    "greeting": "Hello, Verified Driver",
+    "tabs": {
+      "login": "Login",
+      "register": "Register"
+    },
+    "form": {
+      "username": {
+        "label": "Username",
+        "placeholder": "Username"
+      },
+      "password": {
+        "label": "Password",
+        "placeholder": "Changed Password"
+      }
+    },
+    "actions": {
+      "login": "Login",
+      "forgotPassword": "Forgor password ?"
+    },
+    "terms": "By signing up you agree to terms and conditions "
+  }
+}

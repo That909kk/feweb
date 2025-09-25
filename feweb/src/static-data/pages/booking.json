@@ -1,0 +1,158 @@
+{
+  "vi": {
+    "title": "Đặt lịch dịch vụ",
+    "steps": {
+      "service": "Chọn dịch vụ",
+      "schedule": "Chọn lịch",
+      "employee": "Chọn nhân viên",
+      "info": "Thông tin đặt lịch",
+      "payment": "Thanh toán",
+      "complete": "Hoàn tất"
+    },
+    "scheduleForm": {
+      "title": "Chọn thời gian và địa điểm",
+      "dateLabel": "Ngày đặt lịch",
+      "timeLabel": "Giờ bắt đầu",
+      "addressLabel": "Địa chỉ",
+      "addressPlaceholder": "Nhập địa chỉ đầy đủ",
+      "cityLabel": "Thành phố",
+      "districtLabel": "Quận/Huyện",
+      "wardLabel": "Phường/Xã",
+      "useDefaultAddress": "Sử dụng địa chỉ mặc định",
+      "noteLabel": "Ghi chú",
+      "notePlaceholder": "Thêm ghi chú cho dịch vụ (nếu có)"
+    },
+    "employeeSelection": {
+      "title": "Chọn nhân viên",
+      "subtitle": "Nhân viên có sẵn cho thời gian và địa điểm đã chọn",
+      "rating": "Đánh giá",
+      "experience": "Kinh nghiệm",
+      "years": "năm",
+      "noEmployees": "Không tìm thấy nhân viên nào có sẵn. Vui lòng chọn thời gian khác.",
+      "loading": "Đang tìm nhân viên có sẵn...",
+      "selectRandom": "Chọn ngẫu nhiên",
+      "viewProfile": "Xem hồ sơ"
+    },
+    "bookingSummary": {
+      "title": "Thông tin đặt lịch",
+      "service": "Dịch vụ",
+      "date": "Ngày",
+      "time": "Thời gian",
+      "location": "Địa điểm",
+      "employee": "Nhân viên",
+      "price": "Giá dịch vụ",
+      "total": "Tổng cộng",
+      "confirm": "Xác nhận đặt lịch"
+    },
+    "payment": {
+      "title": "Phương thức thanh toán",
+      "methods": "Chọn phương thức thanh toán",
+      "cash": "Tiền mặt",
+      "momo": "Ví MoMo",
+      "vnpay": "VNPay",
+      "bankTransfer": "Chuyển khoản ngân hàng",
+      "cardNumber": "Số thẻ",
+      "cardHolderName": "Tên chủ thẻ",
+      "expiryDate": "Ngày hết hạn",
+      "cvv": "CVV",
+      "payNow": "Thanh toán ngay",
+      "payLater": "Thanh toán sau"
+    },
+    "confirmation": {
+      "title": "Đặt lịch thành công",
+      "message": "Đặt lịch dịch vụ đã hoàn tất",
+      "bookingId": "Mã đặt lịch",
+      "viewBooking": "Xem chi tiết đặt lịch",
+      "backToServices": "Trở về trang dịch vụ"
+    },
+    "messages": {
+      "requiredField": "Vui lòng nhập thông tin này",
+      "invalidDate": "Ngày không hợp lệ",
+      "pastDate": "Không thể chọn ngày trong quá khứ",
+      "unavailableTime": "Thời gian này không có sẵn",
+      "bookingSuccess": "Đặt lịch thành công",
+      "bookingError": "Lỗi khi đặt lịch. Vui lòng thử lại.",
+      "paymentSuccess": "Thanh toán thành công",
+      "paymentError": "Lỗi thanh toán. Vui lòng thử lại.",
+      "sessionExpired": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại."
+    }
+  },
+  "en": {
+    "title": "Book Service",
+    "steps": {
+      "service": "Select Service",
+      "schedule": "Choose Schedule",
+      "employee": "Select Employee",
+      "info": "Booking Info",
+      "payment": "Payment",
+      "complete": "Complete"
+    },
+    "scheduleForm": {
+      "title": "Choose time and location",
+      "dateLabel": "Booking date",
+      "timeLabel": "Start time",
+      "addressLabel": "Address",
+      "addressPlaceholder": "Enter full address",
+      "cityLabel": "City",
+      "districtLabel": "District",
+      "wardLabel": "Ward",
+      "useDefaultAddress": "Use default address",
+      "noteLabel": "Notes",
+      "notePlaceholder": "Add notes for the service (optional)"
+    },
+    "employeeSelection": {
+      "title": "Select employee",
+      "subtitle": "Available employees for your selected time and location",
+      "rating": "Rating",
+      "experience": "Experience",
+      "years": "years",
+      "noEmployees": "No employees available. Please select a different time.",
+      "loading": "Finding available employees...",
+      "selectRandom": "Select randomly",
+      "viewProfile": "View profile"
+    },
+    "bookingSummary": {
+      "title": "Booking information",
+      "service": "Service",
+      "date": "Date",
+      "time": "Time",
+      "location": "Location",
+      "employee": "Employee",
+      "price": "Service price",
+      "total": "Total",
+      "confirm": "Confirm booking"
+    },
+    "payment": {
+      "title": "Payment method",
+      "methods": "Select payment method",
+      "cash": "Cash",
+      "momo": "MoMo Wallet",
+      "vnpay": "VNPay",
+      "bankTransfer": "Bank transfer",
+      "cardNumber": "Card number",
+      "cardHolderName": "Cardholder name",
+      "expiryDate": "Expiry date",
+      "cvv": "CVV",
+      "payNow": "Pay now",
+      "payLater": "Pay later"
+    },
+    "confirmation": {
+      "title": "Booking successful",
+      "message": "Your service booking is complete",
+      "bookingId": "Booking ID",
+      "viewBooking": "View booking details",
+      "backToServices": "Back to services"
+    },
+    "messages": {
+      "requiredField": "This field is required",
+      "invalidDate": "Invalid date",
+      "pastDate": "Cannot select a date in the past",
+      "unavailableTime": "This time slot is not available",
+      "bookingSuccess": "Booking successful",
+      "bookingError": "Error while booking. Please try again.",
+      "paymentSuccess": "Payment successful",
+      "paymentError": "Payment error. Please try again.",
+      "sessionExpired": "Your session has expired. Please log in again."
+    }
+  }
+}

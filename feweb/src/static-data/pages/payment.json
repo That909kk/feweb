@@ -1,0 +1,84 @@
+{
+  "vi": {
+    "title": "Thanh toán",
+    "subtitle": "Hoàn tất thanh toán đặt lịch của bạn",
+    "paymentMethods": {
+      "title": "Chọn phương thức thanh toán",
+      "CASH": "Tiền mặt",
+      "MOMO": "Ví MoMo",
+      "VNPAY": "VNPay",
+      "BANK_TRANSFER": "Chuyển khoản ngân hàng"
+    },
+    "orderSummary": {
+      "title": "Thông tin đơn hàng",
+      "booking": "Mã đơn hàng",
+      "service": "Dịch vụ",
+      "date": "Ngày đặt lịch",
+      "time": "Thời gian",
+      "subtotal": "Tạm tính",
+      "discount": "Giảm giá",
+      "tax": "Thuế",
+      "total": "Tổng cộng"
+    },
+    "actions": {
+      "proceedToPayment": "Tiến hành thanh toán",
+      "cancelPayment": "Hủy thanh toán",
+      "returnToBooking": "Quay lại đặt lịch"
+    },
+    "paymentStatus": {
+      "processing": "Đang xử lý thanh toán...",
+      "successful": "Thanh toán thành công",
+      "failed": "Thanh toán thất bại",
+      "pending": "Đang chờ xử lý",
+      "cancelled": "Đã hủy thanh toán"
+    },
+    "messages": {
+      "selectPaymentMethod": "Vui lòng chọn phương thức thanh toán",
+      "redirecting": "Đang chuyển hướng đến cổng thanh toán...",
+      "paymentSuccess": "Thanh toán đã được xử lý thành công",
+      "paymentFailed": "Thanh toán thất bại. Vui lòng thử lại hoặc chọn phương thức khác.",
+      "sessionExpired": "Phiên làm việc đã hết hạn. Vui lòng đăng nhập lại."
+    }
+  },
+  "en": {
+    "title": "Payment",
+    "subtitle": "Complete payment for your booking",
+    "paymentMethods": {
+      "title": "Select payment method",
+      "CASH": "Cash",
+      "MOMO": "MoMo Wallet",
+      "VNPAY": "VNPay",
+      "BANK_TRANSFER": "Bank Transfer"
+    },
+    "orderSummary": {
+      "title": "Order summary",
+      "booking": "Order ID",
+      "service": "Service",
+      "date": "Booking date",
+      "time": "Time",
+      "subtotal": "Subtotal",
+      "discount": "Discount",
+      "tax": "Tax",
+      "total": "Total"
+    },
+    "actions": {
+      "proceedToPayment": "Proceed to payment",
+      "cancelPayment": "Cancel payment",
+      "returnToBooking": "Return to booking"
+    },
+    "paymentStatus": {
+      "processing": "Processing payment...",
+      "successful": "Payment successful",
+      "failed": "Payment failed",
+      "pending": "Pending",
+      "cancelled": "Payment cancelled"
+    },
+    "messages": {
+      "selectPaymentMethod": "Please select a payment method",
+      "redirecting": "Redirecting to payment gateway...",
+      "paymentSuccess": "Your payment has been processed successfully",
+      "paymentFailed": "Payment failed. Please try again or select another method.",
+      "sessionExpired": "Your session has expired. Please log in again."
+    }
+  }
+}

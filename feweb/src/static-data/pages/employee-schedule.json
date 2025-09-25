@@ -1,0 +1,66 @@
+{
+  "vi": {
+    "title": "Lịch làm việc",
+    "subtitle": "Quản lý lịch làm việc của nhân viên",
+    "filters": {
+      "title": "Bộ lọc",
+      "status": "Trạng thái",
+      "district": "Quận/Huyện",
+      "city": "Thành phố",
+      "dateRange": "Khoảng thời gian",
+      "fromDate": "Từ ngày",
+      "toDate": "Đến ngày",
+      "search": "Tìm kiếm",
+      "reset": "Đặt lại"
+    },
+    "status": {
+      "AVAILABLE": "Có sẵn",
+      "BUSY": "Bận",
+      "ON_LEAVE": "Nghỉ phép",
+      "INACTIVE": "Không hoạt động"
+    },
+    "employeeCard": {
+      "rating": "Đánh giá",
+      "experience": "Kinh nghiệm",
+      "years": "năm",
+      "specialization": "Chuyên môn",
+      "select": "Chọn nhân viên",
+      "viewProfile": "Xem hồ sơ"
+    },
+    "noEmployees": "Không tìm thấy nhân viên nào phù hợp với bộ lọc đã chọn",
+    "loading": "Đang tải danh sách nhân viên...",
+    "error": "Lỗi khi tải danh sách nhân viên. Vui lòng thử lại."
+  },
+  "en": {
+    "title": "Work Schedule",
+    "subtitle": "Manage employee work schedules",
+    "filters": {
+      "title": "Filters",
+      "status": "Status",
+      "district": "District",
+      "city": "City",
+      "dateRange": "Date Range",
+      "fromDate": "From date",
+      "toDate": "To date",
+      "search": "Search",
+      "reset": "Reset"
+    },
+    "status": {
+      "AVAILABLE": "Available",
+      "BUSY": "Busy",
+      "ON_LEAVE": "On Leave",
+      "INACTIVE": "Inactive"
+    },
+    "employeeCard": {
+      "rating": "Rating",
+      "experience": "Experience",
+      "years": "years",
+      "specialization": "Specialization",
+      "select": "Select employee",
+      "viewProfile": "View profile"
+    },
+    "noEmployees": "No employees found matching the selected filters",
+    "loading": "Loading employee list...",
+    "error": "Error loading employee list. Please try again."
+  }
+}
