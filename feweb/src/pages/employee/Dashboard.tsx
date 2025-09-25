@@ -1,9 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import Navigation from '../../components/Navigation';
-import { Calendar, Clock, MapPin, User, ClipboardList, CheckCircle, AlertCircle } from 'lucide-react';
+import { Calendar, Clock, MapPin, User, ClipboardList, CheckCircle, AlertCircle, X } from 'lucide-react';
 import type { EmployeeData } from '../../types/api';
 import { useEmployeeAssignments } from '../../hooks/useEmployee';
+import { cancelAssignmentApi } from '../../api/employee';
 import AvailableBookings from '../../components/AvailableBookings';
 import EmployeeBookings from '../../components/EmployeeBookings';
 
@@ -11,6 +12,10 @@ const EmployeeDashboard: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'assignments'|'available'|'myBookings'>('assignments');
   const [statusFilter, setStatusFilter] = useState<string>('');
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>('');
+  const [cancelReason, setCancelReason] = useState<string>('');
+  const [isCancelling, setIsCancelling] = useState(false);
   const { 
     assignments, 
     stats: statistics, 
@@ -72,6 +77,70 @@ const EmployeeDashboard: React.FC = () => {
       fetchStatistics();
     }
   }, [user, getStatistics, isInitialized]);
+
+  const handleCancelAssignment = (assignmentId: string) => {
+    setSelectedAssignmentId(assignmentId);
+    setShowCancelModal(true);
+  };
+
+  const confirmCancelAssignment = async () => {
+    if (!cancelReason.trim()) {
+      alert('Vui lòng nhập lý do hủy công việc');
+      return;
+    }
+
+    setIsCancelling(true);
+    try {
+      const employeeId = user?.profileData && 'employeeId' in user.profileData 
+        ? (user.profileData as EmployeeData).employeeId || user?.id 
+        : user?.id;
+
+      if (!employeeId) {
+        throw new Error('Không tìm thấy thông tin nhân viên');
+      }
+
+      console.log('[Dashboard] Cancelling assignment:', {
+        assignmentId: selectedAssignmentId,
+        employeeId,
+        reason: cancelReason
+      });
+
+      await cancelAssignmentApi(selectedAssignmentId, {
+        reason: cancelReason.trim(),
+        employeeId: employeeId
+      });
+
+      console.log('[Dashboard] Assignment cancelled successfully');
+
+      // Refresh assignments
+      await getAssignments(employeeId, statusFilter || undefined);
+
+      // Reset modal state
+      setShowCancelModal(false);
+      setCancelReason('');
+      setSelectedAssignmentId('');
+      
+      alert('Hủy công việc thành công!');
+    } catch (error: any) {
+      console.error('[Dashboard] Error cancelling assignment:', error);
+      
+      // Show more specific error messages
+      let errorMessage = 'Có lỗi xảy ra khi hủy công việc';
+      if (error.message) {
+        errorMessage = error.message;
+      } else if (error.response?.status === 500) {
+        errorMessage = 'Lỗi server - vui lòng liên hệ quản trị viên';
+      } else if (error.response?.status === 404) {
+        errorMessage = 'Không tìm thấy công việc này';
+      } else if (error.response?.status === 403) {
+        errorMessage = 'Bạn không có quyền hủy công việc này';
+      }
+      
+      alert(errorMessage);
+    } finally {
+      setIsCancelling(false);
+    }
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -261,6 +330,7 @@ const EmployeeDashboard: React.FC = () => {
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thời gian làm việc</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Địa chỉ dịch vụ</th>
                         <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái & Tổng tiền</th>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
                       </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
@@ -316,6 +386,16 @@ const EmployeeDashboard: React.FC = () => {
                               </div>
                             </div>
                           </td>
+                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {(assignment.status === 'ASSIGNED' || assignment.status === 'CONFIRMED') && (
+                              <button
+                                onClick={() => handleCancelAssignment(assignment.assignmentId)}
+                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-xs font-medium transition-colors"
+                              >
+                                Hủy việc
+                              </button>
+                            )}
+                          </td>
                         </tr>
                       ))}
                     </tbody>
@@ -331,11 +411,92 @@ const EmployeeDashboard: React.FC = () => {
             </div>
           )}
 
-          {activeTab === 'available' && <AvailableBookings />}
+          {activeTab === 'available' && (
+            <AvailableBookings 
+              onAcceptSuccess={() => {
+                // Optionally switch to assignments tab to show the new assignment
+                // setActiveTab('assignments');
+                
+                // Refresh assignments to show the newly accepted booking
+                if (user) {
+                  let employeeId = user.id;
+                  if (user.profileData && 'employeeId' in user.profileData) {
+                    employeeId = (user.profileData as EmployeeData).employeeId || user.id;
+                  }
+                  if (employeeId) {
+                    getAssignments(employeeId, statusFilter || undefined);
+                  }
+                }
+              }}
+            />
+          )}
           
           {activeTab === 'myBookings' && <EmployeeBookings />}
         </div>
       </main>
+
+      {/* Cancel Assignment Modal */}
+      {showCancelModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-lg font-semibold text-gray-900">Hủy công việc</h3>
+              <button
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setCancelReason('');
+                  setSelectedAssignmentId('');
+                }}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Lý do hủy công việc *
+              </label>
+              <textarea
+                value={cancelReason}
+                onChange={(e) => setCancelReason(e.target.value)}
+                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                rows={4}
+                placeholder="Nhập lý do hủy công việc (ví dụ: Bị ốm đột xuất không thể thực hiện công việc)"
+                disabled={isCancelling}
+              />
+            </div>
+            
+            <div className="flex justify-end space-x-3">
+              <button
+                onClick={() => {
+                  setShowCancelModal(false);
+                  setCancelReason('');
+                  setSelectedAssignmentId('');
+                }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
+                disabled={isCancelling}
+              >
+                Đóng
+              </button>
+              <button
+                onClick={confirmCancelAssignment}
+                disabled={isCancelling || !cancelReason.trim()}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                {isCancelling ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Đang hủy...
+                  </div>
+                ) : (
+                  'Xác nhận hủy'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

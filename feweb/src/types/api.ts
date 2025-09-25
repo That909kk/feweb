@@ -189,152 +189,6 @@ export interface CalculatePriceResponse extends ApiResponse {
   };
 }
 
-// Service Options Types
-export interface ServiceOption {
-  optionId: number;
-  optionName: string;
-  optionType: 'SINGLE_CHOICE_RADIO' | 'SINGLE_CHOICE_DROPDOWN' | 'MULTIPLE_CHOICE_CHECKBOX' | 'QUANTITY_INPUT';
-  displayOrder: number;
-  isRequired: boolean;
-  parentChoiceId?: number;
-  choices: ServiceOptionChoice[];
-}
-
-export interface ServiceOptionChoice {
-  choiceId: number;
-  choiceName: string;
-  displayOrder: number;
-  isDefault: boolean;
-}
-
-export interface ServiceWithOptions extends Service {
-  options: ServiceOption[];
-}
-
-// Price Calculation Types
-export interface PriceCalculationRequest {
-  serviceId: number;
-  selectedChoiceIds: number[];
-  quantity?: number;
-}
-
-export interface PriceCalculationResponse extends ApiResponse {
-  data: {
-    serviceId: number;
-    serviceName: string;
-    basePrice: number;
-    totalAdjustment: number;
-    finalPrice: number;
-    suggestedStaff: number;
-    estimatedDurationHours: number;
-    formattedPrice: string;
-    formattedDuration: string;
-  };
-}
-
-// Suitable Employees Types
-export interface SuitableEmployeesRequest {
-  serviceId: number;
-  bookingTime: string; // ISO datetime
-  latitude: number;
-  longitude: number;
-  selectedChoiceIds?: number[];
-}
-
-export interface SuitableEmployee {
-  employeeId: string;
-  fullName: string;
-  avatar: string;
-  skills: string[];
-  rating: string;
-  status: string;
-  workingDistricts: string[];
-  workingCity: string;
-  completedJobs: number;
-}
-
-export interface SuitableEmployeesResponse extends ApiResponse {
-  data: {
-    availableEmployees: SuitableEmployee[];
-    totalFound: number;
-    requiredStaff: number;
-  };
-}
-
-// Booking Validation Types
-export interface BookingValidationRequest {
-  addressId?: string;
-  newAddress?: {
-    customerId: string;
-    fullAddress: string;
-    ward: string;
-    district: string;
-    city: string;
-    latitude?: number;
-    longitude?: number;
-  };
-  bookingTime: string; // ISO datetime
-  note?: string;
-  promoCode?: string | null;
-  bookingDetails: Array<{
-    serviceId: number;
-    quantity: number;
-    expectedPrice: number;
-    expectedPricePerUnit: number;
-    selectedChoiceIds: number[];
-  }>;
-  assignments?: Array<{
-    serviceId: number;
-    employeeId: string;
-  }> | null;
-  paymentMethodId: number;
-}
-
-export interface BookingValidationResponse {
-  valid: boolean; // API returns 'valid' not 'isValid'
-  calculatedTotalAmount: number | null;
-  formattedTotalAmount?: string;
-  errors: string[];
-  conflicts: Array<{
-    conflictType: string;
-    employeeId: string;
-    conflictStartTime: string;
-    conflictEndTime: string;
-    reason: string;
-  }>;
-  serviceValidations: Array<{
-    serviceId: number;
-    serviceName: string;
-    exists: boolean;
-    active: boolean;
-    basePrice: number;
-    calculatedPrice: number;
-    expectedPrice: number;
-    priceMatches: boolean;
-    validChoiceIds: number[];
-    invalidChoiceIds: number[];
-    recommendedStaff: number;
-    valid: boolean;
-  }>;
-  customer: {
-    customerId: string;
-    fullName: string;
-    email: string;
-    phoneNumber: string;
-  } | null;
-  address: {
-    addressId: string;
-    fullAddress: string;
-    ward: string;
-    district: string;
-    city: string;
-    latitude: number;
-    longitude: number;
-    isDefault: boolean;
-  } | null;
-  usingNewAddress: boolean;
-}
-
 // Employee Schedule Types
 export interface EmployeeScheduleParams {
   status?: 'AVAILABLE' | 'BUSY';
@@ -373,117 +227,32 @@ export interface BookingAssignmentRequest {
 }
 
 export interface CreateBookingRequest {
-  addressId?: string | null;
-  newAddress?: {
-    customerId: string;
-    fullAddress: string;
-    ward: string;
-    district: string;
-    city: string;
-    latitude?: number;
-    longitude?: number;
-  };
+  addressId: string; // Required by backend validation (@NotBlank)
+  fullAddress?: string | null; // Optional alternative (not currently used)
   bookingTime: string;
   note?: string | null;
   promoCode?: string | null;
   bookingDetails: BookingDetailRequest[];
-  assignments?: BookingAssignmentRequest[] | null;
+  assignments?: BookingAssignmentRequest[];
   paymentMethodId: number;
 }
 
-export interface BookingResponse {
-  bookingId: string;
-  bookingCode: string;
-  status: string;
-  totalAmount: number;
-  formattedTotalAmount: string;
-  bookingTime: string;
-  createdAt: string;
-  customerInfo: {
-    addressId: string;
-    fullAddress: string;
-    ward: string;
-    district: string;
-    city: string;
-    latitude: number;
-    longitude: number;
-    isDefault: boolean;
-  };
-  serviceDetails: Array<{
-    bookingDetailId: string;
-    service: {
-      serviceId: number;
-      name: string;
-      description: string;
-      basePrice: number;
-      unit: string;
-      estimatedDurationHours: number;
-      iconUrl: string;
-      categoryName: string;
-      isActive: boolean;
-    };
-    quantity: number;
-    pricePerUnit: number;
-    formattedPricePerUnit: string;
-    subTotal: number;
-    formattedSubTotal: string;
-    selectedChoices: Array<{
-      choiceId: number;
-      choiceName: string;
-      optionName: string;
-      priceAdjustment: number;
-      formattedPriceAdjustment: string;
-    }>;
-    assignments: Array<{
-      assignmentId: string;
-      employee: {
-        employeeId: string;
-        fullName: string;
-        email: string;
-        phoneNumber: string;
-        avatar: string;
-      };
-      status: string;
-    }>;
-    duration: string;
-    formattedDuration: string;
-  }>;
-  paymentInfo: {
-    paymentId: string;
-    amount: number;
-    paymentMethod: {
-      methodId: number;
-      name: string;
-      isActive: boolean;
-    };
-    paymentStatus: string;
-    transactionCode: string;
+export interface BookingResponse extends ApiResponse {
+  data: {
+    bookingId: string;
+    bookingCode?: string;
+    customerId: string;
+    serviceId: number;
+    status: string;
+    totalPrice: number;
+    scheduledDate: string;
+    scheduledTime: string;
+    address: string;
+    notes?: string;
+    employeeId?: string;
     createdAt: string;
-    paidAt: string | null;
+    updatedAt: string;
   };
-  promotionApplied: any | null;
-  assignedEmployees: Array<{
-    employeeId: string;
-    fullName: string;
-    email: string;
-    phoneNumber: string;
-    avatar: string;
-    rating: number | null;
-    employeeStatus: string;
-    skills: string[];
-    bio: string;
-  }>;
-  totalServices: number;
-  totalEmployees: number;
-  estimatedDuration: string;
-  hasPromotion: boolean;
-}
-
-// Payment Method Types
-export interface PaymentMethod {
-  methodId: number;
-  methodCode: string;
-  methodName: string;
 }
 
 // Booking Detail Types
@@ -528,6 +297,12 @@ export interface PaymentResponse extends ApiResponse {
     paymentUrl?: string; // For online payment methods
     createdAt: string;
   };
+}
+
+// Cancel Assignment Request
+export interface CancelAssignmentRequest {
+  reason: string;
+  employeeId: string;
 }
 
 // Generic Pagination

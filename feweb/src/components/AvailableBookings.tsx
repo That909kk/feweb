@@ -2,10 +2,57 @@ import React, { useState, useEffect } from 'react';
 import { useAvailableBookings } from '../hooks/useAvailableBookings';
 import { useAuth } from '../contexts/AuthContext';
 import { toast } from 'react-hot-toast';
-import { Calendar, Clock, MapPin, CheckCircle, AlertCircle } from 'lucide-react';
+import { CheckCircle, AlertCircle, Calendar, Clock, MapPin } from 'lucide-react';
 import type { EmployeeData } from '../types/api';
 
-const AvailableBookings: React.FC = () => {
+// Success Modal Component
+interface SuccessModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  assignmentData: {
+    serviceName: string;
+    bookingCode: string;
+    scheduledDate: string;
+    scheduledTime: string;
+    estimatedDuration: number;
+    price: number;
+  } | null;
+}
+
+const SuccessModal: React.FC<SuccessModalProps> = ({ isOpen, onClose, assignmentData }) => {
+  useEffect(() => {
+    if (isOpen && assignmentData) {
+      // Auto close after 2 seconds
+      const timer = setTimeout(() => {
+        onClose();
+      }, 2000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [isOpen, assignmentData, onClose]);
+
+  if (!isOpen || !assignmentData) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-lg p-6 max-w-sm w-full mx-4 shadow-2xl">
+        <div className="text-center">
+          <div className="bg-green-100 p-3 rounded-full w-16 h-16 mx-auto mb-4 flex items-center justify-center">
+            <CheckCircle className="w-8 h-8 text-green-600" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">Nhận việc thành công!</h3>
+          <p className="text-gray-600">Công việc đã được thêm vào danh sách của bạn</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+interface AvailableBookingsProps {
+  onAcceptSuccess?: () => void;
+}
+
+const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onAcceptSuccess }) => {
   const { user } = useAuth();
   const { 
     availableBookings, 
@@ -16,6 +63,15 @@ const AvailableBookings: React.FC = () => {
   } = useAvailableBookings();
   
   const [acceptingBookingId, setAcceptingBookingId] = useState<string | null>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successData, setSuccessData] = useState<{
+    serviceName: string;
+    bookingCode: string;
+    scheduledDate: string;
+    scheduledTime: string;
+    estimatedDuration: number;
+    price: number;
+  } | null>(null);
 
   useEffect(() => {
     const fetchAvailableBookings = async () => {
@@ -29,6 +85,8 @@ const AvailableBookings: React.FC = () => {
             employeeId = (user.profileData as EmployeeData).employeeId || user.id;
           }
           
+          console.log('[AvailableBookings] Fetching bookings for employee:', employeeId);
+          
           if (employeeId) {
             await getAvailableBookings(employeeId);
           } else {
@@ -37,13 +95,17 @@ const AvailableBookings: React.FC = () => {
         } catch (err) {
           console.error('Error fetching available bookings:', err);
         }
+      } else {
+        console.log('[AvailableBookings] No user found, skipping fetch');
       }
     };
 
     fetchAvailableBookings();
-  }, [user, getAvailableBookings]);
+  }, [user?.id]); // Only run when user.id changes
 
-  const handleAcceptBooking = async (detailId: string) => {
+
+
+  const handleAcceptBooking = async (bookingDetailId: string) => {
     if (!user) {
       toast.error('Không thể xác định thông tin nhân viên');
       return;
@@ -60,22 +122,45 @@ const AvailableBookings: React.FC = () => {
       return;
     }
 
-    setAcceptingBookingId(detailId);
+    setAcceptingBookingId(bookingDetailId);
     
     try {
-      console.log(`Accepting booking ${detailId} for employee ${employeeId}`);
-      const result = await acceptBookingDetail(detailId, employeeId);
+      console.log(`Accepting booking ${bookingDetailId} for employee ${employeeId}`);
+      const result = await acceptBookingDetail(bookingDetailId, employeeId);
       if (result) {
-        toast.success('Đã nhận công việc thành công!');
-        // Refresh the list
+        // Set success data and show modal
+        setSuccessData({
+          serviceName: result.serviceName || '',
+          bookingCode: result.bookingCode || '',
+          scheduledDate: result.scheduledDate || '',
+          scheduledTime: result.scheduledTime || '',
+          estimatedDuration: result.estimatedDuration || 0,
+          price: result.price || 0
+        });
+        setShowSuccessModal(true);
+        
+        // Refresh the available bookings list
         await getAvailableBookings(employeeId);
+        
+        // Notify parent component about successful acceptance
+        onAcceptSuccess?.();
       }
     } catch (err: any) {
       console.error('Error accepting booking:', err);
-      if (err.message === 'Chi tiết dịch vụ đã có đủ nhân viên') {
+      
+      // Handle specific error messages
+      const errorMessage = err.message || 'Có lỗi xảy ra khi nhận công việc';
+      
+      if (errorMessage.includes('Chi tiết dịch vụ đã có đủ nhân viên')) {
         toast.error('Dịch vụ này đã có đủ nhân viên');
+      } else if (errorMessage.includes('đã được phân công công việc khác trong khung giờ này')) {
+        toast.error('Bạn đã có công việc khác trong khung giờ này. Vui lòng chọn dịch vụ khác!');
+      } else if (errorMessage.includes('Nhân viên đã nhận chi tiết dịch vụ này')) {
+        toast.error('Bạn đã nhận dịch vụ này rồi');
+      } else if (errorMessage.includes('Booking is in invalid status')) {
+        toast.error('Dịch vụ này không còn khả dụng');
       } else {
-        toast.error(err.message || 'Có lỗi xảy ra khi nhận công việc');
+        toast.error(errorMessage);
       }
     } finally {
       setAcceptingBookingId(null);
@@ -136,17 +221,28 @@ const AvailableBookings: React.FC = () => {
   }
 
   return (
-    <div className="p-4">
-      <h2 className="text-2xl font-bold mb-6">Dịch vụ đang tìm nhân viên</h2>
+    <>
+      <div className="p-4">
+        <h2 className="text-2xl font-bold mb-6">Dịch vụ đang tìm nhân viên</h2>
       
-      {availableBookings.length === 0 ? (
+      {/* Show available bookings count */}
+      {availableBookings.length > 0 && (
+        <div className="mb-4 text-sm text-gray-600">
+          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full">
+            {availableBookings.length} dịch vụ khả dụng
+          </span>
+        </div>
+      )}
+      
+      {availableBookings.length === 0 && !isLoading ? (
         <div className="bg-white rounded-lg shadow p-6 text-center">
           <p className="text-gray-500">Không có dịch vụ nào cần nhân viên vào lúc này.</p>
+          <p className="text-xs text-gray-400 mt-2">Kiểm tra console để xem log API.</p>
         </div>
       ) : (
         <div className="space-y-4">
           {availableBookings.map((booking) => (
-            <div key={booking.detailId} className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
+            <div key={booking.bookingDetailId} className="bg-white rounded-lg shadow p-4 border-l-4 border-blue-500">
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="text-lg font-semibold text-gray-900">{booking.serviceName}</h3>
@@ -157,34 +253,43 @@ const AvailableBookings: React.FC = () => {
               <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
                 <div className="flex items-center text-gray-600">
                   <Calendar className="w-4 h-4 mr-2" />
-                  <span>Ngày: {new Date(booking.bookingTime).toLocaleDateString('vi-VN')}</span>
+                  <span>Ngày: {new Date(booking.bookingTime).toLocaleDateString('vi-VN', { 
+                    weekday: 'short', 
+                    year: 'numeric', 
+                    month: 'short', 
+                    day: 'numeric' 
+                  })}</span>
                 </div>
                 <div className="flex items-center text-gray-600">
                   <Clock className="w-4 h-4 mr-2" />
                   <span>
-                    Thời gian: {new Date(booking.bookingTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                    Thời gian: {new Date(booking.bookingTime).toLocaleTimeString('vi-VN', { 
+                      hour: '2-digit', 
+                      minute: '2-digit',
+                      hour12: false 
+                    })}
                   </span>
                 </div>
                 <div className="flex items-center text-gray-600">
                   <MapPin className="w-4 h-4 mr-2" />
-                  <span>Địa chỉ: {booking.address}</span>
+                  <span>Địa chỉ: {booking.serviceAddress}</span>
                 </div>
                 <div className="flex items-center text-gray-600">
                   <Clock className="w-4 h-4 mr-2" />
-                  <span>Thời lượng dự kiến: {booking.estimatedDuration}h</span>
+                  <span>Thời lượng dự kiến: {booking.estimatedDurationHours}h</span>
                 </div>
                 <div className="flex items-center text-gray-600">
-                  <span className="text-sm">Số lượng: {booking.quantity}</span>
+                  <span className="text-sm">Số lượng: {booking.requiredEmployees}</span>
                 </div>
               </div>
               
               <div className="mt-4 border-t pt-4 flex justify-end">
                 <button
-                  onClick={() => handleAcceptBooking(booking.detailId)}
-                  disabled={acceptingBookingId === booking.detailId}
+                  onClick={() => handleAcceptBooking(booking.bookingDetailId)}
+                  disabled={acceptingBookingId === booking.bookingDetailId}
                   className="flex items-center px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 disabled:bg-gray-300 disabled:text-gray-600 disabled:cursor-not-allowed"
                 >
-                  {acceptingBookingId === booking.detailId ? (
+                  {acceptingBookingId === booking.bookingDetailId ? (
                     <>
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
                       Đang xử lý...
@@ -209,18 +314,37 @@ const AvailableBookings: React.FC = () => {
               ? (user.profileData as EmployeeData).employeeId || user.id 
               : user.id;
             if (employeeId) {
+              console.log('[AvailableBookings] Manual refresh triggered for employee:', employeeId);
               getAvailableBookings(employeeId);
             }
           }
         }}
-        className="mt-6 px-4 py-2 flex items-center text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+        disabled={isLoading}
+        className="mt-6 px-4 py-2 flex items-center text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
       >
-        <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-        </svg>
-        Làm mới danh sách
+        {isLoading ? (
+          <>
+            <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin mr-2"></div>
+            Đang tải...
+          </>
+        ) : (
+          <>
+            <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+            Làm mới danh sách
+          </>
+        )}
       </button>
-    </div>
+      </div>
+
+      {/* Success Modal */}
+      <SuccessModal
+        isOpen={showSuccessModal}
+        onClose={() => setShowSuccessModal(false)}
+        assignmentData={successData}
+      />
+    </>
   );
 };
 

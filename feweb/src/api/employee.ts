@@ -21,21 +21,33 @@ interface Assignment {
   note: string | null;
 }
 
-// Available Booking interface
+// Available Booking interface - matches real API response
 interface AvailableBooking {
-  detailId: string;
+  bookingDetailId: string;  // Changed from detailId
   bookingCode: string;
   serviceName: string;
-  address: string;
-  bookingTime: string;
-  estimatedDuration: number;
-  quantity: number;
+  serviceAddress: string;   // Changed from address
+  bookingTime: string;      // Format: "2024-09-26 09:30:00"
+  estimatedDurationHours: number;  // Changed from estimatedDuration
+  requiredEmployees: number;       // Changed from quantity
 }
 
 // Cancel Assignment Request interface
 interface CancelAssignmentRequest {
   reason: string;
   employeeId: string;
+}
+
+// Accept Booking Detail Response interface
+interface AcceptBookingResponse {
+  assignmentId: string;
+  bookingCode: string;
+  serviceName: string;
+  status: string;
+  scheduledDate: string;
+  scheduledTime: string;
+  estimatedDuration: number;
+  price: number;
 }
 
 /**
@@ -126,44 +138,115 @@ export const cancelAssignmentApi = async (
   cancelRequest: CancelAssignmentRequest
 ): Promise<ApiResponse<void>> => {
   try {
+    // Validate input
+    if (!assignmentId || !assignmentId.trim()) {
+      throw new Error('Assignment ID không hợp lệ');
+    }
+    
+    if (!cancelRequest.reason || !cancelRequest.reason.trim()) {
+      throw new Error('Lý do hủy không được để trống');
+    }
+    
+    if (!cancelRequest.employeeId || !cancelRequest.employeeId.trim()) {
+      throw new Error('Employee ID không hợp lệ');
+    }
+    
+    console.log('[API] Cancel Assignment Request:', {
+      assignmentId: assignmentId.trim(),
+      cancelRequest: {
+        ...cancelRequest,
+        reason: cancelRequest.reason.trim()
+      },
+      url: `/employee/assignments/${assignmentId.trim()}/cancel`
+    });
+    
     const response = await api.post<ApiResponse<void>>(
-      `/assignments/${assignmentId}/cancel`, 
-      cancelRequest
+      `/employee/assignments/${assignmentId.trim()}/cancel`, 
+      {
+        ...cancelRequest,
+        reason: cancelRequest.reason.trim()
+      }
     );
+    
+    console.log('[API] Cancel Assignment Response:', response.data);
     return response.data;
-  } catch (error) {
-    console.error(`Error canceling assignment ${assignmentId}:`, error);
-    throw error;
+  } catch (error: any) {
+    console.error(`[API] Error canceling assignment ${assignmentId}:`, {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method,
+        data: error.config?.data
+      }
+    });
+    
+    // Throw error with more details
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else if (error.response?.status === 500) {
+      throw new Error('Lỗi server khi hủy công việc. Vui lòng kiểm tra console để xem chi tiết.');
+    } else if (error.response?.status === 404) {
+      throw new Error('Không tìm thấy assignment này');
+    } else if (error.response?.status === 403) {
+      throw new Error('Bạn không có quyền hủy assignment này');
+    } else {
+      throw new Error(error.message || 'Có lỗi xảy ra khi hủy công việc');
+    }
   }
 };
 
 // Get available bookings
+let apiCallCount = 0; // Debug counter
+
 export const getAvailableBookingsApi = async (
   employeeId: string,
   page: number = 0,
   size: number = 10
-): Promise<ApiResponse<{
+): Promise<{
   data: AvailableBooking[];
   message: string;
   totalItems: number;
   success: boolean;
-}>> => {
+}> => {
   try {
+    apiCallCount++;
+    console.log(`[API] Get Available Bookings Request #${apiCallCount}:`, {
+      employeeId,
+      page,
+      size,
+      url: `/employee/available-bookings?employeeId=${employeeId}&page=${page}&size=${size}`,
+      timestamp: new Date().toLocaleTimeString()
+    });
+
     const params = new URLSearchParams({
       employeeId: employeeId,
       page: page.toString(),
       size: size.toString()
     });
     
-    const response = await api.get<ApiResponse<{
+    const response = await api.get<{
       data: AvailableBooking[];
       message: string;
       totalItems: number;
       success: boolean;
-    }>>(`/available-bookings?${params.toString()}`);
+    }>(`/employee/available-bookings?${params.toString()}`);
+    
+    console.log('[API] Get Available Bookings Response:', response.data);
     return response.data;
-  } catch (error) {
-    console.error(`Error fetching available bookings for employee ${employeeId}:`, error);
+  } catch (error: any) {
+    console.error(`[API] Error fetching available bookings for employee ${employeeId}:`, {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message,
+      config: {
+        url: error.config?.url,
+        method: error.config?.method
+      }
+    });
     throw error;
   }
 };
@@ -172,15 +255,38 @@ export const getAvailableBookingsApi = async (
 export const acceptBookingDetailApi = async (
   detailId: string,
   employeeId: string
-): Promise<ApiResponse<Assignment>> => {
+): Promise<ApiResponse<AcceptBookingResponse>> => {
   try {
-    const response = await api.post<ApiResponse<Assignment>>(
-      `/booking-details/${detailId}/accept?employeeId=${employeeId}`
+    console.log('[API] Accept Booking Detail Request:', {
+      detailId,
+      employeeId,
+      url: `/employee/booking-details/${detailId}/accept?employeeId=${employeeId}`
+    });
+    
+    const response = await api.post<ApiResponse<AcceptBookingResponse>>(
+      `/employee/booking-details/${detailId}/accept?employeeId=${employeeId}`
     );
+    
+    console.log('[API] Accept Booking Detail Response:', response.data);
     return response.data;
-  } catch (error) {
-    console.error(`Error accepting booking detail ${detailId}:`, error);
-    throw error;
+  } catch (error: any) {
+    console.error(`[API] Error accepting booking detail ${detailId}:`, {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message
+    });
+    
+    // Throw error with better message
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else if (error.response?.status === 400) {
+      throw new Error('Không thể nhận công việc này - có thể đã có người nhận hoặc có xung đột lịch');
+    } else if (error.response?.status === 404) {
+      throw new Error('Không tìm thấy công việc này');
+    } else {
+      throw new Error(error.message || 'Có lỗi xảy ra khi nhận công việc');
+    }
   }
 };
 

@@ -24,7 +24,9 @@ export interface ApiResponse<T = any> {
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
     // Log API requests in development
-    console.log(`[API] Request to ${config.url}`);
+    const fullUrl = `${config.baseURL}${config.url}`;
+    console.log(`[API] Full request URL: ${fullUrl}`);
+    console.log(`[API] Method: ${config.method?.toUpperCase()}`);
     if (config.params) {
       console.log(`[API] Request params:`, config.params);
     }
