@@ -102,6 +102,57 @@ export interface CustomerData {
   addressId?: string;
 }
 
+// Customer Update Types
+export interface UpdateCustomerRequest {
+  avatar?: string;
+  fullName: string;
+  isMale: boolean;
+  email: string;
+  birthdate: string; // ISO date string (YYYY-MM-DD)
+}
+
+export interface UpdateCustomerResponse extends ApiResponse {
+  data: {
+    customerId: string;
+    avatar?: string;
+    fullName: string;
+    isMale: boolean;
+    email: string;
+    birthdate: string;
+  };
+}
+
+// Get Customer Info Types  
+export interface GetCustomerInfoResponse extends ApiResponse {
+  data: {
+    customerId: string;
+    account: {
+      accountId: string;
+      username: string;
+      password: string;
+      phoneNumber: string;
+      status: string;
+      isPhoneVerified: boolean;
+      createdAt: string;
+      updatedAt: string;
+      lastLogin: string;
+      roles: Array<{
+        roleId: number;
+        roleName: string;
+      }>;
+    };
+    avatar?: string;
+    fullName: string;
+    isMale: boolean;
+    email: string;
+    birthdate?: string;
+    rating?: number | null;
+    vipLevel?: string | null;
+    createdAt: string;
+    updatedAt: string;
+  };
+}
+
 export interface EmployeeData {
   employeeId: string;
   username: string;

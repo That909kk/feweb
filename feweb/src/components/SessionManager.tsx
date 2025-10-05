@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { DeviceType } from '../types/api';
+import type { DeviceType } from '../types/api';
 import { Shield, ShieldCheck, LogOut, Smartphone, Monitor, RefreshCw } from 'lucide-react';
 
 interface SessionManagerProps {

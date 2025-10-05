@@ -1,0 +1,158 @@
+{
+  "vi": {
+    "title": "Hồ sơ nhân viên",
+    "subtitle": "Quản lý thông tin cá nhân và hồ sơ công việc",
+    "sections": {
+      "basicInfo": "Thông tin cơ bản",
+      "contactInfo": "Thông tin liên hệ", 
+      "workInfo": "Thông tin công việc",
+      "skills": "Kỹ năng"
+    },
+    "fields": {
+      "avatar": "Ảnh đại diện",
+      "fullName": "Họ và tên",
+      "email": "Email",
+      "phoneNumber": "Số điện thoại",
+      "birthdate": "Ngày sinh",
+      "gender": "Giới tính",
+      "hiredDate": "Ngày vào làm",
+      "employeeStatus": "Trạng thái làm việc",
+      "rating": "Đánh giá",
+      "bio": "Giới thiệu bản thân",
+      "skills": "Các kỹ năng",
+      "username": "Tên đăng nhập",
+      "accountStatus": "Trạng thái tài khoản",
+      "phoneVerified": "Xác thực số điện thoại",
+      "lastLogin": "Lần đăng nhập cuối",
+      "createdAt": "Ngày tạo tài khoản",
+      "updatedAt": "Cập nhật lần cuối"
+    },
+    "genderOptions": {
+      "male": "Nam",
+      "female": "Nữ"
+    },
+    "statusOptions": {
+      "AVAILABLE": "Sẵn sàng",
+      "BUSY": "Đang bận",
+      "UNAVAILABLE": "Không có sẵn",
+      "ON_LEAVE": "Nghỉ phép"
+    },
+    "ratingOptions": {
+      "HIGHEST": "Xuất sắc",
+      "HIGH": "Tốt", 
+      "MEDIUM": "Trung bình",
+      "LOW": "Kém",
+      "LOWEST": "Rất kém"
+    },
+    "actions": {
+      "edit": "Chỉnh sửa",
+      "save": "Lưu thay đổi",
+      "cancel": "Hủy",
+      "update": "Cập nhật",
+      "refresh": "Làm mới"
+    },
+    "messages": {
+      "loading": "Đang tải thông tin...",
+      "saving": "Đang lưu thay đổi...",
+      "saveSuccess": "Cập nhật thông tin thành công!",
+      "saveError": "Có lỗi xảy ra khi lưu thông tin",
+      "loadError": "Không thể tải thông tin nhân viên",
+      "noData": "Không có dữ liệu",
+      "invalidData": "Dữ liệu không hợp lệ",
+      "confirmCancel": "Bạn có chắc muốn hủy các thay đổi?",
+      "requiredFields": "Vui lòng điền đầy đủ thông tin bắt buộc"
+    },
+    "validations": {
+      "emailInvalid": "Email không hợp lệ",
+      "phoneInvalid": "Số điện thoại không hợp lệ",
+      "fullNameRequired": "Họ tên không được để trống",
+      "emailRequired": "Email không được để trống",
+      "birthdateInvalid": "Ngày sinh không hợp lệ",
+      "hiredDateInvalid": "Ngày vào làm không hợp lệ"
+    },
+    "placeholders": {
+      "fullName": "Nhập họ và tên",
+      "email": "Nhập địa chỉ email",
+      "bio": "Giới thiệu về kinh nghiệm và kỹ năng của bạn...",
+      "skills": "Nhập kỹ năng (phân cách bằng dấu phẩy)"
+    }
+  },
+  "en": {
+    "title": "Employee Profile",
+    "subtitle": "Manage personal information and work profile",
+    "sections": {
+      "basicInfo": "Basic Information",
+      "contactInfo": "Contact Information",
+      "workInfo": "Work Information", 
+      "skills": "Skills"
+    },
+    "fields": {
+      "avatar": "Avatar",
+      "fullName": "Full Name",
+      "email": "Email",
+      "phoneNumber": "Phone Number",
+      "birthdate": "Date of Birth",
+      "gender": "Gender",
+      "hiredDate": "Hire Date",
+      "employeeStatus": "Work Status",
+      "rating": "Rating",
+      "bio": "Bio",
+      "skills": "Skills",
+      "username": "Username",
+      "accountStatus": "Account Status",
+      "phoneVerified": "Phone Verified",
+      "lastLogin": "Last Login",
+      "createdAt": "Created At",
+      "updatedAt": "Updated At"
+    },
+    "genderOptions": {
+      "male": "Male",
+      "female": "Female"
+    },
+    "statusOptions": {
+      "AVAILABLE": "Available",
+      "BUSY": "Busy",
+      "UNAVAILABLE": "Unavailable",
+      "ON_LEAVE": "On Leave"
+    },
+    "ratingOptions": {
+      "HIGHEST": "Excellent",
+      "HIGH": "Good",
+      "MEDIUM": "Average", 
+      "LOW": "Poor",
+      "LOWEST": "Very Poor"
+    },
+    "actions": {
+      "edit": "Edit",
+      "save": "Save Changes",
+      "cancel": "Cancel",
+      "update": "Update",
+      "refresh": "Refresh"
+    },
+    "messages": {
+      "loading": "Loading information...",
+      "saving": "Saving changes...",
+      "saveSuccess": "Profile updated successfully!",
+      "saveError": "Error occurred while saving",
+      "loadError": "Could not load employee information",
+      "noData": "No data available",
+      "invalidData": "Invalid data",
+      "confirmCancel": "Are you sure you want to cancel changes?",
+      "requiredFields": "Please fill in all required fields"
+    },
+    "validations": {
+      "emailInvalid": "Invalid email address",
+      "phoneInvalid": "Invalid phone number",
+      "fullNameRequired": "Full name is required",
+      "emailRequired": "Email is required",
+      "birthdateInvalid": "Invalid birth date",
+      "hiredDateInvalid": "Invalid hire date"
+    },
+    "placeholders": {
+      "fullName": "Enter full name",
+      "email": "Enter email address",
+      "bio": "Tell us about your experience and skills...",
+      "skills": "Enter skills (comma separated)"
+    }
+  }
+}

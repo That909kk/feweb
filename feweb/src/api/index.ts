@@ -6,3 +6,5 @@ export * from './booking';
 export * from './payment';
 export * from './client';
 export * from './categories';
+export * from './customer';
+export * from './employee';

@@ -37,7 +37,7 @@ Based on housekeeping_service_v8.sql:
 - **Employees**: 
   - Jane Smith (ID: e1000001-0000-0000-0000-000000000001) - Skills: Cleaning, Organizing
   - Bob Wilson (ID: e1000001-0000-0000-0000-000000000002) - Skills: Deep Cleaning, Laundry
-- **Working Zones**: Employee coverage areas by district and city
+- **Working Zones**: Employee coverage areas by ward and city
 
 ---
 
@@ -222,15 +222,15 @@ Based on housekeeping_service_v8.sql:
 - **Preconditions**:
   - Customer is authenticated with valid token.
   - Service with ID 1 exists and is active (recommended staff: 1).
-  - Employees are available in the specified district and city.
+  - Employees are available in the specified ward and city.
   - Booking time is in the future.
 - **Input**:
   - **Method**: `GET`
-  - **URL**: `/api/v1/customer/services/employee/suitable?serviceId=1&bookingTime=2025-09-05T10:00:00&district=Quận Tân Phú&city=TP. Hồ Chí Minh`
+  - **URL**: `/api/v1/customer/services/employee/suitable?serviceId=1&bookingTime=2025-09-05T10:00:00&ward=Phường Tây Thạnh&city=TP. Hồ Chí Minh`
   - **Query Parameters**: 
     - `serviceId = 1`
     - `bookingTime = 2025-09-05T10:00:00`
-    - `district = Quận Tân Phú`
+    - `ward = Phường Tây Thạnh`
     - `city = TP. Hồ Chí Minh`
   - **Headers**: 
     ```
@@ -240,7 +240,7 @@ Based on housekeeping_service_v8.sql:
   ```json
   {
     "success": true,
-    "message": "Tìm thấy 2 nhân viên phù hợp",
+    "message": "Tìm thấy 1 nhân viên phù hợp",
     "data": [
       {
         "employeeId": "e1000001-0000-0000-0000-000000000001",
@@ -249,20 +249,9 @@ Based on housekeeping_service_v8.sql:
         "skills": ["Cleaning", "Organizing"],
         "rating": "4.8",
         "status": "AVAILABLE",
-        "workingDistricts": ["Quận Tân Phú", "Quận 10"],
+        "workingWards": ["Phường Tây Thạnh", "Phường Bảy Hiền"],
         "workingCity": "TP. Hồ Chí Minh",
         "completedJobs": 45
-      },
-      {
-        "employeeId": "e1000001-0000-0000-0000-000000000002",
-        "fullName": "Bob Wilson",
-        "avatar": "https://picsum.photos/200",
-        "skills": ["Deep Cleaning", "Laundry"],
-        "rating": "4.6",
-        "status": "AVAILABLE",
-        "workingDistricts": ["Quận Tân Phú", "Quận 1"],
-        "workingCity": "TP. Hồ Chí Minh",
-        "completedJobs": 32
       }
     ]
   }
@@ -277,14 +266,14 @@ Based on housekeeping_service_v8.sql:
 - **Preconditions**:
   - Customer is authenticated with valid token.
   - Service with ID 1 exists and is active (recommended staff: 1).
-  - No employees are available in the specified district and time.
+  - No employees are available in the specified ward and time.
 - **Input**:
   - **Method**: `GET`
-  - **URL**: `/api/v1/customer/services/employee/suitable?serviceId=1&bookingTime=2025-09-05T02:00:00&district=Quận 12&city=TP. Hồ Chí Minh`
+  - **URL**: `/api/v1/customer/services/employee/suitable?serviceId=1&bookingTime=2025-09-05T02:00:00&ward=Phường Thủ Đức&city=TP. Hồ Chí Minh`
   - **Query Parameters**: 
     - `serviceId = 1`
     - `bookingTime = 2025-09-05T02:00:00`
-    - `district = Quận 12`
+    - `ward = Phường Thủ Đức`
     - `city = TP. Hồ Chí Minh`
   - **Headers**: 
     ```
@@ -336,11 +325,11 @@ Based on housekeeping_service_v8.sql:
   - Service with ID 999 does not exist.
 - **Input**:
   - **Method**: `GET`
-  - **URL**: `/api/v1/customer/services/employee/suitable?serviceId=999&bookingTime=2025-09-05T10:00:00&district=Quận Tân Phú&city=TP. Hồ Chí Minh`
+  - **URL**: `/api/v1/customer/services/employee/suitable?serviceId=999&bookingTime=2025-09-05T10:00:00&ward=Phường Tây Thạnh&city=TP. Hồ Chí Minh`
   - **Query Parameters**: 
     - `serviceId = 999`
     - `bookingTime = 2025-09-05T10:00:00`
-    - `district = Quận Tân Phú`
+    - `ward = Phường Tây Thạnh`
     - `city = TP. Hồ Chí Minh`
   - **Headers**: 
     ```
@@ -366,11 +355,11 @@ Based on housekeeping_service_v8.sql:
   - Service with ID 1 exists and is active (recommended staff: 1).
 - **Input**:
   - **Method**: `GET`
-  - **URL**: `/api/v1/customer/services/employee/suitable?serviceId=1&bookingTime=2024-09-01T10:00:00&district=Quận Tân Phú&city=TP. Hồ Chí Minh`
+  - **URL**: `/api/v1/customer/services/employee/suitable?serviceId=1&bookingTime=2024-09-01T10:00:00&ward=Phường Tây Thạnh&city=TP. Hồ Chí Minh`
   - **Query Parameters**: 
     - `serviceId = 1`
     - `bookingTime = 2024-09-01T10:00:00` (past date)
-    - `district = Quận Tân Phú`
+    - `ward = Phường Tây Thạnh`
     - `city = TP. Hồ Chí Minh`
   - **Headers**: 
     ```
@@ -418,11 +407,11 @@ Based on housekeeping_service_v8.sql:
   - Customer is authenticated with valid token.
 - **Input**:
   - **Method**: `GET`
-  - **URL**: `/api/v1/customer/services/employee/suitable?serviceId=1&bookingTime=invalid-date&district=Quận Tân Phú&city=TP. Hồ Chí Minh`
+  - **URL**: `/api/v1/customer/services/employee/suitable?serviceId=1&bookingTime=invalid-date&ward=Phường Tây Thạnh&city=TP. Hồ Chí Minh`
   - **Query Parameters**: 
     - `serviceId = 1`
     - `bookingTime = invalid-date`
-    - `district = Quận Tân Phú`
+    - `ward = Phường Tây Thạnh`
     - `city = TP. Hồ Chí Minh`
   - **Headers**: 
     ```
@@ -449,7 +438,7 @@ Based on housekeeping_service_v8.sql:
 - **Service Options**: Options are returned with proper display order and choice hierarchy.
 - **Employee Matching**: Suitable employees are filtered by service compatibility, availability, and working zone coverage.
 - **Date Validation**: Booking time must be in ISO 8601 format and in the future.
-- **Geographic Filtering**: Employee matching considers district and city working zones.
+- **Geographic Filtering**: Employee matching considers ward and city working zones.
 - **Response Format**: Consistent response structure with success status, message, and data fields.
 - **Error Handling**: Comprehensive error scenarios with appropriate HTTP status codes and Vietnamese error messages.
 - **Option Types**: Support for RADIO, CHECKBOX, and SELECT option types with multiple choices.

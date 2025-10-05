@@ -194,6 +194,281 @@ The request body includes all of the following fields:
 
 ---
 
+## POST /api/v1/employee/{employeeId}/avatar - Upload Employee Avatar
+
+### Test Case 6: Successfully Upload Employee Avatar
+- **Test Case ID**: TC_EMPLOYEE_006
+- **Description**: Verify that an authorized employee can upload their avatar image.
+- **Preconditions**:
+  - Employee is authenticated with a valid token.
+  - Employee has permission to update their own profile.
+  - Employee with the specified ID exists.
+  - Valid image file is provided (JPG, PNG, etc.).
+- **Input**:
+  - **Method**: `POST`
+  - **URL**: `/api/v1/employee/e1000001-0000-0000-0000-000000000001/avatar`
+  - **Headers**:
+    ```
+    Authorization: Bearer <valid_employee_token>
+    Content-Type: multipart/form-data
+    ```
+  - **Form Data**:
+    ```
+    avatar: [image_file.jpg] (binary data)
+    ```
+- **Expected Output**:
+  ```json
+  {
+    "data": {
+        "employee": {
+            "employeeId": "e1000001-0000-0000-0000-000000000001",
+            "account": {
+                "accountId": "a1000001-0000-0000-0000-000000000002",
+                "username": "jane_smith",
+                "password": "$2a$12$dRX/zeerYun4LF16PRZuzuaaQDv673McBavp3xEciXKezLjSzyyiK",
+                "phoneNumber": "0912345678",
+                "status": "ACTIVE",
+                "isPhoneVerified": true,
+                "createdAt": "2025-09-26T19:08:01.001699",
+                "updatedAt": "2025-09-27T20:01:13.285365",
+                "lastLogin": "2025-09-27T20:01:13.284007",
+                "roles": [
+                    {
+                        "roleId": 2,
+                        "roleName": "EMPLOYEE"
+                    },
+                    {
+                        "roleId": 1,
+                        "roleName": "CUSTOMER"
+                    }
+                ]
+            },
+            "avatar": "https://res.cloudinary.com/dhhntolb5/image/upload/v1758978104/employee_avatars/bioawzgqfipodf7nb6cj.jpg",
+            "fullName": "Jane Smith",
+            "isMale": false,
+            "email": "jane.smith@example.com",
+            "birthdate": "2003-04-14",
+            "hiredDate": "2024-01-15",
+            "skills": [
+                "Cleaning",
+                "Organizing"
+            ],
+            "bio": "Có kinh nghiệm dọn dẹp nhà cửa và sắp xếp đồ đạc.",
+            "rating": null,
+            "employeeStatus": "AVAILABLE",
+            "createdAt": "2025-09-26T19:08:01.053334",
+            "updatedAt": "2025-09-27T20:01:43.790769787"
+        },
+        "avatarPublicId": "employee_avatars/bioawzgqfipodf7nb6cj"
+    },
+    "success": true
+  }
+  ```
+- **Status Code**: `200 OK`
+
+### Test Case 7: Upload Avatar - Access Denied
+- **Test Case ID**: TC_EMPLOYEE_007
+- **Description**: Verify that an employee cannot upload avatar for another employee's account.
+- **Preconditions**:
+  - Employee is authenticated with a valid token.
+  - Employee tries to upload avatar for a different employee ID.
+- **Input**:
+  - **Method**: `POST`
+  - **URL**: `/api/v1/employee/e1000001-0000-0000-0000-000000000002/avatar`
+  - **Headers**:
+    ```
+    Authorization: Bearer <valid_employee_token_for_different_user>
+    Content-Type: multipart/form-data
+    ```
+  - **Form Data**:
+    ```
+    avatar: [image_file.jpg] (binary data)
+    ```
+- **Expected Output**:
+  ```json
+  {
+    "success": false,
+    "message": "Access denied. You can only update your own data."
+  }
+  ```
+- **Status Code**: `403 Forbidden`
+
+### Test Case 8: Upload Avatar - Admin Access
+- **Test Case ID**: TC_EMPLOYEE_008
+- **Description**: Verify that an admin can upload avatar for any employee.
+- **Preconditions**:
+  - Admin is authenticated with a valid token.
+  - Admin has ROLE_ADMIN permission.
+  - Employee with the specified ID exists.
+- **Input**:
+  - **Method**: `POST`
+  - **URL**: `/api/v1/employee/e1000001-0000-0000-0000-000000000001/avatar`
+  - **Headers**:
+    ```
+    Authorization: Bearer <valid_admin_token>
+    Content-Type: multipart/form-data
+    ```
+  - **Form Data**:
+    ```
+    avatar: [image_file.jpg] (binary data)
+    ```
+- **Expected Output**:
+  ```json
+  {
+    "data": {
+        "employee": {
+            "employeeId": "e1000001-0000-0000-0000-000000000001",
+            "account": {
+                "accountId": "a1000001-0000-0000-0000-000000000002",
+                "username": "jane_smith",
+                "password": "$2a$12$dRX/zeerYun4LF16PRZuzuaaQDv673McBavp3xEciXKezLjSzyyiK",
+                "phoneNumber": "0912345678",
+                "status": "ACTIVE",
+                "isPhoneVerified": true,
+                "createdAt": "2025-09-26T19:08:01.001699",
+                "updatedAt": "2025-09-27T20:01:13.285365",
+                "lastLogin": "2025-09-27T20:01:13.284007",
+                "roles": [
+                    {
+                        "roleId": 2,
+                        "roleName": "EMPLOYEE"
+                    },
+                    {
+                        "roleId": 1,
+                        "roleName": "CUSTOMER"
+                    }
+                ]
+            },
+            "avatar": "https://res.cloudinary.com/dhhntolb5/image/upload/v1758978104/employee_avatars/bioawzgqfipodf7nb6cj.jpg",
+            "fullName": "Jane Smith",
+            "isMale": false,
+            "email": "jane.smith@example.com",
+            "birthdate": "2003-04-14",
+            "hiredDate": "2024-01-15",
+            "skills": [
+                "Cleaning",
+                "Organizing"
+            ],
+            "bio": "Có kinh nghiệm dọn dẹp nhà cửa và sắp xếp đồ đạc.",
+            "rating": null,
+            "employeeStatus": "AVAILABLE",
+            "createdAt": "2025-09-26T19:08:01.053334",
+            "updatedAt": "2025-09-27T20:01:43.790769787"
+        },
+        "avatarPublicId": "employee_avatars/bioawzgqfipodf7nb6cj"
+    },
+    "success": true
+  }
+  ```
+- **Status Code**: `200 OK`
+
+### Test Case 9: Upload Avatar - Invalid File Format
+- **Test Case ID**: TC_EMPLOYEE_009
+- **Description**: Verify that invalid file formats are rejected when uploading avatar.
+- **Preconditions**:
+  - Employee is authenticated with a valid token.
+  - Employee provides an invalid file format (e.g., .txt, .pdf).
+- **Input**:
+  - **Method**: `POST`
+  - **URL**: `/api/v1/employee/e1000001-0000-0000-0000-000000000001/avatar`
+  - **Headers**:
+    ```
+    Authorization: Bearer <valid_employee_token>
+    Content-Type: multipart/form-data
+    ```
+  - **Form Data**:
+    ```
+    avatar: [document.txt] (text file)
+    ```
+- **Expected Output**:
+  ```json
+  {
+    "success": false,
+    "message": "Invalid file format. Only image files (JPG, PNG, GIF) are allowed."
+  }
+  ```
+- **Status Code**: `400 Bad Request`
+
+### Test Case 10: Upload Avatar - File Too Large
+- **Test Case ID**: TC_EMPLOYEE_010
+- **Description**: Verify that files exceeding the maximum size limit are rejected.
+- **Preconditions**:
+  - Employee is authenticated with a valid token.
+  - Employee provides an image file larger than the allowed limit (e.g., > 5MB).
+- **Input**:
+  - **Method**: `POST`
+  - **URL**: `/api/v1/employee/e1000001-0000-0000-0000-000000000001/avatar`
+  - **Headers**:
+    ```
+    Authorization: Bearer <valid_employee_token>
+    Content-Type: multipart/form-data
+    ```
+  - **Form Data**:
+    ```
+    avatar: [large_image.jpg] (>5MB file)
+    ```
+- **Expected Output**:
+  ```json
+  {
+    "success": false,
+    "message": "File size exceeds maximum limit of 5MB."
+  }
+  ```
+- **Status Code**: `400 Bad Request`
+
+### Test Case 11: Upload Avatar - Missing File
+- **Test Case ID**: TC_EMPLOYEE_011
+- **Description**: Verify that request fails when no file is provided.
+- **Preconditions**:
+  - Employee is authenticated with a valid token.
+  - No file is included in the request.
+- **Input**:
+  - **Method**: `POST`
+  - **URL**: `/api/v1/employee/e1000001-0000-0000-0000-000000000001/avatar`
+  - **Headers**:
+    ```
+    Authorization: Bearer <valid_employee_token>
+    Content-Type: multipart/form-data
+    ```
+  - **Form Data**: (empty or missing avatar field)
+- **Expected Output**:
+  ```json
+  {
+    "success": false,
+    "message": "Avatar file is required."
+  }
+  ```
+- **Status Code**: `400 Bad Request`
+
+### Test Case 12: Upload Avatar - Employee Not Found
+- **Test Case ID**: TC_EMPLOYEE_012
+- **Description**: Verify that request fails when employee ID doesn't exist.
+- **Preconditions**:
+  - User is authenticated with a valid token.
+  - Employee ID provided doesn't exist in the system.
+- **Input**:
+  - **Method**: `POST`
+  - **URL**: `/api/v1/employee/non-existent-employee-id/avatar`
+  - **Headers**:
+    ```
+    Authorization: Bearer <valid_token>
+    Content-Type: multipart/form-data
+    ```
+  - **Form Data**:
+    ```
+    avatar: [image_file.jpg] (binary data)
+    ```
+- **Expected Output**:
+  ```json
+  {
+    "success": false,
+    "message": "Không tìm thấy thông tin nhân viên"
+  }
+  ```
+- **Status Code**: `400 Bad Request`
+
+---
+
 ## Notes
 - These test cases are high-level and may be expanded with additional fields and scenarios.
 - Ensure the test environment contains representative employee data.

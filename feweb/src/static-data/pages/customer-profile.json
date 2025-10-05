@@ -1,0 +1,109 @@
+{
+  "vi": {
+    "title": "Hồ sơ khách hàng",
+    "subtitle": "Quản lý thông tin cá nhân",
+    "form": {
+      "title": "Thông tin cá nhân",
+      "fields": {
+        "avatar": "Ảnh đại diện",
+        "fullName": "Họ và tên",
+        "email": "Email",
+        "phoneNumber": "Số điện thoại",
+        "accountStatus": "Trạng thái tài khoản",
+        "isPhoneVerified": "Xác thực số điện thoại",
+        "roles": "Vai trò",
+        "gender": "Giới tính",
+        "birthdate": "Ngày sinh",
+        "rating": "Đánh giá",
+        "vipLevel": "Cấp VIP",
+        "lastLogin": "Đăng nhập cuối",
+        "createdAt": "Ngày tạo",
+        "updatedAt": "Cập nhật cuối"
+      },
+      "genderOptions": {
+        "male": "Nam",
+        "female": "Nữ"
+      },
+      "placeholders": {
+        "fullName": "Nhập họ và tên",
+        "email": "Nhập địa chỉ email",
+        "phoneNumber": "Nhập số điện thoại",
+        "birthdate": "Chọn ngày sinh"
+      }
+    },
+    "actions": {
+      "update": "Cập nhật",
+      "cancel": "Hủy",
+      "uploadAvatar": "Tải ảnh lên",
+      "changeAvatar": "Thay đổi ảnh đại diện"
+    },
+    "messages": {
+      "updateSuccess": "Cập nhật thông tin thành công",
+      "updateError": "Có lỗi xảy ra khi cập nhật thông tin",
+      "loading": "Đang cập nhật...",
+      "invalidEmail": "Định dạng email không hợp lệ",
+      "requiredField": "Trường này là bắt buộc",
+      "avatarUploadSuccess": "Tải ảnh đại diện thành công",
+      "avatarUploadError": "Lỗi khi tải ảnh đại diện"
+    },
+    "validation": {
+      "fullNameRequired": "Họ và tên là bắt buộc",
+      "emailRequired": "Email là bắt buộc",
+      "emailInvalid": "Định dạng email không hợp lệ",
+      "birthdateRequired": "Ngày sinh là bắt buộc"
+    }
+  },
+  "en": {
+    "title": "Customer Profile",
+    "subtitle": "Manage personal information",
+    "form": {
+      "title": "Personal Information",
+      "fields": {
+        "avatar": "Avatar",
+        "fullName": "Full Name",
+        "email": "Email",
+        "phoneNumber": "Phone Number",
+        "accountStatus": "Account Status",
+        "isPhoneVerified": "Phone Verified",
+        "gender": "Gender",
+        "birthdate": "Date of Birth",
+        "rating": "Rating",
+        "vipLevel": "VIP Level",
+        "lastLogin": "Last Login",
+        "createdAt": "Created At",
+        "updatedAt": "Updated At"
+      },
+      "genderOptions": {
+        "male": "Male",
+        "female": "Female"
+      },
+      "placeholders": {
+        "fullName": "Enter full name",
+        "email": "Enter email address",
+        "phoneNumber": "Enter phone number",
+        "birthdate": "Select date of birth"
+      }
+    },
+    "actions": {
+      "update": "Update",
+      "cancel": "Cancel",
+      "uploadAvatar": "Upload Image",
+      "changeAvatar": "Change Avatar"
+    },
+    "messages": {
+      "updateSuccess": "Profile updated successfully",
+      "updateError": "Error occurred while updating profile",
+      "loading": "Updating...",
+      "invalidEmail": "Invalid email format",
+      "requiredField": "This field is required",
+      "avatarUploadSuccess": "Avatar uploaded successfully",
+      "avatarUploadError": "Error uploading avatar"
+    },
+    "validation": {
+      "fullNameRequired": "Full name is required",
+      "emailRequired": "Email is required",
+      "emailInvalid": "Invalid email format",
+      "birthdateRequired": "Date of birth is required"
+    }
+  }
+}

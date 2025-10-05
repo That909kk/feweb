@@ -7,3 +7,5 @@ export * from './useAuthSession';
 export * from './useEmployeeBookings';
 export * from './useCategories';
 export * from './useRegister';
+export * from './useCustomer';
+export * from './useEmployeeProfile';

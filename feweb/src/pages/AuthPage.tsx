@@ -7,7 +7,43 @@ import type { UserRole } from '../types';
 const AuthPage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { user, login, selectRole, getRoles } = useAuth();
+  const { user, login, getRoles, isAuthenticated, isInitialized } = useAuth();
+  
+  // Redirect to dashboard if already authenticated
+  useEffect(() => {
+    if (isInitialized && isAuthenticated && user) {
+      console.log(`✅ User already authenticated, redirecting to dashboard for role: ${user.role}`);
+      switch (user.role) {
+        case 'ADMIN':
+          navigate('/admin/dashboard', { replace: true });
+          break;
+        case 'EMPLOYEE':
+          navigate('/employee/dashboard', { replace: true });
+          break;
+        case 'CUSTOMER':
+        default:
+          navigate('/customer/dashboard', { replace: true });
+          break;
+      }
+    }
+  }, [isInitialized, isAuthenticated, user, navigate]);
+
+  // Show loading while checking authentication status
+  if (!isInitialized) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Đang kiểm tra trạng thái đăng nhập...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render auth form if user is authenticated
+  if (isAuthenticated && user) {
+    return null; // Component will redirect in useEffect above
+  }
   
   const initialMode = searchParams.get('mode') === 'register' ? 'register' : 'login';
   const [mode, setMode] = useState<'login' | 'register' | 'selectRole'>(

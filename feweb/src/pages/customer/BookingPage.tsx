@@ -113,6 +113,7 @@ const BookingPage: React.FC = () => {
   const [addressSource, setAddressSource] = useState<'profile' | 'current' | 'custom'>('profile');
   const [customAddress, setCustomAddress] = useState('');
   const [currentLocationAddress, setCurrentLocationAddress] = useState('');
+  const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
   const [customTimeInput, setCustomTimeInput] = useState('');
   const [timeInputType, setTimeInputType] = useState<'preset' | 'custom'>('preset');
   const [quickDateOptions, setQuickDateOptions] = useState<Array<{date: string, label: string, dayOfWeek: string}>>([]);
@@ -299,7 +300,7 @@ const BookingPage: React.FC = () => {
     setBookingData(prev => ({ ...prev, [name]: value }));
   };
 
-  // Hàm lấy vị trí hiện tại
+  // Hàm lấy vị trí hiện tại với độ chính xác cao
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
       console.error('Trình duyệt không hỗ trợ định vị');
@@ -307,97 +308,276 @@ const BookingPage: React.FC = () => {
     }
 
     setIsLoadingLocation(true);
-    console.log("Getting current location...");
+    console.log("Getting current location with high accuracy...");
 
-    navigator.geolocation.getCurrentPosition(
-      async (position) => {
-        const { latitude, longitude } = position.coords;
-        console.log("Received coordinates:", latitude, longitude);
-        
-        // Lưu tọa độ cho bản đồ
-        setMapCoordinates({ lat: latitude, lng: longitude });
-        
-        // Lấy địa chỉ từ coordinates
-        const formattedAddress = await getAddressFromCoordinates(latitude, longitude);
-        
-        if (formattedAddress) {
-          setCurrentLocationAddress(formattedAddress);
-          setBookingData(prev => ({ ...prev, address: formattedAddress }));
-          setAddressSource('current');
+    // Cấu hình options cho độ chính xác cao
+    const geoOptions = {
+      enableHighAccuracy: true,      // Bật độ chính xác cao (sử dụng GPS nếu có)
+      timeout: 15000,               // Timeout 15 giây
+      maximumAge: 30000            // Cache vị trí trong 30 giây
+    };
+
+    let bestPosition: GeolocationPosition | null = null;
+    let attempts = 0;
+    const maxAttempts = 3;
+
+    const tryGetPosition = () => {
+      attempts++;
+      console.log(`Attempt ${attempts}/${maxAttempts} to get location`);
+
+      navigator.geolocation.getCurrentPosition(
+        async (position) => {
+          const { latitude, longitude, accuracy } = position.coords;
+          console.log(`Received coordinates: ${latitude}, ${longitude} (accuracy: ${accuracy}m)`);
           
-          // Tự động hiển thị bản đồ sau khi lấy được vị trí
-          setShowMap(true);
-        }
-      },
-      (error) => {
-        setIsLoadingLocation(false);
-        console.error('Lỗi định vị:', error);
-      }
-    );
+          // Kiểm tra độ chính xác
+          if (!bestPosition || position.coords.accuracy < bestPosition.coords.accuracy) {
+            bestPosition = position;
+            console.log(`New best position with accuracy: ${accuracy}m`);
+          }
+
+          // Nếu độ chính xác đã đủ tốt (< 50m) hoặc đã hết số lần thử, sử dụng kết quả tốt nhất
+          if (accuracy < 50 || attempts >= maxAttempts) {
+            console.log(`Using position with accuracy: ${bestPosition.coords.accuracy}m`);
+            
+            // Lưu tọa độ cho bản đồ
+            setMapCoordinates({ 
+              lat: bestPosition.coords.latitude, 
+              lng: bestPosition.coords.longitude 
+            });
+            
+            // Lấy địa chỉ từ coordinates
+            const formattedAddress = await getAddressFromCoordinates(
+              bestPosition.coords.latitude, 
+              bestPosition.coords.longitude
+            );
+            
+            if (formattedAddress) {
+              setCurrentLocationAddress(formattedAddress);
+              setLocationAccuracy(bestPosition.coords.accuracy);
+              setBookingData(prev => ({ ...prev, address: formattedAddress }));
+              setAddressSource('current');
+              
+              // Tự động hiển thị bản đồ sau khi lấy được vị trí
+              setShowMap(true);
+            }
+            
+            setIsLoadingLocation(false);
+          } else if (attempts < maxAttempts) {
+            // Thử lại nếu độ chính xác chưa đủ tốt
+            setTimeout(tryGetPosition, 2000);
+          }
+        },
+        (error) => {
+          console.error(`Geolocation error (attempt ${attempts}):`, error.message);
+          
+          // Xử lý các loại lỗi cụ thể
+          let errorMessage = 'Không thể xác định vị trí hiện tại';
+          switch (error.code) {
+            case error.PERMISSION_DENIED:
+              errorMessage = 'Bạn đã từ chối quyền truy cập vị trí. Vui lòng cho phép truy cập vị trí trong cài đặt trình duyệt.';
+              break;
+            case error.POSITION_UNAVAILABLE:
+              errorMessage = 'Thông tin vị trí không khả dụng. Vui lòng kiểm tra kết nối mạng và GPS.';
+              break;
+            case error.TIMEOUT:
+              errorMessage = 'Quá thời gian chờ xác định vị trí. Vui lòng thử lại.';
+              break;
+          }
+          
+          // Nếu có vị trí tốt nhất từ lần thử trước, sử dụng nó
+          if (bestPosition && attempts >= maxAttempts) {
+            console.log(`Using best available position with accuracy: ${bestPosition.coords.accuracy}m`);
+            setMapCoordinates({ 
+              lat: bestPosition.coords.latitude, 
+              lng: bestPosition.coords.longitude 
+            });
+            
+            getAddressFromCoordinates(bestPosition.coords.latitude, bestPosition.coords.longitude)
+              .then(formattedAddress => {
+                if (formattedAddress && bestPosition) {
+                  setCurrentLocationAddress(formattedAddress);
+                  setLocationAccuracy(bestPosition.coords.accuracy);
+                  setBookingData(prev => ({ ...prev, address: formattedAddress }));
+                  setAddressSource('current');
+                  setShowMap(true);
+                }
+              });
+          } else if (attempts < maxAttempts) {
+            // Thử lại với cấu hình ít nghiêm ngặt hơn
+            setTimeout(() => {
+              const fallbackOptions = {
+                enableHighAccuracy: false,
+                timeout: 10000,
+                maximumAge: 60000
+              };
+              
+              navigator.geolocation.getCurrentPosition(
+                async (position) => {
+                  console.log(`Fallback position: ${position.coords.latitude}, ${position.coords.longitude} (accuracy: ${position.coords.accuracy}m)`);
+                  bestPosition = position;
+                  tryGetPosition();
+                },
+                () => {
+                  attempts = maxAttempts; // Dừng thử
+                  tryGetPosition();
+                },
+                fallbackOptions
+              );
+            }, 1000);
+          }
+          
+          if (attempts >= maxAttempts && !bestPosition) {
+            setIsLoadingLocation(false);
+            alert(errorMessage);
+          }
+        },
+        geoOptions
+      );
+    };
+
+    tryGetPosition();
   };
 
-  // Hàm lấy địa chỉ từ coordinates (reverse geocoding)
+  // Hàm lấy địa chỉ từ coordinates (reverse geocoding) với nhiều nguồn
   const getAddressFromCoordinates = async (lat: number, lng: number) => {
     try {
       setIsLoadingLocation(true);
       
-      // Sử dụng Nominatim OpenStreetMap để lấy địa chỉ từ tọa độ
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&namedetails=1`
-      );
-      const data = await response.json();
-      console.log('Dữ liệu địa lý nhận được:', data);
+      // Thử nhiều service geocoding để có kết quả tốt nhất
+      const geocodingServices = [
+        // Service 1: Nominatim với cấu hình tối ưu cho Việt Nam
+        {
+          name: 'Nominatim',
+          url: `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1&accept-language=vi,en&countrycodes=vn`
+        },
+        // Service 2: Photon (alternative)
+        {
+          name: 'Photon',
+          url: `https://photon.komoot.io/reverse?lat=${lat}&lon=${lng}&lang=vi`
+        }
+      ];
+
+      let bestResult = null;
       
-      // Trích xuất thông tin địa chỉ chi tiết
-      const addressDetails = data.address || {};
+      // Thử từng service
+      for (const service of geocodingServices) {
+        try {
+          console.log(`Trying ${service.name} geocoding service...`);
+          const response = await fetch(service.url, {
+            headers: {
+              'User-Agent': 'BookingApp/1.0'
+            }
+          });
+          
+          if (!response.ok) continue;
+          
+          const data = await response.json();
+          console.log(`${service.name} geocoding data:`, data);
+          
+          if (service.name === 'Nominatim' && data.address) {
+            bestResult = { service: service.name, data };
+            break; // Ưu tiên Nominatim
+          } else if (service.name === 'Photon' && data.features && data.features[0]) {
+            bestResult = { service: service.name, data: data.features[0] };
+            break;
+          }
+        } catch (error) {
+          console.warn(`${service.name} geocoding failed:`, error);
+          continue;
+        }
+      }
+
+      if (!bestResult) {
+        throw new Error('All geocoding services failed');
+      }
+
+      const { service, data } = bestResult;
+      console.log(`Using ${service} result:`, data);
       
-      // Tạo đối tượng chứa thông tin chi tiết
+      // Xử lý dữ liệu theo từng service
+      let addressDetails: any = {};
+      
+      if (service === 'Nominatim') {
+        addressDetails = data.address || {};
+      } else if (service === 'Photon') {
+        const props = data.properties || {};
+        addressDetails = {
+          house_number: props.housenumber,
+          road: props.street,
+          neighbourhood: props.district,
+          ward: props.suburb,
+          county: props.county,
+          city: props.city,
+          state: props.state,
+        };
+      }
+      
+      // Tạo đối tượng chứa thông tin chi tiết với nhiều fallback options
       const detailedAddress = {
-        houseNumber: addressDetails.house_number || '',
-        street: addressDetails.road || addressDetails.street || '',
-        neighbourhood: addressDetails.neighbourhood || addressDetails.suburb || '',
-        ward: addressDetails.ward || addressDetails.quarter || addressDetails.village || '',
-        district: addressDetails.county || addressDetails.state_district || addressDetails.city_district || '',
-        city: addressDetails.city || addressDetails.town || '',
+        houseNumber: addressDetails.house_number || addressDetails.housenumber || '',
+        street: addressDetails.road || addressDetails.street || addressDetails.way || '',
+        neighbourhood: addressDetails.neighbourhood || addressDetails.suburb || addressDetails.residential || '',
+        ward: addressDetails.ward || addressDetails.quarter || addressDetails.village || addressDetails.hamlet || '',
+        district: addressDetails.county || addressDetails.state_district || addressDetails.city_district || addressDetails.district || '',
+        city: addressDetails.city || addressDetails.town || addressDetails.municipality || '',
         state: addressDetails.state || addressDetails.province || '',
+        country: addressDetails.country || 'Việt Nam',
       };
       
-      // Tạo địa chỉ có định dạng để hiển thị chi tiết (format: Số nhà Tên đường, Phường/Xã, Quận/Huyện, Tỉnh/Thành phố)
+      console.log('Detailed address extracted:', detailedAddress);
+      
+      // Tạo địa chỉ có định dạng chuẩn Việt Nam (Số nhà Tên đường, Phường/Xã, Quận/Huyện, Thành phố)
       let formattedAddress = '';
       
-      // Số nhà + Tên đường
+      // Số nhà + Tên đường (ưu tiên có số nhà)
       if (detailedAddress.houseNumber && detailedAddress.street) {
-        formattedAddress += `${detailedAddress.houseNumber} ${detailedAddress.street}, `;
+        formattedAddress += `${detailedAddress.houseNumber} ${detailedAddress.street}`;
       } else if (detailedAddress.street) {
-        formattedAddress += `${detailedAddress.street}, `;
-      }
-      
-      // Phường/Xã/Ward
-      if (detailedAddress.ward) {
-        formattedAddress += `${detailedAddress.ward}, `;
+        formattedAddress += detailedAddress.street;
       } else if (detailedAddress.neighbourhood) {
-        formattedAddress += `${detailedAddress.neighbourhood}, `;
+        formattedAddress += detailedAddress.neighbourhood;
       }
       
-      // Quận/Huyện/District
+      // Phường/Xã (ưu tiên ward)
+      if (detailedAddress.ward) {
+        formattedAddress += formattedAddress ? `, ${detailedAddress.ward}` : detailedAddress.ward;
+      } else if (detailedAddress.neighbourhood && detailedAddress.neighbourhood !== formattedAddress) {
+        formattedAddress += formattedAddress ? `, ${detailedAddress.neighbourhood}` : detailedAddress.neighbourhood;
+      }
+      
+      // Quận/Huyện
       if (detailedAddress.district) {
-        formattedAddress += `${detailedAddress.district}, `;
+        formattedAddress += formattedAddress ? `, ${detailedAddress.district}` : detailedAddress.district;
       }
       
-      // Thành phố/City
+      // Thành phố
       if (detailedAddress.city) {
-        formattedAddress += `${detailedAddress.city}, `;
+        formattedAddress += formattedAddress ? `, ${detailedAddress.city}` : detailedAddress.city;
       }
       
-      // Tỉnh/State/Province
-      if (detailedAddress.state) {
-        formattedAddress += detailedAddress.state;
+      // Tỉnh/Thành phố (nếu khác với city)
+      if (detailedAddress.state && detailedAddress.state !== detailedAddress.city) {
+        formattedAddress += formattedAddress ? `, ${detailedAddress.state}` : detailedAddress.state;
       }
       
-      // Nếu không có đủ thông tin chi tiết, sử dụng display_name
-      if (!formattedAddress.trim()) {
-        formattedAddress = data.display_name || 'Không xác định được địa chỉ';
+      // Làm sạch địa chỉ (loại bỏ dấu phẩy thừa và khoảng trắng)
+      formattedAddress = formattedAddress
+        .replace(/,\s*,/g, ',')      // Loại bỏ dấu phẩy kép
+        .replace(/^\s*,\s*/, '')     // Loại bỏ dấu phẩy đầu
+        .replace(/\s*,\s*$/, '')     // Loại bỏ dấu phẩy cuối
+        .trim();
+      
+      // Nếu không có đủ thông tin chi tiết, sử dụng display_name làm fallback
+      if (!formattedAddress) {
+        if (service === 'Nominatim') {
+          formattedAddress = data.display_name || 'Không xác định được địa chỉ';
+        } else if (service === 'Photon') {
+          formattedAddress = data.properties?.name || data.properties?.street || 'Không xác định được địa chỉ';
+        }
       }
+      
+      console.log('Final formatted address:', formattedAddress);
       
       return formattedAddress;
     } catch (error) {
@@ -1320,18 +1500,6 @@ const BookingPage: React.FC = () => {
               {/* Hiển thị input tương ứng với lựa chọn */}
               {addressSource === 'current' && (
                 <div className="space-y-4">
-                  <div className="bg-yellow-50 p-4 rounded-lg">
-                    <div className="flex items-start">
-                      <NavigationIcon className="w-5 h-5 text-yellow-600 mr-2 mt-0.5" />
-                      <div>
-                        <h4 className="font-medium text-yellow-900 mb-1">Lấy vị trí hiện tại</h4>
-                        <p className="text-sm text-yellow-700">
-                          Nhấn "Lấy vị trí" để sử dụng GPS xác định địa chỉ hiện tại của bạn.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                  
                   <button
                     type="button"
                     onClick={getCurrentLocation}
@@ -1352,10 +1520,15 @@ const BookingPage: React.FC = () => {
                   </button>
                   
                   {currentLocationAddress && (
-                    <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                      <p className="text-sm text-green-800">
-                        <strong>Địa chỉ hiện tại:</strong> {currentLocationAddress}
-                      </p>
+                    <div className="space-y-3">
+                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
+                        <p className="text-sm text-green-800">
+                          <strong>Địa chỉ hiện tại:</strong> {currentLocationAddress}
+                        </p>
+
+                      </div>
+                      
+
                     </div>
                   )}
                   

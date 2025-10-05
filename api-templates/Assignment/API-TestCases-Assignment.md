@@ -33,6 +33,8 @@ All endpoints require:
 2. **POST /assignments/{assignmentId}/cancel** - Cancel Assignment
 3. **GET /available-bookings** - Get Available Bookings
 4. **POST /booking-details/{detailId}/accept** - Accept Booking Detail
+5. **POST /assignments/{assignmentId}/check-in** - Check In Assignment
+6. **POST /assignments/{assignmentId}/check-out** - Check Out Assignment
 
 ---
 
@@ -391,16 +393,285 @@ All endpoints require:
 
 ---
 
+## POST /assignments/{assignmentId}/check-in - Check In Assignment
+
+### Test Case 12: Successful Check-In Within Time Window
+- **Test Case ID**: TC_EMP_ASSIGN_012
+- **Description**: Verify employee can check in to assignment within the allowed time window (10 minutes before to 5 minutes after booking time)
+- **Preconditions**:
+  - Assignment exists with ASSIGNED status
+  - Current time is within check-in window (booking time ±10/+5 minutes)
+  - Employee Jane Smith is assigned to this booking
+  - Booking time is September 22, 2025, 14:00
+- **Input**:
+  - **Path Parameter**: assignmentId = "as000001-0000-0000-0000-000000000002"
+  - **Request Body**:
+    ```json
+    {
+      "employeeId": "e1000001-0000-0000-0000-000000000001"
+    }
+    ```
+  - **Headers**: 
+    ```
+    Authorization: Bearer <jane_smith_employee_token>
+    Content-Type: application/json
+    ```
+- **Expected Output**:
+  ```json
+  {
+    "success": true,
+    "message": "Điểm danh bắt đầu công việc thành công",
+    "data": {
+      "assignmentId": "as000001-0000-0000-0000-000000000002",
+      "status": "IN_PROGRESS",
+      "checkInTime": "2025-09-22T13:55:00+07:00",
+      "checkOutTime": null,
+      "bookingDetail": {
+        "detailId": "bd000001-0000-0000-0000-000000000002",
+        "serviceName": "Dọn dẹp theo giờ",
+        "quantity": 1,
+        "price": 50000,
+        "duration": "2.00"
+      },
+      "employee": {
+        "employeeId": "e1000001-0000-0000-0000-000000000001",
+        "fullName": "Jane Smith"
+      },
+      "booking": {
+        "bookingId": "BK000002",
+        "bookingTime": "2025-09-22T14:00:00+07:00",
+        "customerName": "Jane Smith Customer"
+      }
+    }
+  }
+  ```
+- **Status Code**: 200 OK
+
+### Test Case 13: Check-In Outside Time Window
+- **Test Case ID**: TC_EMP_ASSIGN_013
+- **Description**: Verify check-in is rejected when attempted outside the allowed time window
+- **Preconditions**:
+  - Assignment exists with ASSIGNED status
+  - Current time is outside check-in window (more than 10 minutes before or 5 minutes after booking time)
+  - Booking time is September 22, 2025, 14:00
+  - Current time is September 22, 2025, 13:40 (20 minutes early)
+- **Input**:
+  - **Path Parameter**: assignmentId = "as000001-0000-0000-0000-000000000002"
+  - **Request Body**:
+    ```json
+    {
+      "employeeId": "e1000001-0000-0000-0000-000000000001"
+    }
+    ```
+- **Expected Output**:
+  ```json
+  {
+    "success": false,
+    "message": "Chỉ có thể điểm danh từ 13:50 22/09/2025 đến 14:05 22/09/2025"
+  }
+  ```
+- **Status Code**: 400 Bad Request
+
+### Test Case 14: Check-In Already Completed
+- **Test Case ID**: TC_EMP_ASSIGN_014
+- **Description**: Verify employee cannot check in twice to the same assignment
+- **Preconditions**:
+  - Assignment already has check-in time recorded
+  - Assignment status is IN_PROGRESS
+- **Input**:
+  - **Path Parameter**: assignmentId = "as000001-0000-0000-0000-000000000001"
+  - **Request Body**:
+    ```json
+    {
+      "employeeId": "e1000001-0000-0000-0000-000000000002"
+    }
+    ```
+- **Expected Output**:
+  ```json
+  {
+    "success": false,
+    "message": "Đã điểm danh cho công việc này rồi"
+  }
+  ```
+- **Status Code**: 400 Bad Request
+
+### Test Case 15: Check-In Wrong Assignment Status
+- **Test Case ID**: TC_EMP_ASSIGN_015
+- **Description**: Verify check-in is rejected for assignments not in ASSIGNED status
+- **Preconditions**:
+  - Assignment exists with COMPLETED status (not ASSIGNED)
+  - Employee tries to check in to completed assignment
+- **Input**:
+  - **Path Parameter**: assignmentId = "as000001-0000-0000-0000-000000000001"
+  - **Request Body**:
+    ```json
+    {
+      "employeeId": "e1000001-0000-0000-0000-000000000002"
+    }
+    ```
+- **Expected Output**:
+  ```json
+  {
+    "success": false,
+    "message": "Chỉ có thể điểm danh cho công việc đang được phân công"
+  }
+  ```
+- **Status Code**: 400 Bad Request
+
+---
+
+## POST /assignments/{assignmentId}/check-out - Check Out Assignment
+
+### Test Case 16: Successful Check-Out After Work Completion
+- **Test Case ID**: TC_EMP_ASSIGN_016
+- **Description**: Verify employee can successfully check out from assignment after completing work
+- **Preconditions**:
+  - Assignment exists with IN_PROGRESS status
+  - Assignment has check-in time recorded
+  - Employee Jane Smith is working on this assignment
+- **Input**:
+  - **Path Parameter**: assignmentId = "as000001-0000-0000-0000-000000000002"
+  - **Request Body**:
+    ```json
+    {
+      "employeeId": "e1000001-0000-0000-0000-000000000001"
+    }
+    ```
+  - **Headers**: 
+    ```
+    Authorization: Bearer <jane_smith_employee_token>
+    Content-Type: application/json
+    ```
+- **Expected Output**:
+  ```json
+  {
+    "success": true,
+    "message": "Chấm công kết thúc công việc thành công",
+    "data": {
+      "assignmentId": "as000001-0000-0000-0000-000000000002",
+      "status": "COMPLETED",
+      "checkInTime": "2025-09-22T13:55:00+07:00",
+      "checkOutTime": "2025-09-22T16:05:00+07:00",
+      "bookingDetail": {
+        "detailId": "bd000001-0000-0000-0000-000000000002",
+        "serviceName": "Dọn dẹp theo giờ",
+        "quantity": 1,
+        "price": 50000,
+        "duration": "2.00"
+      },
+      "employee": {
+        "employeeId": "e1000001-0000-0000-0000-000000000001",
+        "fullName": "Jane Smith"
+      },
+      "booking": {
+        "bookingId": "BK000002",
+        "bookingTime": "2025-09-22T14:00:00+07:00",
+        "customerName": "Jane Smith Customer"
+      }
+    }
+  }
+  ```
+- **Status Code**: 200 OK
+
+### Test Case 17: Check-Out Without Check-In
+- **Test Case ID**: TC_EMP_ASSIGN_017
+- **Description**: Verify check-out is rejected for assignments that haven't been checked in
+- **Preconditions**:
+  - Assignment exists with ASSIGNED status (not checked in yet)
+  - No check-in time recorded
+- **Input**:
+  - **Path Parameter**: assignmentId = "as000001-0000-0000-0000-000000000003"
+  - **Request Body**:
+    ```json
+    {
+      "employeeId": "e1000001-0000-0000-0000-000000000001"
+    }
+    ```
+- **Expected Output**:
+  ```json
+  {
+    "success": false,
+    "message": "Chỉ có thể chấm công cho công việc đang thực hiện"
+  }
+  ```
+- **Status Code**: 400 Bad Request
+
+### Test Case 18: Double Check-Out Prevention
+- **Test Case ID**: TC_EMP_ASSIGN_018
+- **Description**: Verify employee cannot check out twice from the same assignment
+- **Preconditions**:
+  - Assignment already has check-out time recorded
+  - Assignment status is COMPLETED
+- **Input**:
+  - **Path Parameter**: assignmentId = "as000001-0000-0000-0000-000000000001"
+  - **Request Body**:
+    ```json
+    {
+      "employeeId": "e1000001-0000-0000-0000-000000000002"
+    }
+    ```
+- **Expected Output**:
+  ```json
+  {
+    "success": false,
+    "message": "Đã chấm công kết thúc công việc này rồi"
+  }
+  ```
+- **Status Code**: 400 Bad Request
+
+### Test Case 19: Booking Status Update After All Assignments Complete
+- **Test Case ID**: TC_EMP_ASSIGN_019
+- **Description**: Verify booking status updates to COMPLETED when all assigned employees check out
+- **Preconditions**:
+  - Multi-staff booking with multiple assignments
+  - This is the last employee to check out
+  - All other employees have already completed their assignments
+- **Input**:
+  - **Path Parameter**: assignmentId = "as000001-0000-0000-0000-000000000010"
+  - **Request Body**:
+    ```json
+    {
+      "employeeId": "e1000001-0000-0000-0000-000000000002"
+    }
+    ```
+- **Expected Output**:
+  ```json
+  {
+    "success": true,
+    "message": "Chấm công kết thúc công việc thành công",
+    "data": {
+      "assignmentId": "as000001-0000-0000-0000-000000000010",
+      "status": "COMPLETED",
+      "checkInTime": "2025-09-22T09:00:00+07:00",
+      "checkOutTime": "2025-09-22T12:30:00+07:00",
+      "bookingDetail": {
+        "detailId": "bd000001-0000-0000-0000-000000000010",
+        "serviceName": "Tổng vệ sinh",
+        "quantity": 3,
+        "price": 100000
+      },
+      "booking": {
+        "bookingId": "BK000003",
+        "bookingTime": "2025-09-22T09:00:00+07:00",
+        "status": "COMPLETED"
+      }
+    }
+  }
+  ```
+- **Status Code**: 200 OK
+
+---
+
 ## Database Integration Test Scenarios
 
-### Test Case 12: Real Database Integration
-- **Test Case ID**: TC_EMP_ASSIGN_012
+### Test Case 20: Real Database Integration
+- **Test Case ID**: TC_EMP_ASSIGN_020
 - **Description**: Verify integration with actual database data from housekeeping_service_v8.sql
 - **Covered Data**:
   - **Employees**: Jane Smith (e1000001-0000-0000-0000-000000000001), Bob Wilson (e1000001-0000-0000-0000-000000000002)
   - **Customers**: John Doe, Mary Jones, Jane Smith Customer
   - **Services**: Dọn dẹp theo giờ (50,000 VND), Tổng vệ sinh (100,000 VND), Vệ sinh máy lạnh (150,000 VND)
-  - **Working Zones**: Real Ho Chi Minh City districts (Tân Phú, Tân Bình, Gò Vấp)
+  - **Working Zones**: Real Ho Chi Minh City wards (Tây Thạnh)
   - **Addresses**: Actual street addresses in Ho Chi Minh City
   - **Existing Assignments**: Bob's completed BK000001, Jane's pending BK000002
 - **Validation Points**:
@@ -424,4 +695,4 @@ All endpoints require:
   - Zone-based assignment optimization
   - Multi-staff service coordination
   - Conflict detection and prevention
-- **Geographic Context**: Ho Chi Minh City districts and real addresses for location-based testing
+- **Geographic Context**: Ho Chi Minh City wards and real addresses for location-based testing

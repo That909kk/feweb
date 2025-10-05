@@ -1,6 +1,69 @@
 import { api } from './client';
 import type { ApiResponse } from './client';
 
+// Employee Profile interface based on API response
+interface EmployeeAccount {
+  accountId: string;
+  username: string;
+  password: string;
+  phoneNumber: string;
+  status: string;
+  isPhoneVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+  lastLogin: string;
+  roles: Array<{
+    roleId: number;
+    roleName: string;
+  }>;
+}
+
+interface EmployeeProfile {
+  employeeId: string;
+  account: EmployeeAccount;
+  avatar: string;
+  fullName: string;
+  isMale: boolean;
+  email: string;
+  birthdate: string;
+  hiredDate: string;
+  skills: string[];
+  bio: string;
+  rating: string | null;
+  employeeStatus: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Update Employee Profile Request interface
+interface UpdateEmployeeProfileRequest {
+  avatar: string;
+  fullName: string;
+  isMale: boolean;
+  email: string;
+  birthdate: string;
+  hiredDate: string;
+  skills: string[];
+  bio: string;
+  rating: string | null;
+  employeeStatus: string;
+}
+
+// Update Employee Profile Response interface
+interface UpdateEmployeeProfileResponse {
+  employeeId: string;
+  avatar: string;
+  fullName: string;
+  isMale: boolean;
+  email: string;
+  birthdate: string;
+  hiredDate: string;
+  skills: string[];
+  bio: string;
+  rating: string;
+  employeeStatus: string;
+}
+
 // Assignment interface dựa trên API response thực tế
 interface Assignment {
   assignmentId: string;
@@ -290,11 +353,97 @@ export const acceptBookingDetailApi = async (
   }
 };
 
+// Get employee profile by ID
+export const getEmployeeProfileApi = async (employeeId: string): Promise<ApiResponse<EmployeeProfile>> => {
+  try {
+    // Only log in development
+    if (import.meta.env.DEV) {
+      console.log(`[API] Get Employee Profile Request:`, {
+        employeeId,
+        url: `/employee/${employeeId}`
+      });
+    }
+    
+    const response = await api.get<ApiResponse<EmployeeProfile>>(`/employee/${employeeId}`);
+    
+    // Only log in development
+    if (import.meta.env.DEV) {
+      console.log('[API] Get Employee Profile Response:', response.data);
+    }
+    return response.data;
+  } catch (error: any) {
+    console.error(`[API] Error fetching employee profile ${employeeId}:`, {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message
+    });
+    
+    // Throw error with better message
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else if (error.response?.status === 404) {
+      throw new Error('Không tìm thấy thông tin nhân viên');
+    } else if (error.response?.status === 403) {
+      throw new Error('Bạn không có quyền xem thông tin nhân viên này');
+    } else {
+      throw new Error(error.message || 'Có lỗi xảy ra khi tải thông tin nhân viên');
+    }
+  }
+};
+
+// Update employee profile
+export const updateEmployeeProfileApi = async (
+  employeeId: string, 
+  profileData: UpdateEmployeeProfileRequest
+): Promise<UpdateEmployeeProfileResponse> => {
+  try {
+    // Only log in development
+    if (import.meta.env.DEV) {
+      console.log(`[API] Update Employee Profile Request:`, {
+        employeeId,
+        profileData,
+        url: `/employee/${employeeId}`
+      });
+    }
+    
+    const response = await api.put<UpdateEmployeeProfileResponse>(`/employee/${employeeId}`, profileData);
+    
+    // Only log in development
+    if (import.meta.env.DEV) {
+      console.log('[API] Update Employee Profile Response:', response.data);
+    }
+    return response.data;
+  } catch (error: any) {
+    console.error(`[API] Error updating employee profile ${employeeId}:`, {
+      status: error.response?.status,
+      statusText: error.response?.statusText,
+      data: error.response?.data,
+      message: error.message
+    });
+    
+    // Throw error with better message
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else if (error.response?.status === 400) {
+      throw new Error('Dữ liệu không hợp lệ. Vui lòng kiểm tra lại thông tin.');
+    } else if (error.response?.status === 403) {
+      throw new Error('Bạn không có quyền cập nhật thông tin nhân viên này');
+    } else if (error.response?.status === 404) {
+      throw new Error('Không tìm thấy thông tin nhân viên');
+    } else {
+      throw new Error(error.message || 'Có lỗi xảy ra khi cập nhật thông tin nhân viên');
+    }
+  }
+};
+
 export default {
   getEmployeeAssignmentsApi,
   updateAssignmentStatusApi,
   getEmployeeStatisticsApi,
   cancelAssignmentApi,
   getAvailableBookingsApi,
-  acceptBookingDetailApi
+  acceptBookingDetailApi,
+  getEmployeeProfileApi,
+  updateEmployeeProfileApi
 };

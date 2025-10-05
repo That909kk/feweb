@@ -29,8 +29,8 @@ All endpoints require:
 ## Database Test Data
 Based on housekeeping_service_v5.sql:
 - **Services**: 
-  - Service ID 1: "Dọn dẹp theo giờ" (50,000đ/hour, 2.0 hours, recommended 1 staff)
-  - Service ID 2: "Tổng vệ sinh" (400,000đ/package, 4.0 hours, recommended 3 staff)
+  - Service ID 1: "Dọn dẹp theo giờ" (50,000đ/hour, 2.0 hours)
+  - Service ID 2: "Tổng vệ sinh" (400,000đ/package, 4.0 hours)
 - **Units**: hour, m2, package
 - **Status**: Only active services are returned
 - **Permissions**: "service.view" permission required for all endpoints
@@ -53,100 +53,50 @@ Based on housekeeping_service_v5.sql:
     ```
     Authorization: Bearer <valid_customer_token>
     ```
-- **Output**:
+- **Expected Output**:
   ```json
   {
     "success": true,
     "message": "Lấy danh sách dịch vụ thành công",
     "data": [
-        {
-            "serviceId": 8,
-            "name": "Đi chợ hộ",
-            "description": "Mua sắm và giao hàng tận nơi theo danh sách của bạn.",
-            "basePrice": 40000.00,
-            "unit": "Lần",
-            "estimatedDurationHours": 1.00,
-            "recommendedStaff": 1,
-            "iconUrl": "https://res.cloudinary.com/dkzemgit8/image/upload/v1757601712/shopping_etf5iz.png",
-            "isActive": true
-        },
-        {
-            "serviceId": 1,
-            "name": "Dọn dẹp theo giờ",
-            "description": "Lau dọn, hút bụi, làm sạch các bề mặt cơ bản trong nhà. Phù hợp cho nhu cầu duy trì vệ sinh hàng tuần.",
-            "basePrice": 50000.00,
-            "unit": "Giờ",
-            "estimatedDurationHours": 2.00,
-            "recommendedStaff": 1,
-            "iconUrl": "https://res.cloudinary.com/dkzemgit8/image/upload/v1757599899/Cleaning_Clock_z29juh.png",
-            "isActive": true
-        },
-        {
-            "serviceId": 6,
-            "name": "Giặt hấp cao cấp",
-            "description": "Giặt khô cho các loại vải cao cấp như vest, áo dài, lụa.",
-            "basePrice": 120000.00,
-            "unit": "Bộ",
-            "estimatedDurationHours": 48.00,
-            "recommendedStaff": 1,
-            "iconUrl": "https://res.cloudinary.com/dkzemgit8/image/upload/v1757601414/vest_2_kfigzg.png",
-            "isActive": true
-        },
-        {
-            "serviceId": 5,
-            "name": "Giặt sấy theo kg",
-            "description": "Giặt và sấy khô quần áo thông thường, giao nhận tận nơi.",
-            "basePrice": 30000.00,
-            "unit": "Kg",
-            "estimatedDurationHours": 24.00,
-            "recommendedStaff": 1,
-            "iconUrl": "https://res.cloudinary.com/dkzemgit8/image/upload/v1757601210/shirt_nmee0d.png",
-            "isActive": true
-        },
-        {
-            "serviceId": 7,
-            "name": "Nấu ăn gia đình",
-            "description": "Đi chợ (chi phí thực phẩm tính riêng) và chuẩn bị bữa ăn cho gia đình theo thực đơn yêu cầu.",
-            "basePrice": 60000.00,
-            "unit": "Giờ",
-            "estimatedDurationHours": 2.50,
-            "recommendedStaff": 2,
-            "iconUrl": "https://res.cloudinary.com/dkzemgit8/image/upload/v1757601546/pan_ysmoql.png",
-            "isActive": true
-        },
-        {
-            "serviceId": 2,
-            "name": "Tổng vệ sinh",
-            "description": "Làm sạch sâu toàn diện, bao gồm các khu vực khó tiếp cận, trần nhà, lau cửa kính. Thích hợp cho nhà mới hoặc dọn dẹp theo mùa.",
-            "basePrice": 100000.00,
-            "unit": "Gói",
-            "estimatedDurationHours": 2.00,
-            "recommendedStaff": 3,
-            "iconUrl": "https://res.cloudinary.com/dkzemgit8/image/upload/v1757599581/house_cleaning_nob_umewqf.png",
-            "isActive": true
-        },
-        {
-            "serviceId": 4,
-            "name": "Vệ sinh máy lạnh",
-            "description": "Bảo trì, làm sạch dàn nóng và dàn lạnh, bơm gas nếu cần.",
-            "basePrice": 150000.00,
-            "unit": "Máy",
-            "estimatedDurationHours": 1.00,
-            "recommendedStaff": 1,
-            "iconUrl": "https://res.cloudinary.com/dkzemgit8/image/upload/v1757600733/cooler_rnyppn.png",
-            "isActive": true
-        },
-        {
-            "serviceId": 3,
-            "name": "Vệ sinh Sofa - Nệm - Rèm",
-            "description": "Giặt sạch và khử khuẩn Sofa, Nệm, Rèm cửa bằng máy móc chuyên dụng.",
-            "basePrice": 300000.00,
-            "unit": "Gói",
-            "estimatedDurationHours": 3.00,
-            "recommendedStaff": 2,
-            "iconUrl": "https://res.cloudinary.com/dkzemgit8/image/upload/v1757600057/sofa_bed_vkkjz8.png",
-            "isActive": true
-        }
+      {
+        "serviceId": 1,
+        "name": "Dọn dẹp theo giờ",
+        "description": "Lau dọn, hút bụi, làm sạch các bề mặt cơ bản trong nhà.",
+        "basePrice": 50000,
+        "unit": "hour",
+        "estimatedDurationHours": 2.0,
+        "isActive": true
+      },
+      {
+        "serviceId": 2,
+        "name": "Tổng vệ sinh",
+        "description": "Làm sạch sâu toàn bộ căn nhà, bao gồm lau kính, vệ sinh các khu vực khó tiếp cận.",
+        "basePrice": 400000,
+        "unit": "package",
+        "estimatedDurationHours": 4.0,
+        "isActive": true
+      }
+    ]
+  }
+  ```
+- **Status Code**: `200 OK`
+
+- **Actual Output**:
+  ```json
+  {
+    "success": true,
+    "message": "Lấy danh sách dịch vụ thành công",
+    "data": [
+      {
+        "serviceId": 1,
+        "name": "Dọn dẹp theo giờ",
+        "description": "Lau dọn, hút bụi, làm sạch các bề mặt cơ bản trong nhà.",
+        "basePrice": 50000,
+        "unit": "hour",
+        "estimatedDurationHours": 2.0,
+        "isActive": true
+      }
     ]
   }
   ```
@@ -205,22 +155,41 @@ Based on housekeeping_service_v5.sql:
     ```
     Authorization: Bearer <valid_customer_token>
     ```
-- **Output**:
+- **Expected Output**:
   ```json
   {
     "success": true,
     "message": "Lấy thông tin dịch vụ thành công",
     "data": {
-        "serviceId": 1,
-        "name": "Dọn dẹp theo giờ",
-        "description": "Lau dọn, hút bụi, làm sạch các bề mặt cơ bản trong nhà. Phù hợp cho nhu cầu duy trì vệ sinh hàng tuần.",
-        "basePrice": 50000.00,
-        "unit": "Giờ",
-        "estimatedDurationHours": 2.00,
-        "iconUrl": "https://res.cloudinary.com/dkzemgit8/image/upload/v1757599899/Cleaning_Clock_z29juh.png",
-        "isActive": true,
-        "formattedPrice": "50,000đ/Giờ",
-        "formattedDuration": "2 giờ 0 phút"
+      "serviceId": 1,
+      "name": "Dọn dẹp theo giờ",
+      "description": "Lau dọn, hút bụi, làm sạch các bề mặt cơ bản trong nhà.",
+      "basePrice": 50000,
+      "unit": "hour",
+      "estimatedDurationHours": 2.0,
+      "isActive": true,
+      "formattedPrice": "50,000đ/giờ",
+      "formattedDuration": "2 giờ"
+    }
+  }
+  ```
+- **Status Code**: `200 OK`
+
+- **Actual Output**:
+  ```json
+  {
+    "success": true,
+    "message": "Lấy thông tin dịch vụ thành công",
+    "data": {
+      "serviceId": 1,
+      "name": "Dọn dẹp theo giờ",
+      "description": "Lau dọn, hút bụi, làm sạch các bề mặt cơ bản trong nhà.",
+      "basePrice": 50000,
+      "unit": "hour",
+      "estimatedDurationHours": 2.0,
+      "isActive": true,
+      "formattedPrice": "50,000đ/giờ",
+      "formattedDuration": "2 giờ"
     }
   }
   ```
@@ -243,7 +212,17 @@ Based on housekeeping_service_v5.sql:
     ```
     Authorization: Bearer <valid_customer_token>
     ```
-- **Output**:
+- **Expected Output**:
+  ```json
+  {
+    "success": false,
+    "message": "Không tìm thấy dịch vụ hoặc dịch vụ đã ngừng hoạt động",
+    "data": null
+  }
+  ```
+- **Status Code**: `404 Not Found`
+
+- **Actual Output**:
   ```json
   {
     "success": false,
@@ -272,23 +251,41 @@ Based on housekeeping_service_v5.sql:
     ```
     Authorization: Bearer <valid_customer_token>
     ```
-- **Output**:
+- **Expected Output**:
   ```json
   {
     "success": true,
     "message": "Tìm thấy 1 dịch vụ phù hợp",
     "data": [
-        {
-            "serviceId": 1,
-            "name": "Dọn dẹp theo giờ",
-            "description": "Lau dọn, hút bụi, làm sạch các bề mặt cơ bản trong nhà. Phù hợp cho nhu cầu duy trì vệ sinh hàng tuần.",
-            "basePrice": 50000.00,
-            "unit": "Giờ",
-            "estimatedDurationHours": 2.00,
-            "recommendedStaff": 1,
-            "iconUrl": "https://res.cloudinary.com/dkzemgit8/image/upload/v1757599899/Cleaning_Clock_z29juh.png",
-            "isActive": true
-        }
+      {
+        "serviceId": 1,
+        "name": "Dọn dẹp theo giờ",
+        "description": "Lau dọn, hút bụi, làm sạch các bề mặt cơ bản trong nhà.",
+        "basePrice": 50000,
+        "unit": "hour",
+        "estimatedDurationHours": 2.0,
+        "isActive": true
+      }
+    ]
+  }
+  ```
+- **Status Code**: `200 OK`
+
+- **Actual Output**:
+  ```json
+  {
+    "success": true,
+    "message": "Tìm thấy 1 dịch vụ phù hợp",
+    "data": [
+      {
+        "serviceId": 1,
+        "name": "Dọn dẹp theo giờ",
+        "description": "Lau dọn, hút bụi, làm sạch các bề mặt cơ bản trong nhã.",
+        "basePrice": 50000,
+        "unit": "hour",
+        "estimatedDurationHours": 2.0,
+        "isActive": true
+      }
     ]
   }
   ```
@@ -311,7 +308,17 @@ Based on housekeeping_service_v5.sql:
     ```
     Authorization: Bearer <valid_customer_token>
     ```
-- **Output**:
+- **Expected Output**:
+  ```json
+  {
+    "success": true,
+    "message": "Không tìm thấy dịch vụ nào phù hợp với từ khóa: nonexistent",
+    "data": []
+  }
+  ```
+- **Status Code**: `200 OK`
+
+- **Actual Output**:
   ```json
   {
     "success": true,
@@ -339,14 +346,26 @@ Based on housekeeping_service_v5.sql:
     ```
     Authorization: Bearer <valid_customer_token>
     ```
-- **Output**:
+- **Expected Output**:
   ```json
   {
-    "data": {
-        "totalServices": 8
-    },
     "success": true,
-    "message": "Lấy số lượng dịch vụ thành công"
+    "message": "Lấy số lượng dịch vụ thành công",
+    "data": {
+      "totalServices": 2
+    }
+  }
+  ```
+- **Status Code**: `200 OK`
+
+- **Actual Output**:
+  ```json
+  {
+    "success": true,
+    "message": "Lấy số lượng dịch vụ thành công",
+    "data": {
+      "totalServices": 2
+    }
   }
   ```
 - **Status Code**: `200 OK`
@@ -361,7 +380,17 @@ Based on housekeeping_service_v5.sql:
   - **Method**: `GET`
   - **URL**: `/api/v1/customer/services`
   - No Authorization header
-- **Output**:
+- **Expected Output**:
+  ```json
+  {
+    "success": false,
+    "message": "Token không hợp lệ",
+    "data": null
+  }
+  ```
+- **Status Code**: `400 Bad Request`
+
+- **Actual Output**:
   ```json
   {
     "success": false,
@@ -374,7 +403,7 @@ Based on housekeeping_service_v5.sql:
 ---
 
 ## Notes
-- **Test Environment**: Database should be configured with test data including services from housekeeping_service_v8.sql.
+- **Test Environment**: Database should be configured with test data including services from housekeeping_service_v5.sql.
 - **Authentication**: All endpoints require valid JWT tokens.
 - **Permission**: Users must have "service.view" permission to access these endpoints.
 - **Service Status**: Only active services (isActive = true) are returned.

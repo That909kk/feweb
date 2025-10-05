@@ -76,23 +76,56 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Load auth data from localStorage on mount
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    const storedRole = localStorage.getItem('selectedRole');
-    const storedToken = localStorage.getItem('accessToken');
-    
-    if (storedUser && storedRole && storedToken) {
-      try {
-        setUser(JSON.parse(storedUser));
-        setSelectedRole(storedRole as UserRole);
-      } catch (error) {
-        console.error('Error loading stored auth data:', error);
-        // Clear corrupted data
-        localStorage.removeItem('user');
-        localStorage.removeItem('selectedRole');
-        localStorage.removeItem('accessToken');
+    const initializeAuth = async () => {
+      const storedUser = localStorage.getItem('user');
+      const storedRole = localStorage.getItem('selectedRole');
+      const storedToken = localStorage.getItem('accessToken');
+      
+      if (storedUser && storedRole && storedToken) {
+        try {
+          const userData = JSON.parse(storedUser);
+          
+          // Validate token before restoring session
+          setIsLoading(true);
+          const isTokenValid = await validateTokenSilently();
+          
+          if (isTokenValid) {
+            setUser(userData);
+            setSelectedRole(storedRole as UserRole);
+            console.log('✅ Session restored successfully');
+          } else {
+            console.log('❌ Token invalid, clearing stored data');
+            // Clear invalid data
+            localStorage.removeItem('user');
+            localStorage.removeItem('selectedRole');
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('expireIn');
+            localStorage.removeItem('deviceType');
+            localStorage.removeItem('customerId');
+            localStorage.removeItem('employeeId');
+            localStorage.removeItem('adminProfileId');
+          }
+        } catch (error) {
+          console.error('Error loading stored auth data:', error);
+          // Clear corrupted data
+          localStorage.removeItem('user');
+          localStorage.removeItem('selectedRole');
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('expireIn');
+          localStorage.removeItem('deviceType');
+          localStorage.removeItem('customerId');
+          localStorage.removeItem('employeeId');
+          localStorage.removeItem('adminProfileId');
+        } finally {
+          setIsLoading(false);
+        }
       }
-    }
-    setIsInitialized(true);
+      setIsInitialized(true);
+    };
+
+    initializeAuth();
   }, []);
 
   // Step 1: Get available roles
@@ -259,6 +292,17 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  // Silent token validation (without loading state) for initialization
+  const validateTokenSilently = async (): Promise<boolean> => {
+    try {
+      const response = await validateTokenApi();
+      return response.valid;
+    } catch (err: any) {
+      console.error('❌ Silent token validation error:', err?.message || 'Failed to validate token');
+      return false;
+    }
+  };
+
   // Get active sessions
   const getActiveSessions = async (): Promise<ActiveSessionsResponse['data'] | null> => {
     if (!user) return null;
@@ -291,23 +335,49 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await logoutApi(deviceType);
       
-      // Clear local state regardless of API result
+      // Clear local state and localStorage
       setUser(null);
       setSelectedRole(null);
       setAvailableRoles(null);
       setActiveSessions(null);
+      
+      // Clear all stored data
+      localStorage.removeItem('user');
+      localStorage.removeItem('selectedRole');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('expireIn');
+      localStorage.removeItem('deviceType');
+      localStorage.removeItem('customerId');
+      localStorage.removeItem('employeeId');
+      localStorage.removeItem('adminProfileId');
+      localStorage.removeItem('temp_username');
+      localStorage.removeItem('temp_password');
       
       setIsLoading(false);
       return response.success;
     } catch (error: any) {
       console.error('Logout API error:', error);
       
-      // Clear local state regardless of API result
+      // Clear local state and localStorage regardless of API result
       setUser(null);
       setSelectedRole(null);
       setAvailableRoles(null);
       setActiveSessions(null);
       setError(null);
+      
+      // Clear all stored data
+      localStorage.removeItem('user');
+      localStorage.removeItem('selectedRole');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('expireIn');
+      localStorage.removeItem('deviceType');
+      localStorage.removeItem('customerId');
+      localStorage.removeItem('employeeId');
+      localStorage.removeItem('adminProfileId');
+      localStorage.removeItem('temp_username');
+      localStorage.removeItem('temp_password');
       
       setIsLoading(false);
       return false;

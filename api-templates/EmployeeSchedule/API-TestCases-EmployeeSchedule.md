@@ -34,8 +34,8 @@ Based on housekeeping_service_v6.sql:
   - Employee ID: "e1000001-0000-0000-0000-000000000001" (Jane Smith, AVAILABLE)
   - Employee ID: "e1000001-0000-0000-0000-000000000002" (Bob Wilson, AVAILABLE)
 - **Working Zones**:
-  - Jane Smith: Quận Tân Phú, Quận Tân Bình (TP. Hồ Chí Minh)
-  - Bob Wilson: Quận Gò Vấp (TP. Hồ Chí Minh)
+  - Jane Smith: Phường Tây Thạnh, Phường 15 (TP. Hồ Chí Minh)
+  - Bob Wilson: Phường Hạnh Thông (TP. Hồ Chí Minh)
 - **Assignments**: Active assignments and unavailability periods exist
 - **Services**: Various services with different estimated durations
 - **Time Period**: Test queries with 2025-08-28 to 2025-08-30 range
@@ -53,10 +53,10 @@ Based on housekeeping_service_v6.sql:
   - Database contains available employees in specified location.
 - **Input**:
   - **Method**: `GET`
-  - **URL**: `/api/v1/employee-schedule?status=AVAILABLE&district=Quận Tân Phú&city=TP. Hồ Chí Minh&startDate=2025-08-28T09:00:00&endDate=2025-08-28T17:00:00`
+  - **URL**: `/api/v1/employee-schedule?status=AVAILABLE&ward=Phường Tây Thạnh&city=TP. Hồ Chí Minh&startDate=2025-08-28T09:00:00&endDate=2025-08-28T17:00:00`
   - **Query Parameters**:
     - `status = AVAILABLE` (default parameter)
-    - `district = Quận Tân Phú`
+    - `ward = Phường Tây Thạnh`
     - `city = TP. Hồ Chí Minh`
     - `startDate = 2025-08-28T09:00:00`
     - `endDate = 2025-08-28T17:00:00`
@@ -79,11 +79,11 @@ Based on housekeeping_service_v6.sql:
         "status": "AVAILABLE",
         "workingZones": [
           {
-            "district": "Quận Tân Phú",
+            "ward": "Phường Tây Thạnh",
             "city": "TP. Hồ Chí Minh"
           },
           {
-            "district": "Quận Tân Bình",
+            "ward": "Phường Hạnh Thông",
             "city": "TP. Hồ Chí Minh"
           }
         ],
@@ -170,7 +170,7 @@ Based on housekeeping_service_v6.sql:
         "status": "AVAILABLE",
         "workingZones": [
           {
-            "district": "Quận Gò Vấp",
+            "ward": "Phường Hạnh Thông",
             "city": "TP. Hồ Chí Minh"
           }
         ],
@@ -183,7 +183,7 @@ Based on housekeeping_service_v6.sql:
             "bookingCode": "BK000001",
             "serviceName": "Tổng vệ sinh",
             "customerName": "John Doe",
-            "address": "123 Lê Trọng Tấn, Tây Thạnh, Tân Phú, TP. Hồ Chí Minh",
+            "address": "123 Lê Trọng Tấn, Tây Thạnh, TP. Hồ Chí Minh",
             "assignmentStatus": "ASSIGNED",
             "durationHours": 4
           }
@@ -230,7 +230,7 @@ Based on housekeeping_service_v6.sql:
       "status": "AVAILABLE",
       "workingZones": [
         {
-          "district": "Quận Tân Phú",
+          "ward": "Phường Tây Thạnh",
           "city": "TP. Hồ Chí Minh"
         }
       ],
@@ -311,7 +311,7 @@ Based on housekeeping_service_v6.sql:
       "status": "AVAILABLE",
       "workingZones": [
         {
-          "district": "Quận Tân Phú",
+          "ward": "Phường Tây Thạnh",
           "city": "TP. Hồ Chí Minh"
         }
       ],
@@ -363,7 +363,7 @@ Based on housekeeping_service_v6.sql:
       "status": "AVAILABLE",
       "workingZones": [
         {
-          "district": "Quận Tân Phú",
+          "ward": "Phường Tây Thạnh",
           "city": "TP. Hồ Chí Minh"
         }
       ],
@@ -434,11 +434,11 @@ Based on housekeeping_service_v6.sql:
   - Database contains employees available for the requested time and service.
 - **Input**:
   - **Method**: `GET`
-  - **URL**: `/api/v1/employee-schedule/suitable?serviceId=1&bookingTime=2025-08-28T10:00:00&district=Quận Tân Phú&city=TP. Hồ Chí Minh`
+  - **URL**: `/api/v1/employee-schedule/suitable?serviceId=1&bookingTime=2025-08-28T10:00:00&ward=Phường Tây Thạnh&city=TP. Hồ Chí Minh`
   - **Query Parameters**:
     - `serviceId = 1`
     - `bookingTime = 2025-08-28T10:00:00`
-    - `district = Quận Tân Phú` (optional)
+    - `ward = Phường Tây Thạnh` (optional)
     - `city = TP. Hồ Chí Minh` (optional)
   - **Headers**: 
     ```
@@ -459,11 +459,11 @@ Based on housekeeping_service_v6.sql:
         "phone": "+84987654321",
         "workingZones": [
           {
-            "district": "Quận Tân Phú",
+            "ward": "Phường Tây Thạnh",
             "city": "TP. Hồ Chí Minh"
           },
           {
-            "district": "Quận Tân Bình",
+            "ward": "Phường Bảy Hiền",
             "city": "TP. Hồ Chí Minh"
           }
         ],

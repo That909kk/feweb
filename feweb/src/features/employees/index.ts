@@ -1,0 +1,1 @@
+export { default as EmployeeProfile } from './components/EmployeeProfile';
