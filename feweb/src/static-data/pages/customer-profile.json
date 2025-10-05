@@ -32,6 +32,8 @@
       }
     },
     "actions": {
+      "edit": "Chỉnh sửa",
+      "save": "Lưu thay đổi",
       "update": "Cập nhật",
       "cancel": "Hủy",
       "uploadAvatar": "Tải ảnh lên",
@@ -85,6 +87,8 @@
       }
     },
     "actions": {
+      "edit": "Edit",
+      "save": "Save Changes",
       "update": "Update",
       "cancel": "Cancel",
       "uploadAvatar": "Upload Image",
