@@ -2,7 +2,9 @@ import { useState, useCallback } from 'react';
 import { 
   createBookingApi, 
   getCustomerDefaultAddressApi,
-  validateBookingApi
+  validateBookingApi,
+  getCustomerBookingsApi,
+  updateBookingApi
 } from '../api/booking';
 import { getPaymentMethodsApi } from '../api/payment';
 import type { 
@@ -141,13 +143,80 @@ export const useBooking = () => {
     }
   }, []);
 
-  // Mock function for customer bookings since API is not available yet
-  const getCustomerBookings = useCallback(async (customerId: string): Promise<any[]> => {
-    console.log(`[MOCK] Getting bookings for customer: ${customerId}`);
-    
-    // Return empty array since this API doesn't exist yet
-    return [];
-  }, []);
+  const getCustomerBookings = useCallback(
+    async (
+      customerId: string,
+      params?: {
+        status?: string;
+        fromDate?: string;
+        toDate?: string;
+        page?: number;
+        size?: number;
+        sort?: string;
+        direction?: 'ASC' | 'DESC';
+      }
+    ): Promise<any[]> => {
+      if (!customerId) {
+        setError('Thiếu thông tin khách hàng');
+        return [];
+      }
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await getCustomerBookingsApi(customerId, params);
+
+        if (!response) {
+          return [];
+        }
+
+        const data = response.data as any;
+
+        if (Array.isArray(data)) {
+          return data;
+        }
+
+        if (data?.content && Array.isArray(data.content)) {
+          return data.content;
+        }
+
+        return [];
+      } catch (err: any) {
+        const errorMessage =
+          err?.response?.data?.message ||
+          err?.message ||
+          'Không thể tải danh sách đơn dịch vụ';
+        setError(errorMessage);
+        console.error('Get customer bookings error:', err);
+        return [];
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    []
+  );
+
+  const updateBooking = async (
+    bookingId: string,
+    payload: Partial<CreateBookingRequest>
+  ): Promise<BookingResponse | null> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await updateBookingApi(bookingId, payload);
+      return response;
+    } catch (err: any) {
+      const errorMessage =
+        err?.response?.data?.message || err?.message || 'Không thể cập nhật đơn dịch vụ';
+      setError(errorMessage);
+      console.error('Update booking error:', err);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return {
     createBooking,
@@ -155,6 +224,7 @@ export const useBooking = () => {
     validateBooking,
     getPaymentMethods,
     getCustomerBookings,
+    updateBooking,
     isLoading,
     error
   };

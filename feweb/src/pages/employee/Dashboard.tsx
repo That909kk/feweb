@@ -1,503 +1,390 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  AlertCircle,
+  CalendarClock,
+  CheckCircle2,
+  Clock8,
+  HardHat,
+  Loader2,
+  MapPin,
+  PlayCircle,
+  RefreshCcw,
+  ShieldCheck,
+  X,
+  XCircle
+} from 'lucide-react';
+import { DashboardLayout } from '../../layouts';
 import { useAuth } from '../../contexts/AuthContext';
-import Navigation from '../../components/Navigation';
-import { Calendar, Clock, MapPin, User, ClipboardList, CheckCircle, AlertCircle, X } from 'lucide-react';
-import type { EmployeeData } from '../../types/api';
 import { useEmployeeAssignments } from '../../hooks/useEmployee';
-import { cancelAssignmentApi } from '../../api/employee';
 import AvailableBookings from '../../components/AvailableBookings';
 import EmployeeBookings from '../../components/EmployeeBookings';
+import { SectionCard, MetricCard } from '../../shared/components';
+import { cancelAssignmentApi } from '../../api/employee';
+
+type AssignmentStatus =
+  | 'ALL'
+  | 'ASSIGNED'
+  | 'CONFIRMED'
+  | 'IN_PROGRESS'
+  | 'COMPLETED'
+  | 'CANCELLED';
+
+const statusDescriptors: Record<AssignmentStatus, { label: string; badge: string }> = {
+  ALL: { label: 'Tất cả', badge: 'bg-slate-100 text-slate-700' },
+  ASSIGNED: { label: 'Mới phân công', badge: 'bg-sky-100 text-sky-700' },
+  CONFIRMED: { label: 'Đã nhận việc', badge: 'bg-cyan-100 text-cyan-700' },
+  IN_PROGRESS: { label: 'Đang thực hiện', badge: 'bg-amber-100 text-amber-700' },
+  COMPLETED: { label: 'Đã hoàn thành', badge: 'bg-emerald-100 text-emerald-700' },
+  CANCELLED: { label: 'Đã hủy', badge: 'bg-rose-100 text-rose-700' }
+};
 
 const EmployeeDashboard: React.FC = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'assignments'|'available'|'myBookings'>('assignments');
-  const [statusFilter, setStatusFilter] = useState<string>('');
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string>('');
-  const [cancelReason, setCancelReason] = useState<string>('');
-  const [isCancelling, setIsCancelling] = useState(false);
-  const { 
-    assignments, 
-    stats: statistics, 
-    isLoading, 
-    isInitialized,
+  const {
+    assignments,
+    stats,
+    isLoading,
     error,
     getAssignments,
-    getStatistics
+    getStatistics,
   } = useEmployeeAssignments();
 
-  useEffect(() => {
-    const fetchEmployeeData = async () => {
-      if (user) {
-        try {
-          // Lấy ID nhân viên từ thông tin người dùng
-          let employeeId = user.id;
-          
-          // Kiểm tra nếu có profileData và là kiểu EmployeeData
-          if (user.profileData && 'employeeId' in user.profileData) {
-            employeeId = (user.profileData as EmployeeData).employeeId || user.id;
-          }
-          
-          // Chỉ fetch assignments khi statusFilter thay đổi
-          if (employeeId) {
-            await getAssignments(employeeId, statusFilter || undefined);
-          } else {
-            console.error('No valid employeeId found');
-          }
-        } catch (err) {
-          console.error('Error fetching employee data:', err);
-        }
-      }
-    };
+  const [statusFilter, setStatusFilter] = useState<AssignmentStatus>('ALL');
+  const [isActioning, setIsActioning] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
+  const [cancelReason, setCancelReason] = useState('');
+  const [statusBanner, setStatusBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-    fetchEmployeeData();
-  }, [user, getAssignments, getStatistics, statusFilter]);
-
-  // Separate useEffect for initial data load (statistics)
-  useEffect(() => {
-    const fetchStatistics = async () => {
-      if (user) {
-        try {
-          let employeeId = user.id;
-          if (user.profileData && 'employeeId' in user.profileData) {
-            employeeId = (user.profileData as EmployeeData).employeeId || user.id;
-          }
-          
-          if (employeeId) {
-            await getStatistics(employeeId);
-          }
-        } catch (err) {
-          console.error('Error fetching statistics:', err);
-        }
-      }
-    };
-
-    // Only fetch statistics on first load, not when status filter changes
-    if (user && !isInitialized) {
-      fetchStatistics();
+  const employeeId = useMemo(() => {
+    if (!user) return null;
+    if (user.profileData && 'employeeId' in user.profileData) {
+      return user.profileData.employeeId || user.id;
     }
-  }, [user, getStatistics, isInitialized]);
+    return user.id;
+  }, [user]);
 
-  const handleCancelAssignment = (assignmentId: string) => {
+  useEffect(() => {
+    if (employeeId) {
+      getAssignments(employeeId, statusFilter === 'ALL' ? undefined : statusFilter);
+      getStatistics(employeeId);
+    }
+  }, [employeeId, statusFilter]);
+
+  const filteredAssignments = useMemo(() => {
+    if (statusFilter === 'ALL') return assignments;
+    return assignments.filter(item => item.status === statusFilter);
+  }, [assignments, statusFilter]);
+
+  const handleRefresh = async () => {
+    if (!employeeId) return;
+    setIsActioning(true);
+    try {
+      await Promise.all([
+        getAssignments(employeeId, statusFilter === 'ALL' ? undefined : statusFilter),
+        getStatistics(employeeId)
+      ]);
+    } finally {
+      setIsActioning(false);
+    }
+  };
+
+  const openCancelModal = (assignmentId: string) => {
     setSelectedAssignmentId(assignmentId);
+    setCancelReason('');
     setShowCancelModal(true);
   };
 
+  const closeCancelModal = () => {
+    setShowCancelModal(false);
+    setCancelReason('');
+    setSelectedAssignmentId(null);
+  };
+
   const confirmCancelAssignment = async () => {
-    if (!cancelReason.trim()) {
-      alert('Vui lòng nhập lý do hủy công việc');
+    if (!selectedAssignmentId || !employeeId || !cancelReason.trim()) {
       return;
     }
-
-    setIsCancelling(true);
+    setIsActioning(true);
     try {
-      const employeeId = user?.profileData && 'employeeId' in user.profileData 
-        ? (user.profileData as EmployeeData).employeeId || user?.id 
-        : user?.id;
-
-      if (!employeeId) {
-        throw new Error('Không tìm thấy thông tin nhân viên');
-      }
-
-      console.log('[Dashboard] Cancelling assignment:', {
-        assignmentId: selectedAssignmentId,
-        employeeId,
-        reason: cancelReason
-      });
-
       await cancelAssignmentApi(selectedAssignmentId, {
         reason: cancelReason.trim(),
-        employeeId: employeeId
+        employeeId
       });
-
-      console.log('[Dashboard] Assignment cancelled successfully');
-
-      // Refresh assignments
-      await getAssignments(employeeId, statusFilter || undefined);
-
-      // Reset modal state
-      setShowCancelModal(false);
-      setCancelReason('');
-      setSelectedAssignmentId('');
-      
-      alert('Hủy công việc thành công!');
-    } catch (error: any) {
-      console.error('[Dashboard] Error cancelling assignment:', error);
-      
-      // Show more specific error messages
-      let errorMessage = 'Có lỗi xảy ra khi hủy công việc';
-      if (error.message) {
-        errorMessage = error.message;
-      } else if (error.response?.status === 500) {
-        errorMessage = 'Lỗi server - vui lòng liên hệ quản trị viên';
-      } else if (error.response?.status === 404) {
-        errorMessage = 'Không tìm thấy công việc này';
-      } else if (error.response?.status === 403) {
-        errorMessage = 'Bạn không có quyền hủy công việc này';
-      }
-      
-      alert(errorMessage);
+      await getAssignments(employeeId, statusFilter === 'ALL' ? undefined : statusFilter);
+      setStatusBanner({
+        type: 'success',
+        text: 'Bạn đã hủy công việc thành công. Điều phối viên sẽ ghi nhận lý do của bạn.'
+      });
+      closeCancelModal();
+    } catch (err: any) {
+      console.error('Cancel assignment error:', err);
+      setStatusBanner({
+        type: 'error',
+        text: err?.response?.data?.message || err?.message || 'Không thể hủy công việc lúc này. Vui lòng thử lại sau.'
+      });
     } finally {
-      setIsCancelling(false);
+      setIsActioning(false);
     }
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return 'bg-green-100 text-green-800';
-      case 'ASSIGNED':
-        return 'bg-blue-100 text-blue-800';
-      case 'IN_PROGRESS':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'PENDING':
-        return 'bg-orange-100 text-orange-800';
-      case 'CANCELLED':
-        return 'bg-red-100 text-red-800';
-      case 'CONFIRMED':
-        return 'bg-purple-100 text-purple-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const metrics = useMemo(() => {
+    return {
+      completed: stats.completed || 0,
+      upcoming: stats.upcoming || 0,
+      totalEarnings: stats.totalEarnings || 0
+    };
+  }, [stats]);
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return 'Đã hoàn thành';
-      case 'ASSIGNED':
-        return 'Đã nhận';
-      case 'IN_PROGRESS':
-        return 'Đang thực hiện';
-      case 'PENDING':
-        return 'Đang chờ';
-      case 'CANCELLED':
-        return 'Đã hủy';
-      case 'CONFIRMED':
-        return 'Đã xác nhận';
-      default:
-        return status;
-    }
-  };
-  
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
-        <div className="mb-6">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Xin chào, {user?.fullName}!
-          </h2>
-          <p className="text-gray-600">
-            Chào mừng đến với bảng điều khiển nhân viên
-          </p>
-        </div>
-        
-        {/* Stats Section */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="bg-blue-100 p-3 rounded-full">
-                <CheckCircle className="w-6 h-6 text-blue-500" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-gray-900">Công việc hoàn thành</h3>
-                <p className="text-2xl font-bold text-gray-900">{statistics.completed}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="bg-green-100 p-3 rounded-full">
-                <Calendar className="w-6 h-6 text-green-500" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-gray-900">Công việc sắp tới</h3>
-                <p className="text-2xl font-bold text-gray-900">{statistics.upcoming}</p>
-              </div>
-            </div>
-          </div>
-          
-          <div className="bg-white rounded-lg shadow-sm p-6">
-            <div className="flex items-center">
-              <div className="bg-purple-100 p-3 rounded-full">
-                <div className="w-6 h-6 flex items-center justify-center text-purple-500 font-bold">₫</div>
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-semibold text-gray-900">Doanh thu</h3>
-                <p className="text-2xl font-bold text-gray-900">{statistics.totalEarnings.toLocaleString('vi-VN')}đ</p>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        {/* Tabs */}
-        <div className="mb-6">
-          <div className="border-b border-gray-200">
-            <nav className="-mb-px flex" aria-label="Tabs">
-              <button
-                onClick={() => setActiveTab('assignments')}
-                className={`${
-                  activeTab === 'assignments'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm`}
-              >
-                Danh sách công việc
-              </button>
-              <button
-                onClick={() => setActiveTab('available')}
-                className={`${
-                  activeTab === 'available'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm`}
-              >
-                Dịch vụ đang tìm nhân viên
-              </button>
-              <button
-                onClick={() => setActiveTab('myBookings')}
-                className={`${
-                  activeTab === 'myBookings'
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                } w-1/3 py-4 px-1 text-center border-b-2 font-medium text-sm`}
-              >
-                Công việc của tôi
-              </button>
-            </nav>
-          </div>
-        </div>
-        
-        {/* Content based on active tab */}
-        <div className="bg-white rounded-lg shadow-sm">
-          {activeTab === 'assignments' && (
-            <div className="p-6">
-              <div className="flex justify-between items-center mb-6">
-                <h3 className="text-xl font-semibold text-gray-900">Danh sách công việc</h3>
-                <div className="flex items-center space-x-4">
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => {
-                      console.log(`[Dashboard] Status filter changed to: "${e.target.value}"`);
-                      setStatusFilter(e.target.value);
-                    }}
-                    className="border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    disabled={isLoading}
-                  >
-                    <option value="">Tất cả trạng thái</option>
-                    <option value="ASSIGNED">Đã nhận</option>
-                    <option value="IN_PROGRESS">Đang thực hiện</option>
-                    <option value="COMPLETED">Đã hoàn thành</option>
-                    <option value="CANCELLED">Đã hủy</option>
-                  </select>
-                </div>
-              </div>
-              
-              {!isInitialized && isLoading ? (
-                <div className="text-center py-8 text-gray-500">
-                  <p className="text-lg">Đang tải dữ liệu...</p>
-                </div>
-              ) : error ? (
-                <div className="text-center py-8 text-red-500">
-                  <AlertCircle className="w-12 h-12 mx-auto mb-4" />
-                  <p className="text-lg">{error}</p>
-                  <button 
-                    onClick={() => {
-                      if (user) {
-                        const employeeId = user.profileData && 'employeeId' in user.profileData 
-                          ? (user.profileData as EmployeeData).employeeId || user.id 
-                          : user.id;
-                        if (employeeId) {
-                          getAssignments(employeeId, statusFilter || undefined);
-                        }
-                      }
-                    }}
-                    className="mt-4 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm"
-                  >
-                    Thử lại
-                  </button>
-                </div>
-              ) : assignments.length > 0 ? (
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-gray-50">
-                      <tr>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dịch vụ</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Khách hàng</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thời gian làm việc</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Địa chỉ dịch vụ</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Trạng thái & Tổng tiền</th>
-                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Thao tác</th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {assignments.map((assignment) => (
-                        <tr key={assignment.assignmentId} className="hover:bg-gray-50">
-                          <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                            <div>
-                              <div className="font-medium">{assignment.serviceName}</div>
-                              <div className="text-xs text-gray-500">Mã: {assignment.bookingCode}</div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <div className="flex flex-col">
-                              <div className="flex items-center">
-                                <User className="w-4 h-4 mr-2" />
-                                {assignment.customerName}
-                              </div>
-                              <div className="text-xs text-gray-400 mt-1">
-                                {assignment.customerPhone}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <div className="flex flex-col">
-                              <div className="flex items-center">
-                                <Calendar className="w-4 h-4 mr-2" />
-                                {new Date(assignment.bookingTime).toLocaleDateString('vi-VN')}
-                              </div>
-                              <div className="flex items-center mt-1">
-                                <Clock className="w-4 h-4 mr-2" />
-                                {new Date(assignment.bookingTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} ({assignment.estimatedDurationHours}h)
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                            <div className="flex items-center">
-                              <MapPin className="w-4 h-4 mr-2 flex-shrink-0" />
-                              <span className="truncate max-w-xs">{assignment.serviceAddress}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap">
-                            <div className="flex flex-col">
-                              <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(assignment.status)}`}>
-                                {getStatusText(assignment.status)}
-                              </span>
-                              <div className="text-xs text-gray-500 mt-1">
-                                {assignment.totalAmount.toLocaleString('vi-VN')}đ
-                                {assignment.note && (
-                                  <div className="text-xs text-blue-600 mt-1 italic">
-                                    {assignment.note}
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {(assignment.status === 'ASSIGNED' || assignment.status === 'CONFIRMED') && (
-                              <button
-                                onClick={() => handleCancelAssignment(assignment.assignmentId)}
-                                className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-xs font-medium transition-colors"
-                              >
-                                Hủy việc
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <ClipboardList className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p className="text-lg">Không có công việc nào</p>
-                  <p className="text-sm mt-2">Công việc mới sẽ xuất hiện ở đây</p>
-                </div>
-              )}
-            </div>
-          )}
+    <DashboardLayout
+      role="EMPLOYEE"
+      title={`Xin chào ${user?.fullName ?? ''}`}
+      description="Theo dõi công việc được phân công, nhận thêm lịch trống và quản lý thu nhập minh bạch."
+      actions={
+        <button
+          onClick={handleRefresh}
+          disabled={isActioning}
+          className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-emerald-600 shadow-lg shadow-emerald-100 transition hover:-translate-y-0.5 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <RefreshCcw className={isActioning ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
+          Làm mới dữ liệu
+        </button>
+      }
+    >
+      <div className="grid gap-6 lg:grid-cols-3">
+        <MetricCard
+          icon={HardHat}
+          label="Công việc đang tới"
+          value={`${metrics.upcoming}`}
+          accent="teal"
+          trendLabel="Sẵn sàng đúng giờ, giữ uy tín với khách hàng."
+        />
+        <MetricCard
+          icon={CheckCircle2}
+          label="Hoàn thành tháng này"
+          value={`${metrics.completed}`}
+          accent="navy"
+          trendLabel="Ghi nhận hiệu suất và đánh giá từ khách hàng."
+        />
+        <MetricCard
+          icon={CalendarClock}
+          label="Thu nhập ước tính"
+          value={`${metrics.totalEarnings.toLocaleString('vi-VN')}₫`}
+          accent="amber"
+          trendLabel="Cập nhật theo từng công việc đã chốt."
+        />
+      </div>
 
-          {activeTab === 'available' && (
-            <AvailableBookings 
-              onAcceptSuccess={() => {
-                // Optionally switch to assignments tab to show the new assignment
-                // setActiveTab('assignments');
-                
-                // Refresh assignments to show the newly accepted booking
-                if (user) {
-                  let employeeId = user.id;
-                  if (user.profileData && 'employeeId' in user.profileData) {
-                    employeeId = (user.profileData as EmployeeData).employeeId || user.id;
-                  }
-                  if (employeeId) {
-                    getAssignments(employeeId, statusFilter || undefined);
-                  }
-                }
-              }}
-            />
-          )}
-          
-          {activeTab === 'myBookings' && <EmployeeBookings />}
-        </div>
-      </main>
+      <SectionCard
+        title="Công việc được phân công"
+        description="Nhận xét thời gian, địa điểm và xác nhận ngay để giữ lịch ổn định."
+        actions={
+          <div className="flex flex-wrap gap-2">
+            {(Object.keys(statusDescriptors) as AssignmentStatus[]).map((statusKey) => {
+              const descriptor = statusDescriptors[statusKey];
+              const isActive = statusFilter === statusKey;
+              return (
+                <button
+                  key={statusKey}
+                  onClick={() => setStatusFilter(statusKey)}
+                  className={`rounded-full border px-4 py-1.5 text-sm font-medium transition ${
+                    isActive
+                      ? 'border-emerald-300 bg-emerald-50 text-emerald-700 shadow-sm'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-emerald-200'
+                  }`}
+                >
+                  {descriptor.label}
+                </button>
+              );
+            })}
+          </div>
+        }
+      >
+        {statusBanner && (
+          <div
+            className={`mb-4 flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm ${
+              statusBanner.type === 'success'
+                ? 'border-emerald-100 bg-emerald-50 text-emerald-700'
+                : 'border-rose-100 bg-rose-50 text-rose-600'
+            }`}
+          >
+            {statusBanner.type === 'success' ? <CheckCircle2 className="h-4 w-4" /> : <AlertCircle className="h-4 w-4" />}
+            <span>{statusBanner.text}</span>
+            <button
+              onClick={() => setStatusBanner(null)}
+              className="ml-auto rounded-full bg-white/50 p-1 text-sm"
+            >
+              <X className="h-3 w-3" />
+            </button>
+          </div>
+        )}
 
-      {/* Cancel Assignment Modal */}
+        {error && (
+          <div className="mb-4 flex items-center gap-3 rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-600">
+            <AlertCircle className="h-5 w-5" />
+            {error}
+          </div>
+        )}
+
+        {isLoading && filteredAssignments.length === 0 ? (
+          <div className="flex items-center justify-center rounded-3xl border border-dashed border-slate-200 bg-white/60 py-16 text-slate-500">
+            <Loader2 className="mr-3 h-5 w-5 animate-spin" />
+            Đang tải danh sách công việc...
+          </div>
+        ) : filteredAssignments.length === 0 ? (
+          <div className="flex flex-col items-center justify-center rounded-3xl border border-slate-100 bg-slate-50 py-16 text-center text-slate-500">
+            <ShieldCheck className="mb-4 h-10 w-10 text-slate-400" />
+            <h3 className="text-lg font-semibold text-slate-900">Chưa có công việc ở trạng thái này</h3>
+            <p className="mt-2 max-w-sm text-sm text-slate-500">
+              Hãy kiểm tra mục “Nhận thêm công việc” để tăng thu nhập hoặc chọn bộ lọc khác.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {filteredAssignments.map(assignment => {
+              const descriptor = statusDescriptors[assignment.status as AssignmentStatus] ?? statusDescriptors.ALL;
+              return (
+                <div
+                  key={assignment.assignmentId}
+                  className="flex flex-col gap-4 rounded-3xl border border-slate-100 bg-white/90 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                >
+                  <div className="flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
+                        {assignment.bookingCode}
+                      </p>
+                      <h3 className="text-lg font-semibold text-slate-900">{assignment.serviceName}</h3>
+                    </div>
+                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${descriptor.badge}`}>
+                      {descriptor.label}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
+                    <span className="inline-flex items-center gap-2">
+                      <CalendarClock className="h-4 w-4 text-emerald-500" />
+                      {new Date(assignment.bookingTime).toLocaleString('vi-VN')}
+                    </span>
+                    <span className="inline-flex items-center gap-2">
+                      <Clock8 className="h-4 w-4 text-emerald-500" />
+                      Ước tính {assignment.estimatedDurationHours} giờ
+                    </span>
+                    <span className="inline-flex items-center gap-2">
+                      <MapPin className="h-4 w-4 text-emerald-500" />
+                      {assignment.serviceAddress}
+                    </span>
+                  </div>
+
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-700">
+                    Khách hàng: <strong>{assignment.customerName}</strong> · SĐT: <strong>{assignment.customerPhone}</strong>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="text-sm text-slate-500">
+                      Thu nhập dự kiến:{' '}
+                      <span className="font-semibold text-emerald-600">
+                        {assignment.totalAmount.toLocaleString('vi-VN')}₫
+                      </span>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      {assignment.status === 'ASSIGNED' && (
+                        <button
+                          onClick={() => openCancelModal(assignment.assignmentId)}
+                          className="rounded-full border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:-translate-y-0.5 hover:border-rose-300"
+                        >
+                          Từ chối
+                        </button>
+                      )}
+                      {(assignment.status === 'ASSIGNED' || assignment.status === 'CONFIRMED') && (
+                        <button
+                          onClick={() => openCancelModal(assignment.assignmentId)}
+                          className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:-translate-y-0.5 hover:border-slate-300"
+                        >
+                          Hủy công việc
+                        </button>
+                      )}
+                      <button
+                        className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-500"
+                      >
+                        <PlayCircle className="h-4 w-4" />
+                        Mở hướng dẫn
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard
+        title="Nhận thêm công việc phù hợp"
+        description="Lựa chọn các lịch trống để tối ưu thời gian làm việc của bạn."
+      >
+        <AvailableBookings
+          onAcceptSuccess={handleRefresh}
+        />
+      </SectionCard>
+
+      <SectionCard
+        title="Chi tiết công việc đang thực hiện"
+        description="Theo dõi tiến độ và đánh dấu hoàn thành ngay tại đây."
+      >
+        <EmployeeBookings />
+      </SectionCard>
+
       {showCancelModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">Hủy công việc</h3>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 backdrop-blur-sm">
+          <div className="w-full max-w-lg rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl">
+            <div className="flex items-start justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Hủy nhận công việc</h3>
+                <p className="mt-1 text-sm text-slate-500">
+                  Vui lòng cho biết lý do để chúng tôi sắp xếp lịch phù hợp hơn trong tương lai.
+                </p>
+              </div>
               <button
-                onClick={() => {
-                  setShowCancelModal(false);
-                  setCancelReason('');
-                  setSelectedAssignmentId('');
-                }}
-                className="text-gray-400 hover:text-gray-600"
+                onClick={closeCancelModal}
+                className="rounded-full bg-slate-100 p-2 text-slate-500 transition hover:bg-slate-200"
               >
-                <X className="w-6 h-6" />
+                <X className="h-4 w-4" />
               </button>
             </div>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Lý do hủy công việc *
-              </label>
-              <textarea
-                value={cancelReason}
-                onChange={(e) => setCancelReason(e.target.value)}
-                className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                rows={4}
-                placeholder="Nhập lý do hủy công việc (ví dụ: Bị ốm đột xuất không thể thực hiện công việc)"
-                disabled={isCancelling}
-              />
-            </div>
-            
-            <div className="flex justify-end space-x-3">
+
+            <textarea
+              value={cancelReason}
+              onChange={event => setCancelReason(event.target.value)}
+              rows={4}
+              className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 transition focus:border-emerald-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-200"
+              placeholder="Ví dụ: Trùng lịch cá nhân, sức khỏe không đảm bảo..."
+            />
+
+            <div className="mt-6 flex justify-end gap-3">
               <button
-                onClick={() => {
-                  setShowCancelModal(false);
-                  setCancelReason('');
-                  setSelectedAssignmentId('');
-                }}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-md transition-colors"
-                disabled={isCancelling}
+                onClick={closeCancelModal}
+                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:-translate-y-0.5 hover:border-slate-300"
               >
-                Đóng
+                Giữ lại
               </button>
               <button
                 onClick={confirmCancelAssignment}
-                disabled={isCancelling || !cancelReason.trim()}
-                className="px-4 py-2 text-sm font-medium text-white bg-red-500 hover:bg-red-600 rounded-md transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                disabled={!cancelReason.trim() || isActioning}
+                className="inline-flex items-center gap-2 rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-rose-200 transition hover:-translate-y-0.5 hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                {isCancelling ? (
-                  <div className="flex items-center">
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                    Đang hủy...
-                  </div>
+                {isActioning ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
-                  'Xác nhận hủy'
+                  <XCircle className="h-4 w-4" />
                 )}
+                {isActioning ? 'Đang gửi...' : 'Hủy công việc'}
               </button>
             </div>
           </div>
         </div>
       )}
-    </div>
+    </DashboardLayout>
   );
 };
 

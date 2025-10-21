@@ -2,56 +2,51 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode;
-  variant?: 'primary' | 'secondary' | 'ghost';
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost';
   size?: 'sm' | 'md' | 'lg';
   fullWidth?: boolean;
 }
 
-const Button: React.FC<ButtonProps> = ({ 
-  children, 
-  variant = 'primary', 
-  size = 'md', 
-  fullWidth = false, 
+const Button: React.FC<ButtonProps> = ({
+  children,
+  variant = 'primary',
+  size = 'md',
+  fullWidth = false,
   className,
-  ...props 
+  ...props
 }) => {
-  const baseClasses = 'font-medium rounded-lg transition-all duration-200 focus:outline-none';
-  
-  const variants = {
-    primary: 'hover:opacity-90 focus:opacity-90',
-    secondary: 'bg-gray-200 text-gray-800 hover:bg-gray-300 border border-gray-300',
-    ghost: 'bg-transparent hover:opacity-70'
+  const baseClasses =
+    'inline-flex items-center justify-center font-semibold leading-tight transition-transform duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-brand-teal rounded-full';
+
+  const variants: Record<NonNullable<ButtonProps['variant']>, string> = {
+    primary:
+      'bg-brand-navy text-white hover:-translate-y-0.5 hover:bg-brand-navyHover shadow-elevation-sm',
+    secondary:
+      'bg-brand-teal text-white hover:-translate-y-0.5 hover:bg-brand-teal/90 shadow-elevation-sm',
+    outline:
+      'border border-brand-outline/70 text-brand-navy hover:-translate-y-0.5 hover:border-brand-navy hover:bg-brand-background/60',
+    ghost: 'text-brand-navy hover:text-brand-navyHover hover:bg-brand-outline/20'
   };
 
-  const sizes = {
-    sm: 'px-4 py-2 text-sm h-10',
-    md: 'px-6 py-3 text-lg lg:text-xl h-12',
-    lg: 'px-8 py-4 text-2xl lg:text-3xl h-16 lg:h-20'
+  const sizes: Record<NonNullable<ButtonProps['size']>, string> = {
+    sm: 'h-9 px-4 text-sm',
+    md: 'h-11 px-5 text-sm sm:text-base',
+    lg: 'h-12 px-6 text-base sm:text-lg'
   };
 
   const widthClass = fullWidth ? 'w-full' : '';
 
-  const getVariantStyles = () => {
-    if (variant === 'primary') {
-      return {
-        backgroundColor: '#FF9900',
-        color: '#FAFAFA',
-        fontFamily: 'Poppins'
-      };
-    }
-    return {};
-  };
-
   return (
     <button
-      className={`
-        ${baseClasses}
-        ${variants[variant]}
-        ${sizes[size]}
-        ${widthClass}
-        ${className || ''}
-      `}
-      style={getVariantStyles()}
+      className={[
+        baseClasses,
+        variants[variant],
+        sizes[size],
+        widthClass,
+        className ?? ''
+      ]
+        .filter(Boolean)
+        .join(' ')}
       {...props}
     >
       {children}

@@ -7,68 +7,76 @@ interface InputFieldProps extends InputHTMLAttributes<HTMLInputElement> {
   showPasswordToggle?: boolean;
   onTogglePassword?: () => void;
   isPasswordVisible?: boolean;
+  hint?: string;
 }
 
 const InputField = forwardRef<HTMLInputElement, InputFieldProps>(
-  ({ label, error, showPasswordToggle, onTogglePassword, isPasswordVisible, className, ...props }, ref) => {
+  (
+    { label, error, showPasswordToggle, onTogglePassword, isPasswordVisible, className, hint, ...props },
+    ref
+  ) => {
+    const inputClasses = [
+      'w-full rounded-2xl border border-brand-outline/60 bg-white px-4 py-3 text-sm text-brand-text/80 transition',
+      'placeholder:text-brand-text/40 focus:border-brand-teal focus:ring-2 focus:ring-brand-teal focus:ring-offset-1 focus:outline-none',
+      showPasswordToggle ? 'pr-12' : '',
+      error ? 'border-status-danger focus:border-status-danger focus:ring-status-danger/30' : '',
+      className ?? ''
+    ]
+      .filter(Boolean)
+      .join(' ');
+
     return (
       <div className="w-full space-y-2">
-        <label 
-          className="block text-xl lg:text-2xl font-normal"
-          style={{ 
-            color: '#000000',
-            fontFamily: 'Poppins'
-          }}
-        >
-          {label}
-        </label>
+        <div className="flex items-center justify-between">
+          <label className="text-sm font-semibold text-brand-navy">{label}</label>
+          {hint && <span className="text-xs text-brand-text/50">{hint}</span>}
+        </div>
         <div className="relative">
-          <input
-            ref={ref}
-            className={`
-              w-full h-16 lg:h-18 px-6 
-              border-2 rounded-lg
-              text-lg lg:text-xl font-normal placeholder:text-gray-400
-              focus:outline-none focus:border-orange-400
-              bg-white transition-colors
-              ${showPasswordToggle ? 'pr-16' : ''}
-              ${className || ''}
-            `}
-            style={{ 
-              borderColor: '#D2D2D2',
-              fontFamily: 'Poppins'
-            }}
-            {...props}
-          />
+          <input ref={ref} className={inputClasses} {...props} />
           {showPasswordToggle && (
             <button
               type="button"
               onClick={onTogglePassword}
-              className="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-5 text-gray-400 hover:text-gray-600 transition-colors"
+              aria-label={isPasswordVisible ? 'An mat khau' : 'Hien mat khau'}
+              className="absolute right-3 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-brand-text/50 transition hover:text-brand-navy"
             >
-              <svg
-                width="25"
-                height="20"
-                viewBox="0 0 25 20"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M12.5 0C7.5 0 3.23 3.11 1.5 7.5C3.23 11.89 7.5 15 12.5 15C17.5 15 21.77 11.89 23.5 7.5C21.77 3.11 17.5 0 12.5 0ZM12.5 12.5C10.02 12.5 8 10.48 8 8C8 5.52 10.02 3.5 12.5 3.5C14.98 3.5 17 5.52 17 8C17 10.48 14.98 12.5 12.5 12.5ZM12.5 5.5C11.12 5.5 10 6.62 10 8C10 9.38 11.12 10.5 12.5 10.5C13.88 10.5 15 9.38 15 8C15 6.62 13.88 5.5 12.5 5.5Z"
-                  fill="currentColor"
-                />
-              </svg>
+              {isPasswordVisible ? (
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-5 0-9.27-3.11-11-7.5a10.54 10.54 0 0 1 4-4.88" />
+                  <path d="M1 1l22 22" />
+                  <path d="M9.53 9.53a3 3 0 0 0 4.24 4.24" />
+                  <path d="M14.47 14.47l-1.41 1.41" />
+                  <path d="M9.88 9.88L8.47 8.47" />
+                  <path d="M12 5a7 7 0 0 1 7 7 7.3 7.3 0 0 1-.35 2.16" />
+                </svg>
+              ) : (
+                <svg
+                  width="18"
+                  height="18"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M1 12S5 5 12 5s11 7 11 7-4 7-11 7S1 12 1 12z" />
+                  <circle cx="12" cy="12" r="3" />
+                </svg>
+              )}
             </button>
           )}
         </div>
-        {error && (
-          <p 
-            className="text-sm text-red-500"
-            style={{ fontFamily: 'Poppins' }}
-          >
-            {error}
-          </p>
-        )}
+        {error && <p className="text-xs text-status-danger">{error}</p>}
       </div>
     );
   }

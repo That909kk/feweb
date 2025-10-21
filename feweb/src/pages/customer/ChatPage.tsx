@@ -1,261 +1,317 @@
-import React, { useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
-import { 
-  ArrowLeft, 
-  Send,
-  Phone,
-  Info,
-  Paperclip,
-  Smile
-} from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Loader2, MessageCircle, SendHorizontal, UserCircle2 } from 'lucide-react';
+import { DashboardLayout } from '../../layouts';
 import { useAuth } from '../../contexts/AuthContext';
-import Navigation from '../../components/Navigation';
+import { useBooking } from '../../hooks/useBooking';
+import { SectionCard } from '../../shared/components';
+
+type BookingItem = {
+  bookingId: string;
+  bookingCode?: string;
+  status: string;
+  serviceId?: number;
+  bookingTime?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  note?: string;
+  customerInfo?: {
+    fullAddress: string;
+  };
+  address?: string | { fullAddress?: string };
+  serviceDetails?: Array<{
+    service: {
+      name: string;
+    };
+  }>;
+  [key: string]: any;
+};
+
+type ConversationMessage = {
+  id: string;
+  role: 'customer' | 'system';
+  content: string;
+  timestamp?: string;
+};
+
+const statusMessages: Record<string, string> = {
+  AWAITING_EMPLOYEE: 'Đơn đang chờ phân công nhân viên phù hợp.',
+  CONFIRMED: 'Đơn đã được xác nhận. Nhân viên sẽ đến đúng giờ đã hẹn.',
+  IN_PROGRESS: 'Nhân viên đang thực hiện dịch vụ tại địa chỉ của bạn.',
+  COMPLETED: 'Dịch vụ đã hoàn tất. Cảm ơn bạn đã sử dụng HouseCare Hub!',
+  CANCELLED: 'Đơn đã được hủy theo yêu cầu.'
+};
 
 const ChatPage: React.FC = () => {
   const { user } = useAuth();
-  const [searchParams] = useSearchParams();
+  const { getCustomerBookings, updateBooking, isLoading } = useBooking();
+  const [bookings, setBookings] = useState<BookingItem[]>([]);
+  const [selectedBookingId, setSelectedBookingId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
-  const [selectedChat, setSelectedChat] = useState<string | null>(null);
-  
-  // Mock chat data
-  const mockChats = [
-    {
-      id: '1',
-      employeeName: 'Trần Thị Bình',
-      lastMessage: 'Tôi sẽ đến vào lúc 9h sáng ngày mai',
-      time: '10:30',
-      unread: 2,
-      avatar: 'https://picsum.photos/40/40?random=2',
-      status: 'online'
-    },
-    {
-      id: '2',
-      employeeName: 'Nguyễn Thị Cẩm',
-      lastMessage: 'Cảm ơn bạn đã sử dụng dịch vụ',
-      time: 'Hôm qua',
-      unread: 0,
-      avatar: 'https://picsum.photos/40/40?random=6',
-      status: 'offline'
-    }
-  ];
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [feedback, setFeedback] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
-  const mockMessages = [
-    {
-      id: '1',
-      sender: 'employee',
-      content: 'Xin chào! Tôi là nhân viên được phân công cho đơn hàng của bạn.',
-      time: '09:00',
-      avatar: 'https://picsum.photos/40/40?random=2'
-    },
-    {
-      id: '2',
-      sender: 'customer',
-      content: 'Chào bạn! Tôi cần hỗ trợ một chút về thời gian.',
-      time: '09:15',
-      avatar: user?.avatar
-    },
-    {
-      id: '3',
-      sender: 'employee', 
-      content: 'Dạ, bạn có thể cho tôi biết thời gian thuận tiện không?',
-      time: '09:16',
-      avatar: 'https://picsum.photos/40/40?random=2'
-    },
-    {
-      id: '4',
-      sender: 'customer',
-      content: 'Tôi có thể vào lúc 10h sáng được không?',
-      time: '09:17',
-      avatar: user?.avatar
-    },
-    {
-      id: '5',
-      sender: 'employee',
-      content: 'Được ạ, tôi sẽ đến đúng giờ. Cảm ơn bạn!',
-      time: '09:18',
-      avatar: 'https://picsum.photos/40/40?random=2'
-    }
-  ];
-
-  const handleSendMessage = () => {
-    if (message.trim()) {
-      // In a real app, this would send the message via API
-      console.log('Sending message:', message);
-      setMessage('');
+  const loadBookings = async () => {
+    if (!user?.id) return;
+    const data = await getCustomerBookings(user.id);
+    if (Array.isArray(data)) {
+      setBookings(data as BookingItem[]);
+      if (data.length > 0 && !selectedBookingId) {
+        setSelectedBookingId(data[0].bookingId);
+      }
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+  useEffect(() => {
+    loadBookings();
+  }, [user?.id]);
+
+  useEffect(() => {
+    if (feedback) {
+      const timer = setTimeout(() => setFeedback(null), 3000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [feedback]);
+
+  const selectedBooking = useMemo(
+    () => bookings.find(item => item.bookingId === selectedBookingId) || null,
+    [bookings, selectedBookingId]
+  );
+
+  const conversation = useMemo<ConversationMessage[]>(() => {
+    if (!selectedBooking) return [];
+    const messages: ConversationMessage[] = [];
+
+    messages.push({
+      id: 'created',
+      role: 'customer',
+      content: `Bạn đã đặt dịch vụ ${
+        selectedBooking.serviceDetails?.[0]?.service.name || 'gia đình'
+      } với mã ${selectedBooking.bookingCode || selectedBooking.bookingId}.`,
+      timestamp: selectedBooking.createdAt
+    });
+
+    const statusMessage = statusMessages[selectedBooking.status];
+    if (statusMessage) {
+      messages.push({
+        id: 'status',
+        role: 'system',
+        content: statusMessage,
+        timestamp: selectedBooking.bookingTime || selectedBooking.updatedAt
+      });
+    }
+
+    if (selectedBooking.note) {
+      messages.push({
+        id: 'note',
+        role: 'customer',
+        content: selectedBooking.note,
+        timestamp: selectedBooking.updatedAt
+      });
+    }
+
+    return messages;
+  }, [selectedBooking]);
+
+  const handleSendMessage = async () => {
+    if (!selectedBooking || !message.trim()) return;
+    setIsSubmitting(true);
+    try {
+      const payload = { note: message.trim() };
+      const result = await updateBooking(selectedBooking.bookingId, payload);
+      if (result?.success) {
+        setMessage('');
+        await loadBookings();
+        setFeedback({ type: 'success', text: 'Đã cập nhật ghi chú cho đơn dịch vụ.' });
+      } else {
+        setFeedback({ type: 'error', text: 'Không thể gửi ghi chú. Vui lòng thử lại.' });
+      }
+    } catch (error) {
+      console.error('Send support message error:', error);
+      setFeedback({ type: 'error', text: 'Không thể gửi ghi chú. Vui lòng thử lại.' });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation userRole="CUSTOMER" />
-      
-      <div className="flex h-screen pt-16">
-        {/* Chat List Sidebar */}
-        <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
-          {/* Header */}
-          <div className="px-4 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-semibold text-gray-900">Tin nhắn</h2>
-          </div>
-
-          {/* Chat List */}
-          <div className="flex-1 overflow-y-auto">
-            {mockChats.map((chat) => (
-              <div
-                key={chat.id}
-                onClick={() => setSelectedChat(chat.id)}
-                className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
-                  selectedChat === chat.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
-                }`}
-              >
-                <div className="flex items-center space-x-3">
-                  <div className="relative">
-                    <img
-                      src={chat.avatar}
-                      alt={chat.employeeName}
-                      className="w-12 h-12 rounded-full"
-                    />
-                    {chat.status === 'online' && (
-                      <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
+    <DashboardLayout
+      role="CUSTOMER"
+      title="Trung tâm hỗ trợ"
+      description="Trao đổi nhanh với đội ngũ chăm sóc khách hàng và theo dõi ghi chú trên từng đơn đặt dịch vụ."
+    >
+      <div className="grid gap-6 lg:grid-cols-[320px,1fr]">
+        <SectionCard
+          title="Đơn đặt dịch vụ"
+          description="Chọn đơn để xem lịch trao đổi và cập nhật thông tin."
+          headerSpacing="compact"
+        >
+          {isLoading && bookings.length === 0 ? (
+            <div className="flex items-center justify-center py-10 text-slate-500">
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              Đang tải đơn đặt dịch vụ...
+            </div>
+          ) : bookings.length === 0 ? (
+            <div className="rounded-2xl bg-slate-50 p-6 text-center text-slate-500">
+              <MessageCircle className="mx-auto mb-3 h-6 w-6" />
+              <p>Chưa có đơn dịch vụ để trao đổi. Hãy đặt dịch vụ để bắt đầu.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {bookings.map(booking => {
+                const isActive = booking.bookingId === selectedBookingId;
+                return (
+                  <button
+                    key={booking.bookingId}
+                    onClick={() => setSelectedBookingId(booking.bookingId)}
+                    className={`w-full rounded-2xl border px-4 py-3 text-left transition hover:-translate-y-0.5 ${
+                      isActive
+                        ? 'border-sky-300 bg-sky-50/70 text-sky-700 shadow-sm'
+                        : 'border-slate-200 bg-white text-slate-600 hover:border-sky-200'
+                    }`}
+                  >
                     <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-gray-900 truncate">
-                        {chat.employeeName}
-                      </p>
-                      <p className="text-xs text-gray-500">{chat.time}</p>
+                      <span className="text-sm font-semibold">
+                        {booking.bookingCode || booking.bookingId}
+                      </span>
+                      <span className="text-xs uppercase tracking-wide text-slate-400">
+                        {booking.status}
+                      </span>
                     </div>
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-gray-600 truncate">
-                        {chat.lastMessage}
-                      </p>
-                      {chat.unread > 0 && (
-                        <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full">
-                          {chat.unread}
+                    <p className="mt-2 text-sm font-medium text-slate-700">
+                      {booking.serviceDetails?.[0]?.service.name || 'Dịch vụ gia đình'}
+                    </p>
+                    <p className="mt-1 text-xs text-slate-400">
+                      {booking.createdAt
+                        ? new Date(booking.createdAt).toLocaleString('vi-VN')
+                        : '—'}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+          )}
+        </SectionCard>
+
+        <SectionCard
+          title="Trao đổi & ghi chú"
+          description={
+            selectedBooking
+              ? 'Thông tin được đồng bộ với bộ phận chăm sóc khách hàng.'
+              : 'Hãy chọn một đơn để xem chi tiết.'
+          }
+        >
+          {selectedBooking ? (
+            <div className="flex h-full flex-col">
+              <div className="flex flex-col gap-2 rounded-2xl border border-slate-100 bg-white/90 p-4 shadow-sm">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-11 w-11 items-center justify-center rounded-full bg-slate-100">
+                    <UserCircle2 className="h-5 w-5 text-slate-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      {bookingTitle(selectedBooking)}
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      {addressLabel(selectedBooking)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 flex-1 space-y-4 overflow-y-auto pr-2">
+                {conversation.map(message => (
+                  <div
+                    key={message.id}
+                    className={`flex ${
+                      message.role === 'customer' ? 'justify-end' : 'justify-start'
+                    }`}
+                  >
+                    <div
+                      className={`rounded-2xl px-4 py-3 shadow-sm ${
+                        message.role === 'customer'
+                          ? 'bg-sky-600 text-white'
+                          : 'bg-slate-100 text-slate-700'
+                      }`}
+                    >
+                      <p className="text-sm leading-relaxed">{message.content}</p>
+                      {message.timestamp && (
+                        <span className="mt-2 block text-xs opacity-70">
+                          {new Date(message.timestamp).toLocaleString('vi-VN')}
                         </span>
                       )}
                     </div>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Chat Area */}
-        <div className="flex-1 flex flex-col">
-          {selectedChat ? (
-            <>
-              {/* Chat Header */}
-              <div className="px-6 py-4 border-b border-gray-200 bg-white">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-3">
-                    <img
-                      src={mockChats.find(c => c.id === selectedChat)?.avatar}
-                      alt="Employee"
-                      className="w-10 h-10 rounded-full"
-                    />
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900">
-                        {mockChats.find(c => c.id === selectedChat)?.employeeName}
-                      </h3>
-                      <p className="text-sm text-gray-500">
-                        {mockChats.find(c => c.id === selectedChat)?.status === 'online' ? 'Đang online' : 'Offline'}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button className="p-2 text-gray-400 hover:text-gray-600">
-                      <Phone className="w-5 h-5" />
-                    </button>
-                    <button className="p-2 text-gray-400 hover:text-gray-600">
-                      <Info className="w-5 h-5" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-6 space-y-4">
-                {mockMessages.map((msg) => (
-                  <div
-                    key={msg.id}
-                    className={`flex ${msg.sender === 'customer' ? 'justify-end' : 'justify-start'}`}
-                  >
-                    <div className={`flex max-w-xs lg:max-w-md ${msg.sender === 'customer' ? 'flex-row-reverse' : 'flex-row'}`}>
-                      <img
-                        src={msg.avatar}
-                        alt=""
-                        className="w-8 h-8 rounded-full"
-                      />
-                      <div className={`mx-2 ${msg.sender === 'customer' ? 'text-right' : ''}`}>
-                        <div
-                          className={`px-4 py-2 rounded-lg ${
-                            msg.sender === 'customer'
-                              ? 'bg-blue-500 text-white'
-                              : 'bg-gray-100 text-gray-800'
-                          }`}
-                        >
-                          <p className="text-sm">{msg.content}</p>
-                        </div>
-                        <p className="text-xs text-gray-500 mt-1">{msg.time}</p>
-                      </div>
-                    </div>
-                  </div>
                 ))}
+                {conversation.length === 0 && (
+                  <div className="rounded-2xl bg-slate-50 p-5 text-center text-slate-500">
+                    <MessageCircle className="mx-auto mb-3 h-6 w-6" />
+                    <p>Chưa có trao đổi nào cho đơn này.</p>
+                  </div>
+                )}
               </div>
 
-              {/* Message Input */}
-              <div className="px-6 py-4 border-t border-gray-200 bg-white">
-                <div className="flex items-center space-x-3">
-                  <button className="p-2 text-gray-400 hover:text-gray-600">
-                    <Paperclip className="w-5 h-5" />
-                  </button>
-                  <div className="flex-1 relative">
-                    <textarea
-                      value={message}
-                      onChange={(e) => setMessage(e.target.value)}
-                      onKeyPress={handleKeyPress}
-                      placeholder="Nhập tin nhắn..."
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      rows={1}
-                    />
-                  </div>
-                  <button className="p-2 text-gray-400 hover:text-gray-600">
-                    <Smile className="w-5 h-5" />
-                  </button>
+              {feedback && (
+                <div
+                  className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
+                    feedback.type === 'success'
+                      ? 'border-emerald-100 bg-emerald-50 text-emerald-600'
+                      : 'border-rose-100 bg-rose-50 text-rose-600'
+                  }`}
+                >
+                  {feedback.text}
+                </div>
+              )}
+
+              <div className="mt-4 rounded-3xl border border-slate-200 bg-white/90 p-4 shadow-sm">
+                <label className="block text-sm font-semibold text-slate-700">
+                  Gửi cập nhật đến đội ngũ hỗ trợ
+                </label>
+                <textarea
+                  value={message}
+                  onChange={event => setMessage(event.target.value)}
+                  placeholder="Nhập nội dung trao đổi, ví dụ: Giúp mình đến sớm hơn 15 phút nhé..."
+                  rows={3}
+                  className="mt-3 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 transition focus:border-sky-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sky-200"
+                />
+                <div className="mt-3 flex justify-end">
                   <button
                     onClick={handleSendMessage}
-                    disabled={!message.trim()}
-                    className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={!message.trim() || isSubmitting}
+                    className="inline-flex items-center gap-2 rounded-full bg-sky-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-200 transition hover:-translate-y-0.5 hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
                   >
-                    <Send className="w-4 h-4" />
+                    {isSubmitting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <SendHorizontal className="h-4 w-4" />
+                    )}
+                    Gửi ghi chú
                   </button>
                 </div>
               </div>
-            </>
+            </div>
           ) : (
-            <div className="flex-1 flex items-center justify-center">
-              <div className="text-center">
-                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Phone className="w-8 h-8 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">Chọn một cuộc trò chuyện</h3>
-                <p className="text-gray-500">Chọn một nhân viên để bắt đầu trò chuyện</p>
-              </div>
+            <div className="flex h-full flex-col items-center justify-center gap-3 rounded-3xl border border-slate-100 bg-slate-50 p-8 text-center text-slate-500">
+              <MessageCircle className="h-8 w-8" />
+              <p>Chọn một đơn dịch vụ ở bên trái để xem hoặc gửi trao đổi.</p>
             </div>
           )}
-        </div>
+        </SectionCard>
       </div>
-    </div>
+    </DashboardLayout>
   );
+};
+
+const bookingTitle = (booking: BookingItem) =>
+  booking.serviceDetails?.[0]?.service.name || 'Dịch vụ gia đình';
+
+const addressLabel = (booking: BookingItem) => {
+  if (booking.customerInfo?.fullAddress) return booking.customerInfo.fullAddress;
+  if (typeof booking.address === 'string') return booking.address;
+  if (booking.address && 'fullAddress' in booking.address) {
+    return booking.address.fullAddress || 'Chưa cập nhật địa chỉ';
+  }
+  return 'Chưa cập nhật địa chỉ';
 };
 
 export default ChatPage;

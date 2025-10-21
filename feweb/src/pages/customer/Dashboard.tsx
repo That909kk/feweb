@@ -1,277 +1,334 @@
-import React, { useEffect, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { 
-  Calendar, 
-  ClipboardList, 
-  MessageCircle,
-  Plus,
+import {
+  CalendarClock,
+  CalendarHeart,
+  CheckCircle2,
   Clock,
-  MapPin
+  Droplets,
+  Heart,
+  MapPin,
+  MessageCircle,
+  Sparkles,
+  Users,
+  UtensilsCrossed
 } from 'lucide-react';
+import { DashboardLayout } from '../../layouts';
 import { useAuth } from '../../contexts/AuthContext';
 import { useServices } from '../../hooks/useServices';
 import { useBooking } from '../../hooks/useBooking';
-import Navigation from '../../components/Navigation';
-import type { BookingResponse, CustomerData } from '../../types/api';
+import { MetricCard, SectionCard } from '../../shared/components';
+
+type CustomerBooking = {
+  bookingId: string;
+  bookingCode?: string;
+  status: string;
+  bookingTime?: string;
+  formattedTotalAmount?: string;
+  totalPrice?: number;
+  customerInfo?: {
+    fullAddress: string;
+  };
+  serviceDetails?: Array<{
+    service: {
+      name: string;
+      description?: string;
+      iconUrl?: string;
+    };
+  }>;
+};
+
+const statusBadgeMap: Record<string, string> = {
+  COMPLETED: 'border border-status-success/30 bg-status-success/10 text-status-success',
+  CONFIRMED: 'border border-brand-teal/30 bg-brand-teal/10 text-brand-teal',
+  IN_PROGRESS: 'border border-status-warning/30 bg-status-warning/10 text-status-warning',
+  AWAITING_EMPLOYEE: 'border border-status-info/30 bg-status-info/10 text-status-info',
+  PENDING: 'border border-brand-outline/40 bg-brand-outline/20 text-brand-navy',
+  CANCELLED: 'border border-status-danger/30 bg-status-danger/10 text-status-danger',
+  default: 'border border-brand-outline/40 bg-brand-outline/20 text-brand-text/70'
+};
+
+const statusLabelMap: Record<string, string> = {
+  COMPLETED: 'Da hoan thanh',
+  CONFIRMED: 'Da xac nhan',
+  IN_PROGRESS: 'Dang thuc hien',
+  AWAITING_EMPLOYEE: 'Cho phan cong',
+  PENDING: 'Dang cho',
+  CANCELLED: 'Da huy'
+};
+
+const serviceIconFallback: Record<string, React.ComponentType<{ className?: string }>> = {
+  cleaning: Sparkles,
+  cooking: UtensilsCrossed,
+  laundry: Droplets,
+  childcare: Users,
+  care: Heart,
+  default: Sparkles
+};
 
 const CustomerDashboard: React.FC = () => {
   const { user } = useAuth();
-  const { services } = useServices();
+  const { services, isLoading: isLoadingServices, error: servicesError } = useServices();
   const { getCustomerBookings } = useBooking();
-  const [recentBookings, setRecentBookings] = useState<BookingResponse[]>([]);
+  const [recentBookings, setRecentBookings] = useState<CustomerBooking[]>([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(false);
 
   useEffect(() => {
     const loadRecentBookings = async () => {
-      if (user) {
-        setIsLoadingBookings(true);
-        
-        try {
-          // Lấy ID khách hàng từ thông tin người dùng
-          let customerId = user.id;
-          
-          // Kiểm tra nếu có profileData và là kiểu CustomerData
-          if (user.profileData && 'customerId' in user.profileData) {
-            customerId = (user.profileData as CustomerData).customerId || user.id;
-          }
-          
-          // Gọi API để lấy dữ liệu booking
-          if (customerId) {
-            const bookings = await getCustomerBookings(customerId);
-            if (bookings) {
-              setRecentBookings(bookings);
-            } else {
-              // Nếu không có dữ liệu trả về, đặt mảng rỗng để tránh lỗi
-              setRecentBookings([]);
-            }
-          } else {
-            console.error('No valid customerId found');
-          }
-        } catch (error) {
-          console.error('Error loading recent bookings:', error);
-          // Đặt mảng rỗng để tránh lỗi khi API fails
-          setRecentBookings([]);
-        } finally {
-          setIsLoadingBookings(false);
+      if (!user?.id) return;
+
+      setIsLoadingBookings(true);
+      try {
+        const bookings = await getCustomerBookings(user.id);
+        if (Array.isArray(bookings)) {
+          setRecentBookings(bookings as CustomerBooking[]);
         }
+      } catch (error) {
+        console.error('Load customer bookings error:', error);
+        setRecentBookings([]);
+      } finally {
+        setIsLoadingBookings(false);
       }
     };
 
     loadRecentBookings();
+  }, [getCustomerBookings, user]);
+
+  const firstName = useMemo(() => {
+    if (!user?.fullName) return 'KhÃ¡ch hÃ ng';
+    const parts = user.fullName.trim().split(' ');
+    return parts[parts.length - 1] || user.fullName;
   }, [user]);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return 'bg-green-100 text-green-800';
-      case 'ACCEPTED':
-        return 'bg-blue-100 text-blue-800';
-      case 'IN_PROGRESS':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'PENDING':
-        return 'bg-orange-100 text-orange-800';
-      case 'CANCELLED':
-        return 'bg-red-100 text-red-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
-    }
-  };
+  const metrics = useMemo(() => {
+    const total = recentBookings.length;
+    const completed = recentBookings.filter(item => item.status === 'COMPLETED').length;
+    const awaiting = recentBookings.filter(item => item.status === 'AWAITING_EMPLOYEE' || item.status === 'PENDING').length;
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return 'Đã hoàn thành';
-      case 'ACCEPTED':
-        return 'Đã xác nhận';
-      case 'IN_PROGRESS':
-        return 'Đang thực hiện';
-      case 'PENDING':
-        return 'Đang chờ';
-      case 'CANCELLED':
-        return 'Đã hủy';
-      default:
-        return status;
-    }
-  };
+    return {
+      total,
+      completed,
+      awaiting
+    };
+  }, [recentBookings]);
 
-  const getServiceIcon = (category?: string) => {
-    switch (category) {
-      case 'cleaning':
-        return '🏠';
-      case 'cooking':
-        return '👨‍🍳';
-      case 'laundry':
-        return '👔';
-      case 'care':
-        return '❤️';
-      case 'childcare':
-        return '👶';
-      default:
-        return '🛠️';
-    }
+  const upcomingBookings = useMemo(() => {
+    const now = new Date();
+    return recentBookings
+      .filter(item => {
+        if (!item.bookingTime) return false;
+        return new Date(item.bookingTime) >= now;
+      })
+      .sort((a, b) => (a.bookingTime || '').localeCompare(b.bookingTime || ''))
+      .slice(0, 3);
+  }, [recentBookings]);
+
+  const featuredServices = useMemo(() => services.slice(0, 4), [services]);
+
+  const renderStatusBadge = (status: string) => {
+    const badgeClass = statusBadgeMap[status] || statusBadgeMap.default;
+    const label = statusLabelMap[status] || status;
+    return (
+      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${badgeClass}`}>
+        {label}
+      </span>
+    );
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
+    <DashboardLayout
+      role="CUSTOMER"
+      title={`ChÃ o ${firstName}`}
+      description="Theo dÃµi lá»‹ch dá»n dáº¹p, quáº£n lÃ½ Ä‘Æ¡n Ä‘Ã£ Ä‘áº·t vÃ  khÃ¡m phÃ¡ thÃªm dá»‹ch vá»¥ phÃ¹ há»£p vá»›i gia Ä‘Ã¬nh báº¡n."
+      actions={
+        <Link
+          to="/customer/booking"
+          className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-brand-teal shadow-lg shadow-sky-100 transition hover:-translate-y-0.5 hover:bg-sky-50"
+        >
+          <CalendarHeart className="h-4 w-4" />
+          Äáº·t lá»‹ch má»›i
+        </Link>
+      }
+    >
+      <div className="grid gap-6 lg:grid-cols-3">
+        <MetricCard
+          icon={CalendarClock}
+          label="Tá»•ng Ä‘Æ¡n Ä‘Ã£ Ä‘áº·t"
+          value={`${metrics.total}`}
+          accent="navy"
+          trendLabel="Lá»‹ch cá»§a báº¡n luÃ´n Ä‘Æ°á»£c cáº­p nháº­t."
+        />
+        <MetricCard
+          icon={CheckCircle2}
+          label="ÄÆ¡n hoÃ n táº¥t"
+          value={`${metrics.completed}`}
+          accent="teal"
+          trendLabel="Giá»¯ thÃ³i quen chÄƒm nhÃ  Ä‘á»u Ä‘áº·n nÃ o!"
+        />
+        <MetricCard
+          icon={Sparkles}
+          label="Äang chá» xá»­ lÃ½"
+          value={`${metrics.awaiting}`}
+          accent="amber"
+          trendLabel="Æ¯u tiÃªn xá»­ lÃ½ trong hÃ´m nay."
+        />
+      </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Xin chào, {user?.fullName}!
-          </h2>
-          <p className="text-gray-600">
-            Chào mừng bạn đến với bảng điều khiển khách hàng
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="lg:col-span-2 space-y-8">
-            {/* Quick Book Service */}
-            <div className="bg-gradient-to-r from-blue-600 to-green-600 rounded-2xl p-8 text-white">
-              <h3 className="text-2xl font-bold mb-4">Cần hỗ trợ gì hôm nay?</h3>
-              <p className="text-blue-100 mb-6">
-                Đặt dịch vụ giúp việc chỉ trong vài phút
-              </p>
-              <Link
-                to="/customer/booking"
-                className="inline-flex items-center bg-white text-blue-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors"
-              >
-                <Plus className="w-5 h-5 mr-2" />
-                Đặt giúp việc ngay
-              </Link>
+      <div className="grid gap-6 lg:grid-cols-3">
+        <SectionCard
+          title="ÄÆ¡n sáº¯p diá»…n ra"
+          description="Theo dÃµi cÃ¡c dá»‹ch vá»¥ sáº½ diá»…n ra trong vÃ i ngÃ y tá»›i."
+          className="lg:col-span-2"
+        >
+          {isLoadingBookings ? (
+            <div className="flex items-center justify-center py-10 text-brand-text/60">
+              <CalendarClock className="mr-2 h-5 w-5 animate-spin" />
+              Äang táº£i lá»‹ch háº¹n...
             </div>
-
-            {/* Available Services */}
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">Dịch vụ khả dụng</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {services.length > 0 ? (
-                  services.map((service) => (
-                    <Link
-                      key={service.serviceId}
-                      to={`/customer/booking?service=${service.serviceId}`}
-                      className="p-4 border border-gray-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-all"
-                    >
-                      <div className="flex items-start">
-                        <div className="w-14 h-14 rounded-lg mr-4 flex items-center justify-center overflow-hidden">
-                          {service.iconUrl ? (
-                            <img src={service.iconUrl} alt={service.name} className="w-full h-full object-contain" />
-                          ) : (
-                            <div className="text-3xl">{getServiceIcon(service.categoryName)}</div>
-                          )}
-                        </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 mb-1">{service.name}</h4>
-                          <p className="text-sm text-gray-600 mb-2">{service.description}</p>
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-blue-600">
-                              {service.basePrice.toLocaleString('vi-VN')}đ
-                            </span>
-                            <span className="text-sm text-gray-500">
-                              {service.estimatedDurationHours * 60} phút
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </Link>
-                  ))
-                ) : (
-                  <div className="col-span-2 text-center py-8 text-gray-500">
-                    <ClipboardList className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                    <p>Đang tải dịch vụ...</p>
-                  </div>
-                )}
-              </div>
+          ) : upcomingBookings.length === 0 ? (
+            <div className="rounded-2xl bg-brand-background/70 p-6 text-center text-brand-text/60">
+              <Sparkles className="mx-auto mb-3 h-8 w-8 text-brand-text/50" />
+              <p>Báº¡n chÆ°a cÃ³ lá»‹ch háº¹n nÃ o sáº¯p tá»›i. Äáº·t dá»‹ch vá»¥ ngay Ä‘á»ƒ giá»¯ nhÃ  luÃ´n gá»n gÃ ng nhÃ©!</p>
             </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Recent Orders */}
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Đơn gần đây</h3>
-                <Link
-                  to="/customer/orders"
-                  className="text-sm text-blue-600 hover:text-blue-800"
-                >
-                  Xem tất cả
-                </Link>
-              </div>
-              
-              {isLoadingBookings ? (
-                <div className="text-center py-4 text-gray-500">
-                  Đang tải...
-                </div>
-              ) : recentBookings.length > 0 ? (
-                <div className="space-y-4">
-                  {recentBookings.map((booking) => {
-                    // Get first service from serviceDetails
-                    const firstService = booking.serviceDetails?.[0]?.service;
-                    return (
-                      <div key={booking.bookingId} className="border-l-4 border-blue-500 pl-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <h4 className="font-medium text-gray-900">{firstService?.name || 'Dịch vụ'}</h4>
-                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(booking.status)}`}>
-                            {getStatusText(booking.status)}
-                          </span>
-                        </div>
-                        <div className="text-sm text-gray-600 space-y-1">
-                          <div className="flex items-center">
-                            <Calendar className="w-4 h-4 mr-1" />
-                            {new Date(booking.bookingTime).toLocaleDateString('vi-VN')}
-                          </div>
-                          <div className="flex items-center">
-                            <Clock className="w-4 h-4 mr-1" />
-                            {new Date(booking.bookingTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
-                          </div>
-                          <div className="flex items-center">
-                            <MapPin className="w-4 h-4 mr-1" />
-                            {booking.customerInfo.fullAddress.split(',')[0]}...
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <ClipboardList className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-                  <p>Chưa có đơn nào</p>
-                  <Link
-                    to="/customer/booking"
-                    className="inline-block mt-2 text-blue-600 hover:text-blue-800"
+          ) : (
+            <div className="space-y-4">
+              {upcomingBookings.map((booking) => {
+                const serviceName = booking.serviceDetails?.[0]?.service.name || 'Dá»‹ch vá»¥ gia Ä‘Ã¬nh';
+                const startTime = booking.bookingTime ? new Date(booking.bookingTime) : null;
+                return (
+                  <div
+                    key={booking.bookingId}
+                    className="flex flex-col justify-between rounded-2xl border border-brand-outline/40 bg-gradient-to-r from-white via-white to-sky-50/60 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:flex-row sm:items-center"
                   >
-                    Đặt đơn đầu tiên
-                  </Link>
-                </div>
-              )}
+                    <div>
+                      <h3 className="text-lg font-semibold text-brand-navy">{serviceName}</h3>
+                      <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-brand-text/70">
+                        {startTime && (
+                          <>
+                            <span className="inline-flex items-center gap-2">
+                              <CalendarClock className="h-4 w-4 text-sky-500" />
+                              {startTime.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })}
+                            </span>
+                            <span className="inline-flex items-center gap-2">
+                              <Clock className="h-4 w-4 text-sky-500" />
+                              {startTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </>
+                        )}
+                        {booking.customerInfo?.fullAddress && (
+                          <span className="inline-flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-sky-500" />
+                            {booking.customerInfo.fullAddress}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="mt-4 flex flex-col items-end gap-2 sm:mt-0 sm:items-end">
+                      {renderStatusBadge(booking.status)}
+                      {booking.formattedTotalAmount && (
+                        <span className="text-sm font-semibold text-slate-700">
+                          {booking.formattedTotalAmount}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
+          )}
+        </SectionCard>
 
-            {/* Quick Tips */}
-            <div className="bg-green-50 rounded-xl p-6">
-              <h3 className="text-lg font-semibold text-green-900 mb-4">💡 Mẹo sử dụng</h3>
-              <ul className="space-y-2 text-sm text-green-700">
-                <li>• Đặt trước 1-2 ngày để có nhiều lựa chọn nhân viên</li>
-                <li>• Mô tả chi tiết yêu cầu để nhận dịch vụ tốt nhất</li>
-                <li>• Đánh giá sau khi hoàn thành để giúp cải thiện dịch vụ</li>
-              </ul>
-              <Link
-                to="/customer/chat"
-                className="inline-flex items-center mt-4 text-green-600 hover:text-green-800 font-medium"
-              >
-                <MessageCircle className="w-4 h-4 mr-2" />
-                Liên hệ hỗ trợ
-              </Link>
+        <SectionCard
+          title="Há»— trá»£ nhanh"
+          description="Äá»™i ngÅ© CSKH luÃ´n sáºµn sÃ ng há»— trá»£ báº¡n 24/7."
+        >
+          <div className="rounded-2xl bg-gradient-to-br from-brand-navy via-brand-navyHover to-brand-teal p-6 text-white shadow-lg">
+            <div className="flex items-center gap-4">
+              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white/15">
+                <MessageCircle className="h-6 w-6" />
+              </div>
+              <div>
+                <h4 className="text-lg font-semibold">TrÃ² chuyá»‡n cÃ¹ng HomeCare</h4>
+                <p className="mt-1 text-sm text-white/80">
+                  Káº¿t ná»‘i trá»±c tiáº¿p vá»›i nhÃ¢n viÃªn há»— trá»£ hoáº·c ngÆ°á»i lao Ä‘á»™ng Ä‘Ã£ nháº­n viá»‡c.
+                </p>
+              </div>
             </div>
+            <Link
+              to="/customer/chat"
+              className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-brand-teal shadow-inner transition hover:-translate-y-0.5"
+            >
+              Má»Ÿ trung tÃ¢m há»— trá»£
+            </Link>
           </div>
-        </div>
-      </main>
-    </div>
+        </SectionCard>
+      </div>
+
+      <SectionCard
+        title="Dá»‹ch vá»¥ Ä‘á» xuáº¥t cho báº¡n"
+        description="CÃ¡c dá»‹ch vá»¥ phá»• biáº¿n giÃºp giá»¯ nhÃ  gá»n gÃ ng, an tÃ¢m."
+      >
+        {isLoadingServices ? (
+          <div className="flex items-center justify-center py-10 text-brand-text/60">
+            <Sparkles className="mr-2 h-5 w-5 animate-spin" />
+            Äang táº£i gá»£i Ã½ dá»‹ch vá»¥...
+          </div>
+        ) : servicesError ? (
+          <div className="rounded-2xl bg-rose-50 p-6 text-rose-600">
+            KhÃ´ng thá»ƒ táº£i danh sÃ¡ch dá»‹ch vá»¥. Vui lÃ²ng thá»­ láº¡i sau.
+          </div>
+        ) : featuredServices.length === 0 ? (
+          <div className="rounded-2xl bg-brand-background/70 p-6 text-center text-brand-text/60">
+            Hiá»‡n chÆ°a cÃ³ dá»‹ch vá»¥ kháº£ dá»¥ng. Vui lÃ²ng quay láº¡i sau.
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            {featuredServices.map((service) => {
+              const Icon =
+                serviceIconFallback[service.categoryName as keyof typeof serviceIconFallback] ||
+                serviceIconFallback.default;
+              return (
+                <Link
+                  key={service.serviceId}
+                  to={`/customer/booking?serviceId=${service.serviceId}`}
+                  className="group relative flex flex-col rounded-2xl border border-brand-outline/40 bg-white/95 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-teal/60 hover:shadow-elevation-sm"
+                >
+                  <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-teal/10 text-2xl">
+                    {service.iconUrl ? (
+                      <img src={service.iconUrl} alt={service.name} className="h-full w-full rounded-2xl object-cover" />
+                    ) : (
+                      <Icon className="h-5 w-5 text-brand-teal" />
+                    )}
+                  </div>
+                  <h3 className="mt-4 text-base font-semibold text-brand-navy group-hover:text-brand-teal">
+                    {service.name}
+                  </h3>
+                  <p className="mt-2 flex-1 text-sm text-brand-text/70">
+                    {service.description}
+                  </p>
+                  <div className="mt-4 flex items-center justify-between text-sm font-semibold text-brand-teal">
+                    <span>{service.basePrice.toLocaleString('vi-VN')} VND</span>
+                    <span className="text-xs text-brand-text/50">~ {service.estimatedDurationHours * 60} phut</span>
+                  </div>
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </SectionCard>
+    </DashboardLayout>
   );
 };
 
 export default CustomerDashboard;
+
+
+
+
+
+
+
+
+
+
+

@@ -19,7 +19,8 @@ import Navigation from '../../components/Navigation';
 import type { 
   CreateBookingRequest,
   SuitableEmployee,
-  BookingValidationRequest
+  BookingValidationRequest,
+  PaymentMethod
 } from '../../types/api';
 
 // Helper function for input validation
@@ -125,7 +126,7 @@ const BookingPage: React.FC = () => {
   const markerRef = useRef<L.Marker | null>(null);
   
   // State cho payment methods
-  const [paymentMethods, setPaymentMethods] = useState<any[]>([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   
   // State for booking flow
   const [selectedChoiceIds, setSelectedChoiceIds] = useState<number[]>([]);
@@ -2018,7 +2019,7 @@ const BookingPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Navigation userRole="CUSTOMER" />
+      <Navigation role="CUSTOMER" />
 
       <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Error Messages */}

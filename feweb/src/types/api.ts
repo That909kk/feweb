@@ -217,6 +217,40 @@ export interface ServiceChoice {
   status: string;
 }
 
+export type ServiceOptionType =
+  | 'SINGLE_CHOICE_RADIO'
+  | 'SINGLE_CHOICE_DROPDOWN'
+  | 'MULTIPLE_CHOICE_CHECKBOX'
+  | 'QUANTITY_INPUT';
+
+export interface ServiceOptionChoice {
+  choiceId: number;
+  choiceName: string;
+  description?: string;
+  priceAdjustment: number;
+  durationAdjustmentHours?: number;
+  recommendedStaffAdjustment?: number;
+  iconUrl?: string;
+  isDefault?: boolean;
+}
+
+export interface ServiceOption {
+  optionId: number;
+  optionName: string;
+  optionType: ServiceOptionType;
+  required: boolean;
+  minSelection?: number;
+  maxSelection?: number;
+  dependentOnChoiceId?: number | null;
+  quantityStep?: number;
+  choices?: ServiceOptionChoice[];
+}
+
+export interface ServiceWithOptions {
+  service: Service;
+  options: ServiceOption[];
+}
+
 export interface CalculatePriceRequest {
   serviceId: number;
   selectedChoiceIds: number[];
@@ -239,6 +273,47 @@ export interface CalculatePriceResponse extends ApiResponse {
     };
   };
 }
+
+export interface PriceCalculationSelection {
+  optionId: number;
+  choiceIds?: number[];
+  quantity?: number;
+}
+
+export interface PriceCalculationRequest {
+  serviceId: number;
+  bookingTime: string;
+  selections: PriceCalculationSelection[];
+}
+
+export interface PriceCalculationResponse extends ApiResponse<{
+  basePrice: number;
+  adjustments: Array<{
+    label: string;
+    amount: number;
+    description?: string;
+  }>;
+  totalAmount: number;
+  formattedTotalAmount?: string;
+  recommendedEmployees?: number;
+  estimatedDurationHours?: number;
+}> {}
+
+export interface SuitableEmployee {
+  employeeId: string;
+  fullName: string;
+  avatar?: string;
+  rating?: number;
+  totalCompletedJobs?: number;
+  distanceKm?: number;
+  availableFrom?: string;
+  availableTo?: string;
+  primarySkills?: string[];
+}
+
+export interface SuitableEmployeesResponse extends ApiResponse<{
+  availableEmployees: SuitableEmployee[];
+}> {}
 
 // Employee Schedule Types
 export interface EmployeeScheduleParams {
@@ -288,6 +363,63 @@ export interface CreateBookingRequest {
   paymentMethodId: number;
 }
 
+export interface BookingValidationRequest {
+  addressId: string;
+  bookingTime: string;
+  note?: string | null;
+  promoCode?: string | null;
+  bookingDetails: BookingDetailRequest[];
+  assignments?: BookingAssignmentRequest[];
+  fullAddress?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+}
+
+export interface BookingValidationResponse {
+  success?: boolean;
+  isValid: boolean;
+  calculatedTotalAmount: number | null;
+  formattedTotalAmount?: string | null;
+  errors: string[];
+  conflicts: Array<{
+    conflictType: string;
+    employeeId?: string;
+    conflictStartTime?: string;
+    conflictEndTime?: string;
+    reason?: string;
+  }>;
+  serviceValidations: Array<{
+    serviceId: number;
+    serviceName: string;
+    exists: boolean;
+    active: boolean;
+    basePrice: number;
+    calculatedPrice: number;
+    expectedPrice: number;
+    priceMatches: boolean;
+    validChoiceIds: number[];
+    invalidChoiceIds: number[];
+    recommendedStaff?: number;
+    valid: boolean;
+  }>;
+  customer: {
+    customerId: string;
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+  } | null;
+  address: {
+    addressId: string;
+    fullAddress: string;
+    ward: string;
+    city: string;
+    latitude?: number;
+    longitude?: number;
+    isDefault: boolean;
+  } | null;
+  usingNewAddress: boolean;
+}
+
 export interface BookingResponse extends ApiResponse {
   data: {
     bookingId: string;
@@ -315,6 +447,10 @@ export interface BookingDetail {
   status: string;
   startTime: string;
   endTime: string;
+  location?: string;
+  customerAddress?: {
+    fullAddress: string;
+  };
   assignedEmployees: Array<{
     employeeId: string;
     fullName: string;
@@ -326,10 +462,12 @@ export interface BookingDetail {
 
 // Payment Types
 export interface PaymentMethod {
-  id: number;
-  name: string;
-  type: 'CASH' | 'MOMO' | 'VNPAY' | 'BANK_TRANSFER';
-  status: string;
+  methodId: number;
+  methodCode: 'CASH' | 'MOMO' | 'VNPAY' | 'BANK_TRANSFER';
+  methodName: string;
+  description?: string;
+  serviceCharge?: number;
+  isActive?: boolean;
 }
 
 export interface CreatePaymentRequest {
@@ -338,16 +476,15 @@ export interface CreatePaymentRequest {
   amount: number;
 }
 
-export interface PaymentResponse extends ApiResponse {
-  data: {
-    paymentId: string;
-    bookingId: string;
-    methodId: number;
-    amount: number;
-    status: string;
-    paymentUrl?: string; // For online payment methods
-    createdAt: string;
-  };
+export interface PaymentDetail {
+  paymentId: string;
+  bookingCode: string;
+  amount: number;
+  status: 'PENDING' | 'PAID' | 'FAILED' | 'CANCELED' | 'REFUNDED';
+  paymentMethodName: string;
+  transactionCode: string | null;
+  createdAt: string;
+  paidAt: string | null;
 }
 
 // Cancel Assignment Request

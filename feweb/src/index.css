@@ -3,11 +3,11 @@
 @tailwind utilities;
 
 :root {
-  font-family: 'Inter', system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #213547;
-  background-color: #ffffff;
+  color: #0B1D26;
+  background-color: #EEF2F6;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -18,7 +18,7 @@ body {
   margin: 0;
   padding: 0;
   min-height: 100vh;
-  background-color: #ffffff;
+  background-color: #EEF2F6;
 }
 
 #root {
@@ -29,15 +29,15 @@ body {
 }
 
 a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
+  color: inherit;
+  text-decoration: none;
 }
 
-a:hover {
-  color: #535bf2;
+a:focus-visible {
+  outline: 2px solid #2F9C95;
+  outline-offset: 3px;
 }
 
 button {
-  background-color: #f9f9f9;
+  background-color: transparent;
 }

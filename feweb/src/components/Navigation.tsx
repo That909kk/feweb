@@ -1,221 +1,271 @@
-import React, { useState, useEffect } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import React, { useMemo } from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import {
+  BarChart3,
+  CalendarClock,
+  ClipboardList,
+  FileText,
+  HardHat,
+  LayoutDashboard,
+  Megaphone,
+  MessageCircle,
+  ShieldCheck,
+  Sparkles,
+  UserCog,
+  UserRound,
+  Users
+} from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import Button from '../shared/components/Button';
+import type { UserRole } from '../types/api';
 
-interface NavItem {
+type NavigationProps = {
+  role?: UserRole;
+  collapsed?: boolean;
+  onNavigate?: () => void;
+};
+
+type NavItemConfig = {
+  to: string;
   label: string;
-  path: string;
-  roles: string[];
-}
+  description: string;
+  icon: LucideIcon;
+};
 
-interface NavigationProps {
-  userRole?: string; // Optional userRole prop for backward compatibility
-}
+type QuickActionConfig = {
+  to: string;
+  label: string;
+  hint: string;
+  icon: LucideIcon;
+};
 
-const Navigation: React.FC<NavigationProps> = ({ userRole }) => {
-  const { isAuthenticated, logout, user } = useAuth();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+const roleLabels: Record<UserRole, string> = {
+  CUSTOMER: 'Khach hang',
+  EMPLOYEE: 'Nhan vien',
+  ADMIN: 'Quan tri'
+};
 
-  // Handle window resize
-  useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth >= 768) {
-        setIsMenuOpen(false);
-      }
-    };
-
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, []);
-
-  const handleLogout = async () => {
-    // Use the logout function from AuthContext which calls the /api/v1/auth/logout API
-    await logout();
-    navigate('/auth');
-  };
-
-  const toggleMenu = () => {
-    setIsMenuOpen(!isMenuOpen);
-  };
-
-  const navItems: NavItem[] = [
-    // Customer routes
-    { label: 'Đặt lịch', path: '/customer/booking', roles: ['CUSTOMER'] },
-    { label: 'Đơn hàng', path: '/customer/orders', roles: ['CUSTOMER'] },
-    { label: 'Hỗ trợ', path: '/customer/chat', roles: ['CUSTOMER'] },
-    { label: 'Hồ sơ', path: '/customer/profile', roles: ['CUSTOMER'] },
-    
-    // Employee routes
-    { label: 'Lịch làm việc', path: '/employee/schedule', roles: ['EMPLOYEE'] },
-    { label: 'Yêu cầu', path: '/employee/requests', roles: ['EMPLOYEE'] },
-    { label: 'Hồ sơ', path: '/employee/profile', roles: ['EMPLOYEE'] },
-    
-    // Admin routes
-    { label: 'Quản lý đặt lịch', path: '/admin/bookings', roles: ['ADMIN'] },
-    { label: 'Quản lý nội dung', path: '/admin/content', roles: ['ADMIN'] },
-    { label: 'Quản lý người dùng', path: '/admin/users', roles: ['ADMIN'] },
-  ];
-
-  const filteredNavItems = navItems.filter(item => {
-    // If userRole prop is provided, use it; otherwise use the role from auth context
-    const currentRole = userRole || user?.role;
-    
-    if (!currentRole) {
-      // If no role available, only show items that don't require auth
-      return item.roles.includes('GUEST');
+const navigationConfig: Record<UserRole, NavItemConfig[]> = {
+  CUSTOMER: [
+    {
+      to: '/customer/dashboard',
+      label: 'Tong quan',
+      description: 'Trang thai moi nhat',
+      icon: LayoutDashboard
+    },
+    {
+      to: '/customer/booking',
+      label: 'Dat lich',
+      description: 'Tao yeu cau dich vu',
+      icon: CalendarClock
+    },
+    {
+      to: '/customer/orders',
+      label: 'Don hang',
+      description: 'Theo doi trang thai',
+      icon: ClipboardList
+    },
+    {
+      to: '/customer/payments',
+      label: 'Thanh toan',
+      description: 'Lich su giao dich',
+      icon: FileText
+    },
+    {
+      to: '/customer/chat',
+      label: 'Trao doi',
+      description: 'Lien lac nhan vien',
+      icon: MessageCircle
+    },
+    {
+      to: '/customer/profile',
+      label: 'Ho so',
+      description: 'Cap nhat thong tin',
+      icon: UserRound
     }
-    // Otherwise, filter based on the role
-    return item.roles.includes(currentRole);
-  });
+  ],
+  EMPLOYEE: [
+    {
+      to: '/employee/dashboard',
+      label: 'Tong quan',
+      description: 'Chiem nguong lich ban',
+      icon: LayoutDashboard
+    },
+    {
+      to: '/employee/schedule',
+      label: 'Lich lam',
+      description: 'Quan ly ca lam',
+      icon: CalendarClock
+    },
+    {
+      to: '/employee/available',
+      label: 'Cong viec',
+      description: 'Nhan them ca phu hop',
+      icon: HardHat
+    },
+    {
+      to: '/employee/requests',
+      label: 'Yeu cau',
+      description: 'Theo doi ho tro',
+      icon: Sparkles
+    },
+    {
+      to: '/employee/profile',
+      label: 'Ho so',
+      description: 'Cap nhat ky nang',
+      icon: UserCog
+    }
+  ],
+  ADMIN: [
+    {
+      to: '/admin/dashboard',
+      label: 'Tong quan',
+      description: 'Chi so hoat dong',
+      icon: BarChart3
+    },
+    {
+      to: '/admin/users',
+      label: 'Nguoi dung',
+      description: 'Quan ly tai khoan',
+      icon: Users
+    },
+    {
+      to: '/admin/bookings',
+      label: 'Don hang',
+      description: 'Giam sat tien do',
+      icon: ShieldCheck
+    },
+    {
+      to: '/admin/content',
+      label: 'Noi dung',
+      description: 'Quan tri thu vien',
+      icon: Megaphone
+    }
+  ]
+};
 
-  return (
-    <nav className="bg-gradient-to-r from-teal-600 to-teal-500 text-white w-full shadow-lg">
-      <div className="container mx-auto px-4">
-        <div className="flex justify-between items-center py-3">
-          {/* Logo that redirects to appropriate dashboard based on user role */}
-          <div 
-            className="flex items-center cursor-pointer" 
-            onClick={() => {
-              if (isAuthenticated && user?.role) {
-                switch (user.role) {
-                  case 'ADMIN':
-                    navigate('/admin/dashboard');
-                    break;
-                  case 'EMPLOYEE':
-                    navigate('/employee/dashboard');
-                    break;
-                  case 'CUSTOMER':
-                    navigate('/customer/dashboard');
-                    break;
-                  default:
-                    navigate('/');
-                }
-              } else {
-                navigate('/');
-              }
-            }}
+const quickActionConfig: Record<UserRole, QuickActionConfig> = {
+  CUSTOMER: {
+    to: '/customer/booking',
+    label: 'Dat lich nhanh',
+    hint: 'Su dung dia chi mac dinh',
+    icon: Sparkles
+  },
+  EMPLOYEE: {
+    to: '/employee/dashboard',
+    label: 'Check-in ca lam',
+    hint: 'Cap nhat trang thai cong viec',
+    icon: HardHat
+  },
+  ADMIN: {
+    to: '/admin/dashboard',
+    label: 'Xem bao cao ngay',
+    hint: 'Theo doi KPI trong ngay',
+    icon: BarChart3
+  }
+};
+
+const Navigation: React.FC<NavigationProps> = ({ role, collapsed = false, onNavigate }) => {
+  const location = useLocation();
+  const { selectedRole } = useAuth();
+
+  const activeRole = role ?? selectedRole ?? 'CUSTOMER';
+  const navItems = navigationConfig[activeRole];
+  const quickAction = quickActionConfig[activeRole];
+  const workspaceLabel = roleLabels[activeRole];
+
+  const isActive = (path: string) => location.pathname.startsWith(path);
+
+  const navContent = useMemo(
+    () =>
+      navItems.map(item => {
+        const active = isActive(item.to);
+        return (
+          <Link
+            key={item.to}
+            to={item.to}
+            onClick={onNavigate}
+            className={[
+              'group flex w-full items-start gap-3 rounded-2xl border px-4 py-3 transition-all duration-200',
+              active
+                ? 'border-brand-teal bg-white shadow-elevation-sm'
+                : 'border-transparent bg-transparent hover:border-brand-outline/60 hover:bg-white/60 hover:shadow-sm'
+            ].join(' ')}
           >
-            <div className="mr-2">
-              <svg className="w-8 h-8" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a2 2 0 012-2h2a2 2 0 012 2v5m-4 0h4" />
-              </svg>
-            </div>
-            <div className="text-2xl font-bold font-poppins tracking-wide">
-              <span className="text-white">Home</span>
-              <span className="text-yellow-300">Service</span>
-            </div>
-          </div>
-          
-          {/* Mobile menu button */}
-          {isMobile && (
-            <button 
-              onClick={toggleMenu}
-              className="p-2 focus:outline-none hover:bg-teal-700 rounded-md transition-colors"
-              aria-label="Toggle menu"
-            >
-              <svg 
-                className="w-6 h-6" 
-                fill="none" 
-                stroke="currentColor" 
-                viewBox="0 0 24 24" 
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                {isMenuOpen ? (
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M6 18L18 6M6 6l12 12" 
-                  />
-                ) : (
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2} 
-                    d="M4 6h16M4 12h16M4 18h16" 
-                  />
-                )}
-              </svg>
-            </button>
-          )}
-          
-          {/* Desktop navigation */}
-          {!isMobile && (
-            <div className="flex items-center space-x-1">
-              {filteredNavItems.map((item) => (
-                <Link
-                  key={item.path}
-                  to={item.path}
-                  className={`px-4 py-2 rounded-md font-medium hover:bg-teal-700 hover:text-yellow-300 transition-colors ${
-                    location.pathname === item.path 
-                      ? 'bg-teal-700 text-yellow-300 font-semibold' 
-                      : 'text-white'
-                  }`}
+            <item.icon
+              className={[
+                'h-5 w-5 flex-shrink-0 rounded-full p-1 transition-colors',
+                active ? 'bg-brand-teal/10 text-brand-teal' : 'bg-brand-outline/20 text-brand-navy'
+              ].join(' ')}
+            />
+            {!collapsed && (
+              <div className="flex flex-col">
+                <span
+                  className={[
+                    'text-sm font-semibold tracking-tight',
+                    active ? 'text-brand-navy' : 'text-brand-text/80'
+                  ].join(' ')}
                 >
                   {item.label}
-                </Link>
-              ))}
-              
-              {isAuthenticated ? (
-                <Button 
-                  onClick={handleLogout}
-                  className="ml-4 bg-red-500 hover:bg-red-600 shadow-sm"
-                >
-                  Đăng xuất
-                </Button>
-              ) : (
-                <Link to="/auth">
-                  <Button className="ml-4 shadow-sm border border-yellow-400 hover:border-yellow-300">Đăng nhập</Button>
-                </Link>
-              )}
-            </div>
-          )}
-        </div>
-        
-        {/* Mobile navigation menu */}
-        {isMobile && isMenuOpen && (
-          <div className="pt-2 pb-4 bg-teal-600 rounded-b-lg shadow-lg border-t border-teal-700">
-            {filteredNavItems.map((item) => (
-              <Link
-                key={item.path}
-                to={item.path}
-                className={`block px-4 py-3 rounded-md m-1 hover:bg-teal-700 hover:text-yellow-300 transition-colors ${
-                  location.pathname === item.path 
-                    ? 'bg-teal-700 text-yellow-300 font-semibold' 
-                    : 'text-white'
-                }`}
-                onClick={() => setIsMenuOpen(false)}
-              >
-                {item.label}
-              </Link>
-            ))}
-            
-            {isAuthenticated ? (
-              <button 
-                onClick={handleLogout}
-                className="w-full text-left px-4 py-3 m-1 text-red-300 hover:bg-teal-700 hover:text-red-200 transition-colors rounded-md font-medium"
-              >
-                Đăng xuất
-              </button>
-            ) : (
-              <Link 
-                to="/auth"
-                className="block px-4 py-3 m-1 text-yellow-300 hover:bg-teal-700 transition-colors rounded-md font-medium"
-                onClick={() => setIsMenuOpen(false)}
-              >
-                Đăng nhập
-              </Link>
+                </span>
+                <span className="text-xs text-brand-text/60">{item.description}</span>
+              </div>
             )}
+          </Link>
+        );
+      }),
+    [collapsed, navItems]
+  );
+
+  return (
+    <div
+      className={[
+        'flex h-full flex-col justify-between border-r border-brand-outline/40 bg-gradient-to-b from-brand-surface/70 via-brand-surface to-brand-background/60 px-4 py-6',
+        collapsed ? 'w-full' : 'w-72'
+      ].join(' ')}
+    >
+      <div className="space-y-6">
+        {!collapsed && (
+          <div className="rounded-3xl border border-brand-outline/60 bg-white/90 p-5 shadow-sm">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-brand-teal">
+              Workspace
+            </p>
+            <p className="mt-2 text-lg font-semibold text-brand-navy">Khu vuc {workspaceLabel}</p>
+            <p className="mt-2 text-xs text-brand-text/60">
+              Chon chuc nang phu hop voi nhu cau cong viec cua ban.
+            </p>
           </div>
         )}
+
+        {quickAction && !collapsed && (
+          <Link
+            to={quickAction.to}
+            onClick={onNavigate}
+            className="flex items-center gap-3 rounded-3xl bg-brand-navy px-4 py-4 text-white shadow-elevation-sm transition hover:-translate-y-0.5 hover:bg-brand-navyHover"
+          >
+            <quickAction.icon className="h-5 w-5 text-white/90" />
+            <div className="flex flex-col text-left">
+              <span className="text-sm font-semibold">{quickAction.label}</span>
+              <span className="text-xs text-white/70">{quickAction.hint}</span>
+            </div>
+          </Link>
+        )}
+
+        <nav className="space-y-2">{navContent}</nav>
       </div>
-    </nav>
+
+      {!collapsed && (
+        <div className="rounded-3xl border border-brand-outline/40 bg-white/70 p-4 text-xs text-brand-text/70 shadow-inner">
+          <p className="font-semibold text-brand-navy">Trung tam ho tro</p>
+          <p className="mt-2">
+            Can ho tro? Goi <span className="font-semibold text-brand-teal">1900-9999</span> hoac
+            gui email toi <span className="font-semibold text-brand-teal">support@giadung360.vn</span>.
+          </p>
+        </div>
+      )}
+    </div>
   );
 };
 
 export default Navigation;
+

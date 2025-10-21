@@ -3,7 +3,7 @@ import type { ApiResponse } from './client';
 import type { 
   PaymentMethod, 
   CreatePaymentRequest, 
-  PaymentResponse 
+  PaymentDetail 
 } from '../types/api';
 
 /**
@@ -18,14 +18,14 @@ export const getPaymentMethodsApi = async (): Promise<PaymentMethod[]> => {
 };
 
 // Create payment for booking (requires CUSTOMER role)
-export const createPaymentApi = async (data: CreatePaymentRequest): Promise<PaymentResponse> => {
-  const response = await api.post<PaymentResponse>('/customer/payments', data);
+export const createPaymentApi = async (data: CreatePaymentRequest): Promise<PaymentDetail> => {
+  const response = await api.post<PaymentDetail>('/customer/payments', data);
   return response.data;
 };
 
 // Get payment by ID
-export const getPaymentByIdApi = async (paymentId: string): Promise<PaymentResponse> => {
-  const response = await api.get<PaymentResponse>(`/customer/payments/${paymentId}`);
+export const getPaymentByIdApi = async (paymentId: string): Promise<PaymentDetail> => {
+  const response = await api.get<PaymentDetail>(`/customer/payments/${paymentId}`);
   return response.data;
 };
 
