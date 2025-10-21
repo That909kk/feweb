@@ -49,12 +49,12 @@ const statusBadgeMap: Record<string, string> = {
 };
 
 const statusLabelMap: Record<string, string> = {
-  COMPLETED: 'Da hoan thanh',
-  CONFIRMED: 'Da xac nhan',
-  IN_PROGRESS: 'Dang thuc hien',
-  AWAITING_EMPLOYEE: 'Cho phan cong',
-  PENDING: 'Dang cho',
-  CANCELLED: 'Da huy'
+  COMPLETED: 'Đã hoàn thành',
+  CONFIRMED: 'Đã xác nhận',
+  IN_PROGRESS: 'Đang thực hiện',
+  AWAITING_EMPLOYEE: 'Chờ phân công',
+  PENDING: 'Đang chờ',
+  CANCELLED: 'Đã hủy'
 };
 
 const serviceIconFallback: Record<string, React.ComponentType<{ className?: string }>> = {
@@ -95,7 +95,7 @@ const CustomerDashboard: React.FC = () => {
   }, [getCustomerBookings, user]);
 
   const firstName = useMemo(() => {
-    if (!user?.fullName) return 'KhÃ¡ch hÃ ng';
+    if (!user?.fullName) return 'Khách hàng';
     const parts = user.fullName.trim().split(' ');
     return parts[parts.length - 1] || user.fullName;
   }, [user]);
@@ -138,62 +138,62 @@ const CustomerDashboard: React.FC = () => {
   return (
     <DashboardLayout
       role="CUSTOMER"
-      title={`ChÃ o ${firstName}`}
-      description="Theo dÃµi lá»‹ch dá»n dáº¹p, quáº£n lÃ½ Ä‘Æ¡n Ä‘Ã£ Ä‘áº·t vÃ  khÃ¡m phÃ¡ thÃªm dá»‹ch vá»¥ phÃ¹ há»£p vá»›i gia Ä‘Ã¬nh báº¡n."
+      title={`Chào ${firstName}`}
+      description="Theo dõi lịch dọn dẹp, quản lý đơn đã đặt và khám phá thêm dịch vụ phù hợp với gia đình bạn."
       actions={
         <Link
           to="/customer/booking"
           className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-brand-teal shadow-lg shadow-sky-100 transition hover:-translate-y-0.5 hover:bg-sky-50"
         >
           <CalendarHeart className="h-4 w-4" />
-          Äáº·t lá»‹ch má»›i
+          Đặt lịch mới
         </Link>
       }
     >
       <div className="grid gap-6 lg:grid-cols-3">
         <MetricCard
           icon={CalendarClock}
-          label="Tá»•ng Ä‘Æ¡n Ä‘Ã£ Ä‘áº·t"
+          label="Tổng đơn đã đặt"
           value={`${metrics.total}`}
           accent="navy"
-          trendLabel="Lá»‹ch cá»§a báº¡n luÃ´n Ä‘Æ°á»£c cáº­p nháº­t."
+          trendLabel="Lịch của bạn luôn được cập nhật."
         />
         <MetricCard
           icon={CheckCircle2}
-          label="ÄÆ¡n hoÃ n táº¥t"
+          label="Đơn hoàn tất"
           value={`${metrics.completed}`}
           accent="teal"
-          trendLabel="Giá»¯ thÃ³i quen chÄƒm nhÃ  Ä‘á»u Ä‘áº·n nÃ o!"
+          trendLabel="Giữ thói quen chăm nhà đều đặn nào!"
         />
         <MetricCard
           icon={Sparkles}
-          label="Äang chá» xá»­ lÃ½"
+          label="Đang chờ xử lý"
           value={`${metrics.awaiting}`}
           accent="amber"
-          trendLabel="Æ¯u tiÃªn xá»­ lÃ½ trong hÃ´m nay."
+          trendLabel="Ưu tiên xử lý trong hôm nay."
         />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
         <SectionCard
-          title="ÄÆ¡n sáº¯p diá»…n ra"
-          description="Theo dÃµi cÃ¡c dá»‹ch vá»¥ sáº½ diá»…n ra trong vÃ i ngÃ y tá»›i."
+          title="Đơn sắp diễn ra"
+          description="Theo dõi các dịch vụ sẽ diễn ra trong vài ngày tới."
           className="lg:col-span-2"
         >
           {isLoadingBookings ? (
             <div className="flex items-center justify-center py-10 text-brand-text/60">
               <CalendarClock className="mr-2 h-5 w-5 animate-spin" />
-              Äang táº£i lá»‹ch háº¹n...
+              Đang tải lịch hẹn...
             </div>
           ) : upcomingBookings.length === 0 ? (
             <div className="rounded-2xl bg-brand-background/70 p-6 text-center text-brand-text/60">
               <Sparkles className="mx-auto mb-3 h-8 w-8 text-brand-text/50" />
-              <p>Báº¡n chÆ°a cÃ³ lá»‹ch háº¹n nÃ o sáº¯p tá»›i. Äáº·t dá»‹ch vá»¥ ngay Ä‘á»ƒ giá»¯ nhÃ  luÃ´n gá»n gÃ ng nhÃ©!</p>
+              <p>Bạn chưa có lịch hẹn nào sắp tới. Đặt dịch vụ ngay để giữ nhà luôn gọn gàng nhé!</p>
             </div>
           ) : (
             <div className="space-y-4">
               {upcomingBookings.map((booking) => {
-                const serviceName = booking.serviceDetails?.[0]?.service.name || 'Dá»‹ch vá»¥ gia Ä‘Ã¬nh';
+                const serviceName = booking.serviceDetails?.[0]?.service.name || 'Dịch vụ gia đình';
                 const startTime = booking.bookingTime ? new Date(booking.bookingTime) : null;
                 return (
                   <div
@@ -239,8 +239,8 @@ const CustomerDashboard: React.FC = () => {
         </SectionCard>
 
         <SectionCard
-          title="Há»— trá»£ nhanh"
-          description="Äá»™i ngÅ© CSKH luÃ´n sáºµn sÃ ng há»— trá»£ báº¡n 24/7."
+          title="Hỗ trợ nhanh"
+          description="Đội ngũ CSKH luôn sẵn sàng hỗ trợ bạn 24/7."
         >
           <div className="rounded-2xl bg-gradient-to-br from-brand-navy via-brand-navyHover to-brand-teal p-6 text-white shadow-lg">
             <div className="flex items-center gap-4">
@@ -248,9 +248,9 @@ const CustomerDashboard: React.FC = () => {
                 <MessageCircle className="h-6 w-6" />
               </div>
               <div>
-                <h4 className="text-lg font-semibold">TrÃ² chuyá»‡n cÃ¹ng HomeCare</h4>
+                <h4 className="text-lg font-semibold">Trò chuyện cùng HomeCare</h4>
                 <p className="mt-1 text-sm text-white/80">
-                  Káº¿t ná»‘i trá»±c tiáº¿p vá»›i nhÃ¢n viÃªn há»— trá»£ hoáº·c ngÆ°á»i lao Ä‘á»™ng Ä‘Ã£ nháº­n viá»‡c.
+                  Kết nối trực tiếp với nhân viên hỗ trợ hoặc người lao động đã nhận việc.
                 </p>
               </div>
             </div>
@@ -258,28 +258,28 @@ const CustomerDashboard: React.FC = () => {
               to="/customer/chat"
               className="mt-6 inline-flex w-full items-center justify-center rounded-full bg-white px-4 py-2 text-sm font-semibold text-brand-teal shadow-inner transition hover:-translate-y-0.5"
             >
-              Má»Ÿ trung tÃ¢m há»— trá»£
+              Mở trung tâm hỗ trợ
             </Link>
           </div>
         </SectionCard>
       </div>
 
       <SectionCard
-        title="Dá»‹ch vá»¥ Ä‘á» xuáº¥t cho báº¡n"
-        description="CÃ¡c dá»‹ch vá»¥ phá»• biáº¿n giÃºp giá»¯ nhÃ  gá»n gÃ ng, an tÃ¢m."
+        title="Dịch vụ đề xuất cho bạn"
+        description="Các dịch vụ phổ biến giúp giữ nhà gọn gàng, an tâm."
       >
         {isLoadingServices ? (
           <div className="flex items-center justify-center py-10 text-brand-text/60">
             <Sparkles className="mr-2 h-5 w-5 animate-spin" />
-            Äang táº£i gá»£i Ã½ dá»‹ch vá»¥...
+            Đang tải gợi ý dịch vụ...
           </div>
         ) : servicesError ? (
           <div className="rounded-2xl bg-rose-50 p-6 text-rose-600">
-            KhÃ´ng thá»ƒ táº£i danh sÃ¡ch dá»‹ch vá»¥. Vui lÃ²ng thá»­ láº¡i sau.
+            Không thể tải danh sách dịch vụ. Vui lòng thử lại sau.
           </div>
         ) : featuredServices.length === 0 ? (
           <div className="rounded-2xl bg-brand-background/70 p-6 text-center text-brand-text/60">
-            Hiá»‡n chÆ°a cÃ³ dá»‹ch vá»¥ kháº£ dá»¥ng. Vui lÃ²ng quay láº¡i sau.
+            Hiện chưa có dịch vụ khả dụng. Vui lòng quay lại sau.
           </div>
         ) : (
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
@@ -308,7 +308,7 @@ const CustomerDashboard: React.FC = () => {
                   </p>
                   <div className="mt-4 flex items-center justify-between text-sm font-semibold text-brand-teal">
                     <span>{service.basePrice.toLocaleString('vi-VN')} VND</span>
-                    <span className="text-xs text-brand-text/50">~ {service.estimatedDurationHours * 60} phut</span>
+                    <span className="text-xs text-brand-text/50">~ {service.estimatedDurationHours * 60} phút</span>
                   </div>
                 </Link>
               );
