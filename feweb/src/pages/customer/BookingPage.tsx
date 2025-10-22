@@ -134,10 +134,12 @@ const BookingPage: React.FC = () => {
   const [currentPrice, setCurrentPrice] = useState<number>(0);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [showEmployeeSelection, setShowEmployeeSelection] = useState<boolean>(false);
+  const [employeeSelectionErrors, setEmployeeSelectionErrors] = useState<string[]>([]);
   const [suggestedStaff, setSuggestedStaff] = useState<number>(1);
   const [estimatedDuration, setEstimatedDuration] = useState<number>(0);
   const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(false);
   const [showMap, setShowMap] = useState<boolean>(false);
+  const [showPromoCodeInput, setShowPromoCodeInput] = useState<boolean>(false);
   
   // Thêm state cho các trường địa chỉ chi tiết
   const [addressDetails, setAddressDetails] = useState({
@@ -820,17 +822,46 @@ const BookingPage: React.FC = () => {
 
   // Load suitable employees
   const handleLoadSuitableEmployees = async () => {
+    // Clear previous error messages
+    setEmployeeSelectionErrors([]);
+    
+    // Validate required fields
+    const validationErrors: string[] = [];
+    
+    if (!bookingData.serviceId) {
+      validationErrors.push('Vui lòng chọn dịch vụ trước khi tìm nhân viên');
+    }
+    
+    if (!bookingData.date) {
+      validationErrors.push('Vui lòng chọn ngày đặt lịch trước khi tìm nhân viên');
+    }
+    
+    if (!bookingData.time) {
+      validationErrors.push('Vui lòng chọn giờ đặt lịch trước khi tìm nhân viên');
+    }
+    
+    // If there are validation errors, show them locally and return
+    if (validationErrors.length > 0) {
+      setEmployeeSelectionErrors(validationErrors);
+      return;
+    }
+    
+    // If all validations pass, proceed to load suitable employees
     if (bookingData.serviceId && bookingData.date && bookingData.time) {
       const bookingDateTime = `${bookingData.date}T${bookingData.time}:00`;
       
-      await loadSuitableEmployees({
-        serviceId: parseInt(bookingData.serviceId),
-        bookingTime: bookingDateTime,
-        district: 'Quận Tân Phú', // Default district
-        city: 'TP. Hồ Chí Minh', // Default city
-        latitude: mapCoordinates?.lat || 10.7769,
-        longitude: mapCoordinates?.lng || 106.6601
-      });
+      try {
+        await loadSuitableEmployees({
+          serviceId: parseInt(bookingData.serviceId),
+          bookingTime: bookingDateTime,
+          district: 'Quận Tân Phú', // Default district
+          city: 'TP. Hồ Chí Minh', // Default city
+          latitude: mapCoordinates?.lat || 10.7769,
+          longitude: mapCoordinates?.lng || 106.6601
+        });
+      } catch (error) {
+        setEmployeeSelectionErrors(['Không thể tải danh sách nhân viên phù hợp. Vui lòng thử lại sau.']);
+      }
     }
   };
 
@@ -1933,21 +1964,46 @@ const BookingPage: React.FC = () => {
                   <div className="space-y-6">
                     <div className="bg-white rounded-lg p-4 border border-cyan-200">
                       <div className="flex items-center justify-between">
-                        <p className="text-gray-700">
-                          Bạn có thể chọn nhân viên cụ thể hoặc để hệ thống tự động phân công nhân viên phù hợp nhất.
-                        </p>
+                        <div className="flex-1 pr-4">
+                          <p className="text-gray-700 text-sm leading-relaxed">
+                            Bạn có thể chọn nhân viên cụ thể hoặc để hệ thống tự động phân công nhân viên phù hợp nhất.
+                          </p>
+                        </div>
                         <button
                           type="button"
                           onClick={handleLoadSuitableEmployees}
-                          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium shadow-sm flex items-center"
+                          className="flex items-center px-5 py-2.5 bg-gradient-to-r from-cyan-500 to-blue-500 text-white rounded-xl hover:from-cyan-600 hover:to-blue-600 transition-all duration-300 font-medium shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-opacity-50"
                         >
-                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                          </svg>
-                          Tìm nhân viên
+                          <User className="w-4 h-4 mr-2" />
+                          <span className="whitespace-nowrap">Tìm nhân viên</span>
                         </button>
                       </div>
                     </div>
+
+                    {/* Local Error Messages for Employee Selection */}
+                    {employeeSelectionErrors.length > 0 && (
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4 shadow-sm">
+                        <div className="flex items-start">
+                          <div className="flex-shrink-0">
+                            <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5" />
+                          </div>
+                          <div className="ml-3 flex-1">
+                            <h4 className="text-red-800 font-medium text-sm mb-1">Thông tin chưa đầy đủ</h4>
+                            <div className="space-y-1">
+                              {employeeSelectionErrors.map((message, index) => (
+                                <p key={index} className="text-red-700 text-sm">{message}</p>
+                              ))}
+                            </div>
+                          </div>
+                          <button 
+                            onClick={() => setEmployeeSelectionErrors([])} 
+                            className="flex-shrink-0 ml-3 text-red-400 hover:text-red-600 transition-colors"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )}
 
                     {employeesData && employeesData.length > 0 && (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2112,11 +2168,81 @@ const BookingPage: React.FC = () => {
                         <div className="w-2 h-2 bg-cyan-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
                         <div>
                           <p className="text-sm font-medium text-gray-500">Nhân viên được chọn</p>
-                          {employeesData
-                            .filter(emp => selectedEmployees.includes(emp.employeeId))
-                            .map(emp => (
-                              <p key={emp.employeeId} className="text-gray-900 font-semibold">{emp.fullName}</p>
-                            ))}
+                          <div className="space-y-3 mt-2">
+                            {employeesData
+                              .filter(emp => selectedEmployees.includes(emp.employeeId))
+                              .map(employee => (
+                                <div key={employee.employeeId} className="p-3 border border-blue-300 rounded-xl bg-blue-50">
+                                  <div className="flex items-start">
+                                    <div className="w-10 h-10 rounded-full overflow-hidden mr-3 flex-shrink-0">
+                                      {employee.avatar ? (
+                                        <img src={employee.avatar} alt={employee.fullName} className="w-full h-full object-cover" />
+                                      ) : (
+                                        <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
+                                          <User className="w-5 h-5 text-gray-600" />
+                                        </div>
+                                      )}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-start justify-between mb-1">
+                                        <h6 className="font-semibold text-gray-900 text-sm">{employee.fullName}</h6>
+                                        <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0 ml-2" />
+                                      </div>
+                                      <p className="text-xs text-gray-600 mb-2">{employee.workingCity || 'TP. Hồ Chí Minh'}</p>
+                                      <div className="flex items-center justify-between mb-2">
+                                        <div className="flex items-center">
+                                          <svg className="w-3 h-3 text-yellow-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                          </svg>
+                                          <span className="text-xs text-gray-700">{employee.rating || 'Mới'}</span>
+                                        </div>
+                                        <span className="text-xs text-green-600 font-medium">{employee.totalCompletedJobs || employee.completedJobs || 0} việc</span>
+                                      </div>
+                                      {employee.primarySkills && employee.primarySkills.length > 0 && (
+                                        <div className="flex flex-wrap gap-1">
+                                          {employee.primarySkills.slice(0, 2).map((skill, index) => (
+                                            <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                              {skill}
+                                            </span>
+                                          ))}
+                                          {employee.primarySkills.length > 2 && (
+                                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                                              +{employee.primarySkills.length - 2}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                      {employee.skills && employee.skills.length > 0 && !employee.primarySkills && (
+                                        <div className="flex flex-wrap gap-1">
+                                          {employee.skills.slice(0, 2).map((skill, index) => (
+                                            <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                              {skill}
+                                            </span>
+                                          ))}
+                                          {employee.skills.length > 2 && (
+                                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                                              +{employee.skills.length - 2}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Show auto assignment message when no employee selected */}
+                    {selectedEmployees.length === 0 && (
+                      <div className="flex items-start">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Phân công nhân viên</p>
+                          <p className="text-gray-700 font-medium text-sm">Hệ thống sẽ tự động phân công nhân viên phù hợp nhất</p>
+                          <p className="text-xs text-gray-500 mt-1">Dựa trên vị trí, kỹ năng và đánh giá</p>
                         </div>
                       </div>
                     )}
@@ -2139,39 +2265,64 @@ const BookingPage: React.FC = () => {
 
             {/* Promo Code */}
             <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-200">
-              <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                <svg className="w-5 h-5 mr-2 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
-                </svg>
-                Mã khuyến mãi
-              </h4>
-              <div className="bg-white rounded-lg p-4 border border-amber-100">
-                <div className="flex gap-3">
-                  <input
-                    type="text"
-                    value={bookingData.promoCode || ''}
-                    onChange={(e) => setBookingData(prev => ({ ...prev, promoCode: e.target.value }))}
-                    placeholder="Nhập mã khuyến mãi (nếu có)"
-                    className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => {
-                      // TODO: Apply promo code logic
-                      console.log('Applying promo code:', bookingData.promoCode);
-                    }}
-                    className="px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium shadow-sm"
-                  >
-                    Áp dụng
-                  </button>
-                </div>
-                <p className="text-sm text-amber-600 mt-2 flex items-center">
-                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
                   </svg>
-                  Mã khuyến mãi sẽ được áp dụng vào tổng tiền cuối cùng
-                </p>
+                  Mã khuyến mãi
+                </h4>
+                <label className="flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showPromoCodeInput}
+                    onChange={(e) => {
+                      setShowPromoCodeInput(e.target.checked);
+                      // Clear promo code if unchecking
+                      if (!e.target.checked) {
+                        setBookingData(prev => ({ ...prev, promoCode: '' }));
+                      }
+                    }}
+                    className="sr-only"
+                  />
+                  <div className={`relative w-11 h-6 transition-colors duration-200 ease-in-out rounded-full ${showPromoCodeInput ? 'bg-amber-600' : 'bg-gray-300'}`}>
+                    <div className={`inline-block w-4 h-4 transition-transform duration-200 ease-in-out transform bg-white rounded-full top-1 left-1 absolute ${showPromoCodeInput ? 'translate-x-5' : 'translate-x-0'}`} />
+                  </div>
+                  <span className="ml-3 text-sm font-medium text-gray-700">
+                    {showPromoCodeInput ? 'Đã kích hoạt' : 'Có mã khuyến mãi'}
+                  </span>
+                </label>
               </div>
+              
+              {showPromoCodeInput && (
+                <div className="bg-white rounded-lg p-4 border border-amber-100">
+                  <div className="flex gap-3">
+                    <input
+                      type="text"
+                      value={bookingData.promoCode || ''}
+                      onChange={(e) => setBookingData(prev => ({ ...prev, promoCode: e.target.value }))}
+                      placeholder="Nhập mã khuyến mãi (nếu có)"
+                      className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        // TODO: Apply promo code logic
+                        console.log('Applying promo code:', bookingData.promoCode);
+                      }}
+                      className="px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium shadow-sm"
+                    >
+                      Áp dụng
+                    </button>
+                  </div>
+                  <p className="text-sm text-amber-600 mt-2 flex items-center">
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Mã khuyến mãi sẽ được áp dụng vào tổng tiền cuối cùng
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Payment Method */}
