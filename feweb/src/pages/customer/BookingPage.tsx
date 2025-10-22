@@ -15,7 +15,7 @@ import { useServices, useServiceOptions, useServicePriceCalculation, useSuitable
 import { useBooking } from '../../hooks/useBooking';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCategories } from '../../hooks/useCategories';
-import Navigation from '../../components/Navigation';
+import DashboardLayout from '../../layouts/DashboardLayout';
 import type { 
   CreateBookingRequest,
   SuitableEmployee,
@@ -1127,13 +1127,19 @@ const BookingPage: React.FC = () => {
     switch (step) {
       case 1:
         return (
-          <div>
-            <h3 className="text-xl font-semibold mb-6">Chọn loại dịch vụ</h3>
+          <div className="space-y-8">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Chọn dịch vụ phù hợp</h3>
+              <p className="text-gray-600">Tìm và chọn dịch vụ mà bạn cần sử dụng</p>
+            </div>
             
             {/* Categories Section */}
-            <div className="mb-8">
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6">
               <div className="flex items-center justify-between mb-4">
-                <h4 className="text-lg font-medium">Danh mục dịch vụ</h4>
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                  Danh mục dịch vụ
+                </h4>
                 {selectedCategoryId && (
                   <button 
                     onClick={async () => {
@@ -1147,16 +1153,16 @@ const BookingPage: React.FC = () => {
                         setLoadingCategoryServices(false);
                       }
                     }}
-                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center"
+                    className="text-sm text-blue-600 hover:text-blue-800 flex items-center px-3 py-1 rounded-full bg-white shadow-sm hover:shadow-md transition-all"
                   >
                     <X className="h-4 w-4 mr-1" />
                     Xóa bộ lọc
                   </button>
                 )}
               </div>
-              {/* Hiển thị loading state cho danh mục */}
+
               {categoriesLoading ? (
-                <div className="flex justify-center items-center py-6">
+                <div className="flex justify-center items-center py-8">
                   <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-500"></div>
                   <span className="ml-3 text-gray-600">Đang tải danh mục...</span>
                 </div>
@@ -1176,24 +1182,32 @@ const BookingPage: React.FC = () => {
                           setLoadingCategoryServices(false);
                         }
                       }}
-                      className={`flex flex-col items-center justify-between p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 h-[130px] shadow-sm hover:shadow-md ${
+                      className={`group relative p-4 border-2 rounded-xl cursor-pointer transition-all duration-300 h-[140px] shadow-sm hover:shadow-lg transform hover:-translate-y-1 ${
                         selectedCategoryId === category.categoryId
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-blue-300 hover:translate-y-[-2px]'
+                          ? 'border-blue-500 bg-white shadow-blue-100 ring-2 ring-blue-100'
+                          : 'border-gray-200 bg-white hover:border-blue-300'
                       }`}
                     >
-                      <div className="w-14 h-14 mb-2 flex items-center justify-center">
-                        {category.iconUrl ? (
-                          <img src={category.iconUrl} alt={category.categoryName} className="w-full h-full object-contain" />
-                        ) : (
-                          <div className="w-14 h-14 rounded-full bg-blue-100 flex items-center justify-center">
-                            <span className="text-blue-600 font-bold text-xl">{category.categoryName.charAt(0)}</span>
-                          </div>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-center text-center">
-                        <span className="text-sm font-medium line-clamp-1">{category.categoryName}</span>
-                        <span className="text-xs text-gray-500">{category.serviceCount} dịch vụ</span>
+                      {selectedCategoryId === category.categoryId && (
+                        <div className="absolute -top-2 -right-2 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center shadow-lg">
+                          <CheckCircle className="w-4 h-4 text-white" />
+                        </div>
+                      )}
+                      
+                      <div className="flex flex-col items-center justify-between h-full">
+                        <div className="w-16 h-16 mb-3 flex items-center justify-center">
+                          {category.iconUrl ? (
+                            <img src={category.iconUrl} alt={category.categoryName} className="w-full h-full object-contain" />
+                          ) : (
+                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-100 to-indigo-100 flex items-center justify-center">
+                              <span className="text-blue-600 font-bold text-xl">{category.categoryName.charAt(0)}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="text-center">
+                          <span className="text-sm font-semibold text-gray-900 line-clamp-1 mb-1">{category.categoryName}</span>
+                          <span className="text-xs text-blue-600 bg-blue-50 px-2 py-1 rounded-full">{category.serviceCount} dịch vụ</span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -1202,8 +1216,9 @@ const BookingPage: React.FC = () => {
             </div>
             
             {/* Services Section */}
-            <div className="mt-6">
-              <h4 className="text-lg font-medium mb-4">
+            <div>
+              <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <div className="w-2 h-2 bg-emerald-500 rounded-full mr-3"></div>
                 {selectedCategoryId 
                   ? `Dịch vụ thuộc ${categories.find(c => c.categoryId === selectedCategoryId)?.categoryName}` 
                   : "Tất cả dịch vụ"}
@@ -1214,35 +1229,54 @@ const BookingPage: React.FC = () => {
                   <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
                 </div>
               ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                   {(categoryWithServices ? categoryWithServices.services : services).map((service) => (
                     <div
                       key={service.serviceId}
-                      className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                      className={`group p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 hover:shadow-lg transform hover:-translate-y-1 ${
                         bookingData.serviceId === service.serviceId.toString()
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-blue-300'
+                          ? 'border-blue-500 bg-blue-50 shadow-blue-100 ring-2 ring-blue-100'
+                          : 'border-gray-200 bg-white hover:border-blue-300'
                       }`}
                       onClick={() => handleServiceSelect(service.serviceId.toString())}
                     >
-                      <div className="flex items-start">
-                        <div className="w-14 h-14 rounded-lg mr-4 flex items-center justify-center overflow-hidden">
-                          {service.iconUrl ? (
-                            <img src={service.iconUrl} alt={service.name} className="w-full h-full object-contain" />
-                          ) : (
-                            <div className="text-3xl">{getServiceIcon(service.categoryName || 'other')}</div>
-                          )}
+                      <div className="flex items-start space-x-4">
+                        <div className="flex-shrink-0">
+                          <div className="w-16 h-16 rounded-xl overflow-hidden bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+                            {service.iconUrl ? (
+                              <img src={service.iconUrl} alt={service.name} className="w-full h-full object-cover" />
+                            ) : (
+                              <div className="text-2xl">{getServiceIcon(service.categoryName || 'other')}</div>
+                            )}
+                          </div>
                         </div>
-                        <div className="flex-1">
-                          <h4 className="font-semibold text-gray-900 mb-1">{service.name}</h4>
-                          <p className="text-sm text-gray-600 mb-2">{service.description}</p>
+                        
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between mb-2">
+                            <h4 className="font-semibold text-gray-900 text-lg group-hover:text-blue-600 transition-colors">
+                              {service.name}
+                            </h4>
+                            {bookingData.serviceId === service.serviceId.toString() && (
+                              <div className="flex-shrink-0 w-6 h-6 bg-blue-500 rounded-full flex items-center justify-center ml-2">
+                                <CheckCircle className="w-4 h-4 text-white" />
+                              </div>
+                            )}
+                          </div>
+                          
+                          <p className="text-gray-600 text-sm mb-4 line-clamp-2">{service.description}</p>
+                          
                           <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-blue-600">
-                              {service.basePrice.toLocaleString('vi-VN')}đ
-                            </span>
-                            <span className="text-sm text-gray-500">
-                              {service.estimatedDurationHours * 60} phút
-                            </span>
+                            <div className="flex items-center space-x-4">
+                              <div className="bg-blue-100 text-blue-700 px-3 py-1 rounded-full text-sm font-medium">
+                                {service.basePrice.toLocaleString('vi-VN')}đ
+                              </div>
+                              <div className="flex items-center text-gray-500 text-sm">
+                                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                {service.estimatedDurationHours * 60} phút
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -1254,28 +1288,32 @@ const BookingPage: React.FC = () => {
 
             {/* Service Options Section */}
             {bookingData.serviceId && serviceOptions && serviceOptions.options && (
-              <div className="mt-8 p-6 bg-gray-50 rounded-lg">
-                <h4 className="text-lg font-medium mb-4">Tùy chọn dịch vụ</h4>
-                <div className="space-y-4">
+              <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-200">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <div className="w-2 h-2 bg-amber-500 rounded-full mr-3"></div>
+                  Tùy chọn dịch vụ
+                </h4>
+                <div className="space-y-6">
                   {serviceOptions.options.map((option) => (
-                    <div key={option.optionId}>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        {option.optionName} {option.isRequired && <span className="text-red-500">*</span>}
+                    <div key={option.optionId} className="bg-white rounded-lg p-4 shadow-sm border border-amber-100">
+                      <label className="block text-sm font-semibold text-gray-800 mb-3">
+                        {option.optionName} 
+                        {option.isRequired && <span className="text-red-500 ml-1">*</span>}
                       </label>
                       
                       {option.optionType === 'SINGLE_CHOICE_RADIO' && option.choices && (
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {option.choices.map((choice) => (
-                            <label key={choice.choiceId} className="flex items-center">
+                            <label key={choice.choiceId} className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                               <input
                                 type="radio"
                                 name={`option-${option.optionId}`}
                                 value={choice.choiceId}
                                 checked={selectedChoiceIds.includes(choice.choiceId)}
                                 onChange={() => handleOptionSelect(choice.choiceId, choice.choiceName, false)}
-                                className="mr-2"
+                                className="mr-3 text-blue-600 focus:ring-blue-500"
                               />
-                              {choice.choiceName}
+                              <span className="font-medium">{choice.choiceName}</span>
                             </label>
                           ))}
                         </div>
@@ -1283,7 +1321,7 @@ const BookingPage: React.FC = () => {
                       
                       {option.optionType === 'SINGLE_CHOICE_DROPDOWN' && (
                         <select 
-                          className="w-full p-2 border border-gray-300 rounded-lg"
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                           onChange={(e) => {
                             const choiceId = parseInt(e.target.value);
                             const choice = option.choices.find(c => c.choiceId === choiceId);
@@ -1303,16 +1341,16 @@ const BookingPage: React.FC = () => {
                       )}
                       
                       {option.optionType === 'MULTIPLE_CHOICE_CHECKBOX' && option.choices && (
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                           {option.choices.map((choice) => (
-                            <label key={choice.choiceId} className="flex items-center">
+                            <label key={choice.choiceId} className="flex items-center p-3 border border-gray-200 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors">
                               <input
                                 type="checkbox"
                                 checked={selectedChoiceIds.includes(choice.choiceId)}
                                 onChange={() => handleOptionSelect(choice.choiceId, choice.choiceName, true)}
-                                className="mr-2"
+                                className="mr-3 text-blue-600 focus:ring-blue-500 rounded"
                               />
-                              {choice.choiceName}
+                              <span className="font-medium">{choice.choiceName}</span>
                             </label>
                           ))}
                         </div>
@@ -1322,7 +1360,7 @@ const BookingPage: React.FC = () => {
                         <input
                           type="number"
                           min="1"
-                          className="w-full p-2 border border-gray-300 rounded-lg"
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                           placeholder={`Nhập ${option.optionName.toLowerCase()}`}
                         />
                       )}
@@ -1330,28 +1368,47 @@ const BookingPage: React.FC = () => {
                   ))}
                 </div>
                 
-                {/* Price Calculation Display */}
+                {/* Enhanced Price Calculation Display */}
                 {priceData && (
-                  <div className="mt-6 p-4 bg-white rounded-lg border-2 border-blue-200">
-                    <h5 className="font-medium text-gray-900 mb-3">Chi phí ước tính</h5>
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Giá cơ bản:</span>
-                        <span>{priceData.basePrice.toLocaleString('vi-VN')}đ</span>
+                  <div className="mt-6 bg-white rounded-xl p-6 border-2 border-blue-200 shadow-sm">
+                    <h5 className="font-semibold text-gray-900 mb-4 flex items-center">
+                      <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      Chi phí ước tính
+                    </h5>
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-600">Giá cơ bản:</span>
+                        <span className="font-medium">{priceData.basePrice.toLocaleString('vi-VN')}đ</span>
                       </div>
                       {priceData.totalAdjustment > 0 && (
-                        <div className="flex justify-between">
-                          <span>Phụ thu:</span>
-                          <span>+{priceData.totalAdjustment.toLocaleString('vi-VN')}đ</span>
+                        <div className="flex justify-between items-center">
+                          <span className="text-gray-600">Phụ thu:</span>
+                          <span className="font-medium text-orange-600">+{priceData.totalAdjustment.toLocaleString('vi-VN')}đ</span>
                         </div>
                       )}
-                      <div className="flex justify-between font-semibold text-lg border-t pt-2">
-                        <span>Tổng cộng:</span>
-                        <span className="text-blue-600">{priceData.finalPrice.toLocaleString('vi-VN')}đ</span>
+                      <div className="border-t pt-3">
+                        <div className="flex justify-between items-center">
+                          <span className="text-lg font-semibold text-gray-900">Tổng cộng:</span>
+                          <span className="text-2xl font-bold text-blue-600">{priceData.finalPrice.toLocaleString('vi-VN')}đ</span>
+                        </div>
                       </div>
-                      <div className="text-sm text-gray-600 mt-2">
-                        <div>Thời gian ước tính: {priceData.formattedDuration}</div>
-                        <div>Số nhân viên đề xuất: {priceData.suggestedStaff}</div>
+                      <div className="bg-blue-50 rounded-lg p-3 mt-4">
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div className="flex items-center">
+                            <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="text-gray-700">Thời gian: <strong>{priceData.formattedDuration}</strong></span>
+                          </div>
+                          <div className="flex items-center">
+                            <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                            </svg>
+                            <span className="text-gray-700">Nhân viên: <strong>{priceData.suggestedStaff}</strong></span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1363,191 +1420,198 @@ const BookingPage: React.FC = () => {
 
       case 2:
         return (
-          <div>
-            <h3 className="text-xl font-semibold mb-6">Thông tin địa điểm</h3>
+          <div className="space-y-8">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Địa điểm thực hiện</h3>
+              <p className="text-gray-600">Chọn hoặc nhập địa chỉ nơi bạn muốn sử dụng dịch vụ</p>
+            </div>
+
             <div className="space-y-6">
               {/* Lựa chọn nguồn địa chỉ */}
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Chọn địa chỉ từ
-                </label>
+              <div className="space-y-4">
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full mr-3"></div>
+                  Chọn địa chỉ
+                </h4>
                 
                 {/* Địa chỉ từ thông tin người dùng */}
                 <div 
-                  className={`p-4 border-2 rounded-lg cursor-pointer flex items-start ${
+                  className={`group p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
                     addressSource === 'profile' 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 bg-white hover:border-gray-300'
+                      ? 'border-blue-500 bg-blue-50 shadow-blue-100 ring-2 ring-blue-100' 
+                      : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-lg'
                   }`}
                   onClick={() => handleAddressSourceChange('profile')}
                 >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
-                    addressSource === 'profile' ? 'bg-blue-100' : 'bg-gray-100'
-                  }`}>
-                    <User className={`w-5 h-5 ${
-                      addressSource === 'profile' ? 'text-blue-600' : 'text-gray-600'
-                    }`} />
-                  </div>
-                  <div className="flex-1">
-                    <div className="flex items-center mb-1">
-                      <h4 className="font-medium text-gray-900">Địa chỉ của bạn</h4>
-                      {addressSource === 'profile' && (
-                        <span className="ml-2 px-2 py-0.5 bg-blue-100 text-blue-800 text-xs rounded-full">Mặc định</span>
-                      )}
-                    </div>
-                    {user?.profileData && 'address' in user.profileData && user.profileData.address ? (
-                      <p className="text-sm text-gray-600">{user.profileData.address}</p>
-                    ) : (
-                      <p className="text-sm text-gray-600">Sử dụng địa chỉ mặc định từ hệ thống</p>
-                    )}
-                  </div>
-                  <div className="ml-4">
-                    <div className={`w-5 h-5 rounded-full border-2 ${
-                      addressSource === 'profile' 
-                        ? 'border-blue-500 bg-blue-500' 
-                        : 'border-gray-300'
+                  <div className="flex items-start">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-4 transition-all ${
+                      addressSource === 'profile' ? 'bg-blue-100' : 'bg-gray-100 group-hover:bg-blue-50'
                     }`}>
-                      {addressSource === 'profile' && (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <div className="w-2 h-2 rounded-full bg-white"></div>
-                        </div>
+                      <User className={`w-6 h-6 ${
+                        addressSource === 'profile' ? 'text-blue-600' : 'text-gray-600 group-hover:text-blue-600'
+                      }`} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center mb-2">
+                        <h4 className="font-semibold text-gray-900">Địa chỉ mặc định</h4>
+                        {addressSource === 'profile' && (
+                          <div className="ml-3 flex items-center">
+                            <CheckCircle className="w-5 h-5 text-blue-600 mr-1" />
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">Đã chọn</span>
+                          </div>
+                        )}
+                      </div>
+                      {user?.profileData && 'address' in user.profileData && user.profileData.address ? (
+                        <p className="text-gray-600 mb-2">{user.profileData.address}</p>
+                      ) : (
+                        <p className="text-gray-600 mb-2">Sử dụng địa chỉ mặc định từ hệ thống</p>
                       )}
+                      <p className="text-sm text-blue-600">✓ Nhanh chóng và tiện lợi</p>
                     </div>
                   </div>
                 </div>
                 
                 {/* Lấy địa chỉ hiện tại */}
                 <div 
-                  className={`p-4 border-2 rounded-lg cursor-pointer flex items-start ${
+                  className={`group p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
                     addressSource === 'current' 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 bg-white hover:border-gray-300'
+                      ? 'border-blue-500 bg-blue-50 shadow-blue-100 ring-2 ring-blue-100' 
+                      : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-lg'
                   }`}
                   onClick={() => handleAddressSourceChange('current')}
                 >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
-                    addressSource === 'current' ? 'bg-blue-100' : 'bg-gray-100'
-                  }`}>
-                    <NavigationIcon className={`w-5 h-5 ${
-                      addressSource === 'current' ? 'text-blue-600' : 'text-gray-600'
-                    }`} />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-900 mb-1">Lấy vị trí hiện tại của bạn</h4>
-                    {addressSource === 'current' && isLoadingLocation && (
-                      <p className="text-sm text-blue-600">Đang lấy vị trí hiện tại...</p>
-                    )}
-                    {addressSource === 'current' && !isLoadingLocation && currentLocationAddress && (
-                      <p className="text-sm text-gray-600 mt-1">{currentLocationAddress}</p>
-                    )}
-                    {addressSource === 'current' && !isLoadingLocation && !currentLocationAddress && (
-                      <p className="text-sm text-gray-600">Sử dụng GPS để xác định vị trí hiện tại</p>
-                    )}
-                    {addressSource !== 'current' && (
-                      <p className="text-sm text-gray-600">Sử dụng GPS để xác định vị trí hiện tại</p>
-                    )}
-                  </div>
-                  <div className="ml-4">
-                    <div className={`w-5 h-5 rounded-full border-2 ${
-                      addressSource === 'current' 
-                        ? 'border-blue-500 bg-blue-500' 
-                        : 'border-gray-300'
+                  <div className="flex items-start">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-4 transition-all ${
+                      addressSource === 'current' ? 'bg-blue-100' : 'bg-gray-100 group-hover:bg-blue-50'
                     }`}>
-                      {addressSource === 'current' && (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <div className="w-2 h-2 rounded-full bg-white"></div>
-                        </div>
+                      <NavigationIcon className={`w-6 h-6 ${
+                        addressSource === 'current' ? 'text-blue-600' : 'text-gray-600 group-hover:text-blue-600'
+                      }`} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center mb-2">
+                        <h4 className="font-semibold text-gray-900">Vị trí hiện tại</h4>
+                        {addressSource === 'current' && (
+                          <div className="ml-3 flex items-center">
+                            <CheckCircle className="w-5 h-5 text-blue-600 mr-1" />
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">Đã chọn</span>
+                          </div>
+                        )}
+                      </div>
+                      {addressSource === 'current' && isLoadingLocation && (
+                        <p className="text-blue-600 flex items-center">
+                          <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full mr-2"></div>
+                          Đang xác định vị trí...
+                        </p>
                       )}
+                      {addressSource === 'current' && !isLoadingLocation && currentLocationAddress && (
+                        <p className="text-gray-600 mb-2">{currentLocationAddress}</p>
+                      )}
+                      {(!currentLocationAddress || addressSource !== 'current') && (
+                        <p className="text-gray-600 mb-2">Sử dụng GPS để xác định vị trí hiện tại của bạn</p>
+                      )}
+                      <p className="text-sm text-green-600">✓ Chính xác và tự động</p>
                     </div>
                   </div>
                 </div>
                 
                 {/* Nhập địa chỉ tùy chỉnh */}
                 <div 
-                  className={`p-4 border-2 rounded-lg cursor-pointer flex items-start ${
+                  className={`group p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
                     addressSource === 'custom' 
-                      ? 'border-blue-500 bg-blue-50' 
-                      : 'border-gray-200 bg-white hover:border-gray-300'
+                      ? 'border-blue-500 bg-blue-50 shadow-blue-100 ring-2 ring-blue-100' 
+                      : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-lg'
                   }`}
                   onClick={() => handleAddressSourceChange('custom')}
                 >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-3 ${
-                    addressSource === 'custom' ? 'bg-blue-100' : 'bg-gray-100'
-                  }`}>
-                    <MapPin className={`w-5 h-5 ${
-                      addressSource === 'custom' ? 'text-blue-600' : 'text-gray-600'
-                    }`} />
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-gray-900 mb-1">Nhập địa chỉ mới</h4>
-                    <p className="text-sm text-gray-600">Tự nhập địa chỉ chi tiết</p>
-                  </div>
-                  <div className="ml-4">
-                    <div className={`w-5 h-5 rounded-full border-2 ${
-                      addressSource === 'custom' 
-                        ? 'border-blue-500 bg-blue-500' 
-                        : 'border-gray-300'
+                  <div className="flex items-start">
+                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-4 transition-all ${
+                      addressSource === 'custom' ? 'bg-blue-100' : 'bg-gray-100 group-hover:bg-blue-50'
                     }`}>
-                      {addressSource === 'custom' && (
-                        <div className="w-full h-full flex items-center justify-center">
-                          <div className="w-2 h-2 rounded-full bg-white"></div>
-                        </div>
-                      )}
+                      <MapPin className={`w-6 h-6 ${
+                        addressSource === 'custom' ? 'text-blue-600' : 'text-gray-600 group-hover:text-blue-600'
+                      }`} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="flex items-center mb-2">
+                        <h4 className="font-semibold text-gray-900">Địa chỉ khác</h4>
+                        {addressSource === 'custom' && (
+                          <div className="ml-3 flex items-center">
+                            <CheckCircle className="w-5 h-5 text-blue-600 mr-1" />
+                            <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">Đã chọn</span>
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-gray-600 mb-2">Nhập địa chỉ chi tiết khác</p>
+                      <p className="text-sm text-purple-600">✓ Linh hoạt và tùy chỉnh</p>
                     </div>
                   </div>
                 </div>
               </div>
               
-              {/* Hiển thị input tương ứng với lựa chọn */}
+              {/* Hiển thị form tương ứng với lựa chọn */}
               {addressSource === 'current' && (
-                <div className="space-y-4">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+                  <h5 className="font-semibold text-gray-900 mb-4 flex items-center">
+                    <NavigationIcon className="w-5 h-5 mr-2 text-blue-600" />
+                    Xác định vị trí hiện tại
+                  </h5>
+                  
                   <button
                     type="button"
                     onClick={getCurrentLocation}
                     disabled={isLoadingLocation}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="mb-4 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-sm"
                   >
                     {isLoadingLocation ? (
                       <>
-                        <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                        Đang lấy vị trí...
+                        <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                        Đang xác định vị trí...
                       </>
                     ) : (
                       <>
-                        <NavigationIcon className="w-4 h-4 mr-2" />
+                        <NavigationIcon className="w-5 h-5 mr-2" />
                         Lấy vị trí hiện tại
                       </>
                     )}
                   </button>
                   
                   {currentLocationAddress && (
-                    <div className="space-y-3">
-                      <div className="p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <p className="text-sm text-green-800">
-                          <strong>Địa chỉ hiện tại:</strong> {currentLocationAddress}
-                        </p>
-
+                    <div className="space-y-4">
+                      <div className="p-4 bg-white border border-green-200 rounded-lg shadow-sm">
+                        <div className="flex items-start">
+                          <CheckCircle className="w-5 h-5 text-green-600 mr-2 mt-0.5 flex-shrink-0" />
+                          <div>
+                            <p className="font-medium text-green-800 mb-1">Địa chỉ đã xác định</p>
+                            <p className="text-gray-700">{currentLocationAddress}</p>
+                          </div>
+                        </div>
                       </div>
-                      
-
                     </div>
                   )}
                   
                   {/* Hiển thị bản đồ nếu có tọa độ */}
                   {mapCoordinates && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <div className="mt-4">
+                      <h6 className="font-medium text-gray-900 mb-3 flex items-center">
+                        <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-1.447-.894L15 4m0 13V4m-6 3l6-3" />
+                        </svg>
                         Vị trí trên bản đồ
-                      </label>
+                      </h6>
                       {addressSource === 'current' && (
-                        <p className="text-xs text-blue-600 mb-2 flex items-center">
-                          <span className="mr-1">💡</span>
-                          Nhấp trên bản đồ để thay đổi vị trí của bạn
-                        </p>
+                        <div className="mb-3 p-3 bg-blue-100 border border-blue-200 rounded-lg">
+                          <p className="text-sm text-blue-800 flex items-center">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Nhấp trên bản đồ để điều chỉnh vị trí chính xác
+                          </p>
+                        </div>
                       )}
                       <div 
                         ref={mapContainerRef}
-                        className={`w-full h-64 rounded-lg border border-gray-300 ${
+                        className={`w-full h-64 rounded-lg border border-gray-300 shadow-sm ${
                           addressSource === 'current' ? 'cursor-crosshair' : ''
                         }`}
                       ></div>
@@ -1557,148 +1621,173 @@ const BookingPage: React.FC = () => {
               )}
 
               {addressSource === 'custom' && (
-                <div className="space-y-4">
-                  <div className="bg-green-50 p-4 rounded-lg">
-                    <div className="flex items-start">
-                      <MapPin className="w-5 h-5 text-green-600 mr-2 mt-0.5" />
-                      <div>
-                        <h4 className="font-medium text-green-900 mb-1">Nhập địa chỉ mới</h4>
-                        <p className="text-sm text-green-700">
-                          Vui lòng nhập địa chỉ chi tiết để nhân viên có thể tìm đến dễ dàng.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
+                  <h5 className="font-semibold text-gray-900 mb-4 flex items-center">
+                    <MapPin className="w-5 h-5 mr-2 text-purple-600" />
+                    Nhập địa chỉ chi tiết
+                  </h5>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Địa chỉ chi tiết *
-                    </label>
-                    <textarea
-                      value={customAddress}
-                      onChange={(e) => setCustomAddress(e.target.value)}
-                      placeholder="Ví dụ: 123 Nguyễn Văn Linh, Phường An Phú, Quận 2, TP. Hồ Chí Minh"
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                      rows={3}
-                    />
-                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-800 mb-2">
+                        Địa chỉ đầy đủ <span className="text-red-500">*</span>
+                      </label>
+                      <textarea
+                        value={customAddress}
+                        onChange={(e) => setCustomAddress(e.target.value)}
+                        placeholder="Ví dụ: 123 Nguyễn Văn Linh, Phường An Phú, Quận 2, TP. Hồ Chí Minh"
+                        className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all resize-none"
+                        rows={3}
+                      />
+                    </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Phường/Xã
-                      </label>
-                      <input
-                        type="text"
-                        value={addressDetails.ward}
-                        onChange={(e) => setAddressDetails(prev => ({ ...prev, ward: e.target.value }))}
-                        placeholder="Phường An Phú"
-                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Quận/Huyện
-                      </label>
-                      <input
-                        type="text"
-                        value={addressDetails.district}
-                        onChange={(e) => setAddressDetails(prev => ({ ...prev, district: e.target.value }))}
-                        placeholder="Quận 2"
-                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Thành phố
-                      </label>
-                      <input
-                        type="text"
-                        value={addressDetails.city}
-                        onChange={(e) => setAddressDetails(prev => ({ ...prev, city: e.target.value }))}
-                        placeholder="TP. Hồ Chí Minh"
-                        className="w-full p-2 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
-                      />
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Phường/Xã
+                        </label>
+                        <input
+                          type="text"
+                          value={addressDetails.ward}
+                          onChange={(e) => setAddressDetails(prev => ({ ...prev, ward: e.target.value }))}
+                          placeholder="Phường An Phú"
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Quận/Huyện
+                        </label>
+                        <input
+                          type="text"
+                          value={addressDetails.district}
+                          onChange={(e) => setAddressDetails(prev => ({ ...prev, district: e.target.value }))}
+                          placeholder="Quận 2"
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Thành phố
+                        </label>
+                        <input
+                          type="text"
+                          value={addressDetails.city}
+                          onChange={(e) => setAddressDetails(prev => ({ ...prev, city: e.target.value }))}
+                          placeholder="TP. Hồ Chí Minh"
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
 
               {addressSource === 'profile' && (
-                <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
                   <div className="flex items-start">
-                    <User className="w-5 h-5 text-blue-600 mr-2 mt-0.5" />
+                    <CheckCircle className="w-6 h-6 text-green-600 mr-3 mt-1 flex-shrink-0" />
                     <div>
-                      <h4 className="font-medium text-blue-900 mb-1">Sử dụng địa chỉ mặc định</h4>
-                      <p className="text-sm text-blue-700">
+                      <h5 className="font-semibold text-green-900 mb-2">Sử dụng địa chỉ mặc định</h5>
+                      <p className="text-green-800 mb-3">
                         Hệ thống sẽ sử dụng địa chỉ mặc định từ hồ sơ của bạn. 
-                        Vui lòng đảm bảo địa chỉ trong hồ sơ đã chính xác và chi tiết.
+                        Điều này giúp quá trình đặt lịch nhanh chóng và thuận tiện hơn.
                       </p>
+                      <div className="bg-white rounded-lg p-3 border border-green-200">
+                        <p className="text-sm text-gray-600">
+                          💡 <strong>Lưu ý:</strong> Vui lòng đảm bảo địa chỉ trong hồ sơ của bạn đã chính xác và đầy đủ.
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>
               )}
-
             </div>
           </div>
         );
 
       case 3:
         return (
-          <div>
-            <h3 className="text-xl font-semibold mb-6">Chọn thời gian</h3>
-            <div className="space-y-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ngày *
-                </label>
+          <div className="space-y-8">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Lên lịch thời gian</h3>
+              <p className="text-gray-600">Chọn ngày và giờ phù hợp để thực hiện dịch vụ</p>
+            </div>
+
+            <div className="space-y-8">
+              {/* Date Selection */}
+              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  Chọn ngày thực hiện
+                </h4>
                 
-                {/* Tùy chọn ngày nhanh */}
-                <div className="grid grid-cols-4 sm:grid-cols-7 gap-2 mb-3">
-                  {quickDateOptions.map((option) => (
-                    <div
-                      key={option.date}
-                      onClick={() => handleQuickDateSelect(option.date)}
-                      className={`p-2 border-2 rounded-lg cursor-pointer transition-all hover:border-blue-300 flex flex-col items-center ${
-                        bookingData.date === option.date 
-                          ? 'border-blue-500 bg-blue-50' 
-                          : 'border-gray-200'
-                      }`}
-                    >
-                      <span className="text-xs font-medium text-blue-600">{option.dayOfWeek}</span>
-                      <span className={`text-sm font-medium ${bookingData.date === option.date ? 'text-blue-700' : 'text-gray-700'}`}>
-                        {option.label}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                
-                {/* Input ngày tùy chỉnh */}
-                <div className="relative">
-                  <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                    <svg className="w-4 h-4 text-gray-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
-                      <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd"></path>
-                    </svg>
+                {/* Quick Date Options */}
+                <div className="mb-6">
+                  <p className="text-sm font-medium text-gray-700 mb-3">Lựa chọn nhanh:</p>
+                  <div className="grid grid-cols-4 sm:grid-cols-7 gap-3">
+                    {quickDateOptions.map((option) => (
+                      <button
+                        type="button"
+                        key={option.date}
+                        onClick={() => handleQuickDateSelect(option.date)}
+                        className={`p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md transform hover:-translate-y-0.5 ${
+                          bookingData.date === option.date 
+                            ? 'border-blue-500 bg-blue-100 text-blue-700 shadow-blue-200' 
+                            : 'border-gray-200 bg-white hover:border-blue-300'
+                        }`}
+                      >
+                        <div className="text-center">
+                          <div className={`text-xs font-medium mb-1 ${
+                            bookingData.date === option.date ? 'text-blue-600' : 'text-gray-500'
+                          }`}>
+                            {option.dayOfWeek}
+                          </div>
+                          <div className={`text-sm font-semibold ${
+                            bookingData.date === option.date ? 'text-blue-700' : 'text-gray-700'
+                          }`}>
+                            {option.label}
+                          </div>
+                        </div>
+                      </button>
+                    ))}
                   </div>
-                  <input
-                    type="date"
-                    name="date"
-                    value={bookingData.date}
-                    onChange={handleInputChange}
-                    min={new Date().toISOString().split('T')[0]}
-                    className="w-full p-3 pl-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
-                    required
-                  />
                 </div>
-                <p className="mt-1 text-xs text-gray-500 italic">Hoặc chọn ngày khác từ lịch</p>
+                
+                {/* Custom Date Input */}
+                <div>
+                  <p className="text-sm font-medium text-gray-700 mb-2">Hoặc chọn ngày khác:</p>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                      <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <input
+                      type="date"
+                      name="date"
+                      value={bookingData.date}
+                      onChange={handleInputChange}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="w-full pl-10 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
+                      required
+                    />
+                  </div>
+                </div>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Giờ *
-                </label>
+              {/* Time Selection */}
+              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-200">
+                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Chọn giờ thực hiện
+                </h4>
                 
-                <div className="grid grid-cols-3 md:grid-cols-5 gap-3">
+                <div className="grid grid-cols-3 md:grid-cols-5 gap-3 mb-4">
                   {timeSlots.map((time) => {
                     const isPast = time !== '--:--' && isTimeInPast(time);
                     const isCustomTime = time === '--:--';
@@ -1716,37 +1805,40 @@ const BookingPage: React.FC = () => {
                           }
                         }}
                         disabled={isPast}
-                        className={`p-3 rounded-lg border-2 transition-colors ${
+                        className={`p-3 rounded-xl border-2 transition-all duration-200 font-medium ${
                           bookingData.time === time && !isCustomTime
-                            ? 'border-blue-500 bg-blue-50 text-blue-700'
+                            ? 'border-emerald-500 bg-emerald-100 text-emerald-700 shadow-emerald-200'
                             : isCustomTime && timeInputType === 'custom'
-                              ? 'border-blue-500 bg-blue-50 text-blue-700'
+                              ? 'border-emerald-500 bg-emerald-100 text-emerald-700 shadow-emerald-200'
                               : isPast
                                 ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'border-gray-200 hover:border-blue-300'
+                                : 'border-gray-200 bg-white hover:border-emerald-300 hover:shadow-md transform hover:-translate-y-0.5'
                         }`}
                       >
-                        {time}
-                        {isPast && <span className="block text-xs mt-1">(Đã qua)</span>}
+                        {isCustomTime ? 'Khác' : time}
+                        {isPast && <div className="text-xs mt-1 opacity-75">(Đã qua)</div>}
                       </button>
                     );
                   })}
                 </div>
                 
-                {/* Hiển thị input tùy chỉnh nếu chọn --:-- */}
+                {/* Custom Time Input */}
                 {timeInputType === 'custom' && (
-                  <div className="mt-3">
+                  <div className="bg-white rounded-lg p-4 border border-emerald-200">
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Nhập giờ tùy chỉnh:
+                    </label>
                     <div className="relative">
                       <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                        <svg className="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                         </svg>
                       </div>
                       <input
                         type="time"
                         value={customTimeInput}
                         onChange={handleCustomTimeChange}
-                        className={`w-full p-3 pl-10 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all ${
+                        className={`w-full pl-10 p-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all ${
                           isTimeInPast(bookingData.time) ? 'border-red-300' : 'border-gray-300'
                         }`}
                         min={bookingData.date === new Date().toISOString().split('T')[0] 
@@ -1755,11 +1847,14 @@ const BookingPage: React.FC = () => {
                       />
                     </div>
                     {isTimeInPast(bookingData.time) ? (
-                      <p className="mt-1 text-xs text-red-500 font-medium">
+                      <p className="mt-2 text-sm text-red-600 flex items-center">
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
                         Không thể chọn thời gian trong quá khứ
                       </p>
                     ) : (
-                      <p className="mt-1 text-xs text-gray-500">
+                      <p className="mt-2 text-sm text-gray-500">
                         {bookingData.date === new Date().toISOString().split('T')[0] 
                           ? 'Không thể chọn giờ đã qua trong hôm nay' 
                           : 'Nhập giờ theo định dạng 24 giờ (ví dụ: 14:30)'}
@@ -1769,117 +1864,150 @@ const BookingPage: React.FC = () => {
                 )}
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Thời lượng (phút)
-                </label>
-                <select
-                  name="duration"
-                  value={bookingData.duration}
-                  onChange={handleInputChange}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                >
-                  <option value={60}>60 phút</option>
-                  <option value={90}>90 phút</option>
-                  <option value={120}>120 phút</option>
-                  <option value={180}>180 phút</option>
-                  <option value={240}>240 phút</option>
-                </select>
-              </div>
+              {/* Duration and Notes */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
+                  <h5 className="font-semibold text-gray-900 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Thời lượng dự kiến
+                  </h5>
+                  <select
+                    name="duration"
+                    value={bookingData.duration}
+                    onChange={handleInputChange}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
+                  >
+                    <option value={60}>60 phút (1 giờ)</option>
+                    <option value={90}>90 phút (1.5 giờ)</option>
+                    <option value={120}>120 phút (2 giờ)</option>
+                    <option value={180}>180 phút (3 giờ)</option>
+                    <option value={240}>240 phút (4 giờ)</option>
+                  </select>
+                  <p className="mt-2 text-sm text-purple-600">
+                    💡 Thời gian có thể điều chỉnh khi thực hiện
+                  </p>
+                </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ghi chú (không bắt buộc)
-                </label>
-                <textarea
-                  name="notes"
-                  value={bookingData.notes}
-                  onChange={handleInputChange}
-                  rows={3}
-                  className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  placeholder="Ghi chú đặc biệt cho nhân viên (ví dụ: nhà có thú cưng, cần mang dụng cụ đặc biệt...)"
-                />
+                <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl p-6 border border-orange-200">
+                  <h5 className="font-semibold text-gray-900 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-1l-4 4z" />
+                    </svg>
+                    Ghi chú đặc biệt
+                  </h5>
+                  <textarea
+                    name="notes"
+                    value={bookingData.notes}
+                    onChange={handleInputChange}
+                    rows={4}
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all resize-none"
+                    placeholder="Ví dụ: Nhà có thú cưng, cần mang dụng cụ đặc biệt, lưu ý về cửa ra vào..."
+                  />
+                  <p className="mt-2 text-sm text-orange-600">
+                    ✏️ Thông tin này giúp nhân viên chuẩn bị tốt hơn
+                  </p>
+                </div>
               </div>
 
               {/* Employee Selection Section */}
-              <div className="mt-6">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="text-lg font-medium">Chọn nhân viên (Tùy chọn)</h4>
+              <div className="bg-gradient-to-r from-cyan-50 to-blue-50 rounded-xl p-6 border border-cyan-200">
+                <div className="flex items-center justify-between mb-6">
+                  <h4 className="text-lg font-semibold text-gray-900 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                    </svg>
+                    Chọn nhân viên (Tùy chọn)
+                  </h4>
                   <button
                     type="button"
                     onClick={() => setShowEmployeeSelection(!showEmployeeSelection)}
-                    className="text-sm text-blue-600 hover:text-blue-800"
+                    className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors font-medium shadow-sm"
                   >
-                    {showEmployeeSelection ? 'Ẩn' : 'Hiển thị'} lựa chọn nhân viên
+                    {showEmployeeSelection ? 'Ẩn lựa chọn' : 'Hiển thị lựa chọn'}
                   </button>
                 </div>
 
                 {showEmployeeSelection && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm text-gray-600">
-                        Bạn có thể chọn nhân viên cụ thể hoặc để hệ thống tự động phân công
-                      </p>
-                      <button
-                        type="button"
-                        onClick={handleLoadSuitableEmployees}
-                        className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
-                      >
-                        Tìm nhân viên phù hợp
-                      </button>
+                  <div className="space-y-6">
+                    <div className="bg-white rounded-lg p-4 border border-cyan-200">
+                      <div className="flex items-center justify-between">
+                        <p className="text-gray-700">
+                          Bạn có thể chọn nhân viên cụ thể hoặc để hệ thống tự động phân công nhân viên phù hợp nhất.
+                        </p>
+                        <button
+                          type="button"
+                          onClick={handleLoadSuitableEmployees}
+                          className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors font-medium shadow-sm flex items-center"
+                        >
+                          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                          </svg>
+                          Tìm nhân viên
+                        </button>
+                      </div>
                     </div>
 
                     {employeesData && employeesData.length > 0 && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {employeesData.map((employee: SuitableEmployee) => (
                           <div
                             key={employee.employeeId}
-                            className={`p-4 border-2 rounded-lg cursor-pointer transition-colors ${
+                            className={`p-4 border-2 rounded-xl cursor-pointer transition-all duration-200 hover:shadow-lg transform hover:-translate-y-1 ${
                               selectedEmployees.includes(employee.employeeId)
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-gray-200 hover:border-blue-300'
+                                ? 'border-blue-500 bg-blue-50 shadow-blue-100'
+                                : 'border-gray-200 bg-white hover:border-blue-300'
                             }`}
                             onClick={() => {
                               setSelectedEmployees(prev => {
                                 if (prev.includes(employee.employeeId)) {
                                   return prev.filter(id => id !== employee.employeeId);
                                 } else {
-                                  // For now, only allow one employee selection
                                   return [employee.employeeId];
                                 }
                               });
                             }}
                           >
                             <div className="flex items-start">
-                              <div className="w-12 h-12 rounded-full overflow-hidden mr-3">
+                              <div className="w-12 h-12 rounded-full overflow-hidden mr-3 flex-shrink-0">
                                 {employee.avatar ? (
                                   <img src={employee.avatar} alt={employee.fullName} className="w-full h-full object-cover" />
                                 ) : (
-                                  <div className="w-full h-full bg-gray-300 flex items-center justify-center">
+                                  <div className="w-full h-full bg-gradient-to-br from-gray-200 to-gray-300 flex items-center justify-center">
                                     <User className="w-6 h-6 text-gray-600" />
                                   </div>
                                 )}
                               </div>
-                              <div className="flex-1">
-                                <h5 className="font-medium text-gray-900">{employee.fullName}</h5>
-                                <p className="text-sm text-gray-600 mb-1">{employee.workingCity}</p>
-                                <div className="flex items-center justify-between">
-                                  <span className="text-sm text-yellow-600">
-                                    ★ {employee.rating || 'Chưa có đánh giá'}
-                                  </span>
-                                  <span className="text-sm text-green-600">
-                                    {employee.completedJobs} công việc
-                                  </span>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between mb-2">
+                                  <h5 className="font-semibold text-gray-900 truncate">{employee.fullName}</h5>
+                                  {selectedEmployees.includes(employee.employeeId) && (
+                                    <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 ml-2" />
+                                  )}
+                                </div>
+                                <p className="text-sm text-gray-600 mb-2">{employee.workingCity}</p>
+                                <div className="flex items-center justify-between mb-2">
+                                  <div className="flex items-center">
+                                    <svg className="w-4 h-4 text-yellow-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                      <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                    </svg>
+                                    <span className="text-sm text-gray-700">{employee.rating || 'Mới'}</span>
+                                  </div>
+                                  <span className="text-sm text-green-600 font-medium">{employee.completedJobs} việc</span>
                                 </div>
                                 {employee.skills && employee.skills.length > 0 && (
-                                  <div className="mt-2">
-                                    <div className="flex flex-wrap gap-1">
-                                      {employee.skills.slice(0, 2).map((skill, index) => (
-                                        <span key={index} className="px-2 py-1 bg-gray-100 text-xs rounded">
-                                          {skill}
-                                        </span>
-                                      ))}
-                                    </div>
+                                  <div className="flex flex-wrap gap-1">
+                                    {employee.skills.slice(0, 2).map((skill, index) => (
+                                      <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                        {skill}
+                                      </span>
+                                    ))}
+                                    {employee.skills.length > 2 && (
+                                      <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
+                                        +{employee.skills.length - 2}
+                                      </span>
+                                    )}
                                   </div>
                                 )}
                               </div>
@@ -1890,10 +2018,11 @@ const BookingPage: React.FC = () => {
                     )}
 
                     {employeesData && employeesData.length === 0 && (
-                      <div className="text-center py-8 text-gray-500">
-                        <AlertTriangle className="w-12 h-12 mx-auto mb-2" />
-                        <p>Không tìm thấy nhân viên phù hợp trong thời gian này</p>
-                        <p className="text-sm mt-1">Hệ thống sẽ tự động phân công nhân viên khi có sẵn</p>
+                      <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-200">
+                        <AlertTriangle className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                        <h6 className="text-lg font-medium text-gray-900 mb-2">Không tìm thấy nhân viên phù hợp</h6>
+                        <p className="text-gray-600 mb-1">Hiện tại không có nhân viên có sẵn trong khung thời gian này</p>
+                        <p className="text-sm text-blue-600">Hệ thống sẽ tự động phân công nhân viên phù hợp khi có sẵn</p>
                       </div>
                     )}
                   </div>
@@ -1905,85 +2034,162 @@ const BookingPage: React.FC = () => {
 
       case 4:
         return (
-          <div>
-            <h3 className="text-xl font-semibold mb-6">Xác nhận & Thanh toán</h3>
+          <div className="space-y-8">
+            <div className="text-center">
+              <h3 className="text-2xl font-bold text-gray-900 mb-2">Xác nhận đặt lịch</h3>
+              <p className="text-gray-600">Kiểm tra lại thông tin và hoàn tất việc đặt lịch dịch vụ</p>
+            </div>
             
             {/* Order Summary */}
-            <div className="bg-gray-50 rounded-lg p-6 mb-6">
-              <h4 className="font-semibold text-gray-900 mb-4">Thông tin đơn hàng</h4>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Dịch vụ:</span>
-                  <span className="font-medium">{selectedService?.name}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Ngày:</span>
-                  <span className="font-medium">
-                    {new Date(bookingData.date).toLocaleDateString('vi-VN')}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Thời gian:</span>
-                  <span className="font-medium">{bookingData.time}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Thời lượng:</span>
-                  <span className="font-medium">{bookingData.duration} phút</span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Địa chỉ:</span>
-                  <span className="font-medium text-right max-w-xs">{bookingData.address}</span>
-                </div>
-                {bookingData.notes && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Ghi chú:</span>
-                    <span className="font-medium text-right max-w-xs">{bookingData.notes}</span>
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
+              <h4 className="text-lg font-semibold text-gray-900 mb-6 flex items-center">
+                <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                Thông tin đơn hàng
+              </h4>
+              
+              <div className="bg-white rounded-lg p-6 shadow-sm">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="space-y-4">
+                    <div className="flex items-start">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Dịch vụ</p>
+                        <p className="text-gray-900 font-semibold">{selectedService?.name}</p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start">
+                      <div className="w-2 h-2 bg-emerald-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Ngày thực hiện</p>
+                        <p className="text-gray-900 font-semibold">
+                          {new Date(bookingData.date).toLocaleDateString('vi-VN', {
+                            weekday: 'long',
+                            year: 'numeric',
+                            month: 'long',
+                            day: 'numeric'
+                          })}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Thời gian</p>
+                        <p className="text-gray-900 font-semibold">{bookingData.time} ({bookingData.duration} phút)</p>
+                      </div>
+                    </div>
                   </div>
-                )}
-                <hr className="my-2" />
-                <div className="flex justify-between text-lg font-semibold">
-                  <span>Tổng cộng:</span>
-                  <span className="text-blue-600">{estimatedPrice.toLocaleString('vi-VN')}đ</span>
+                  
+                  <div className="space-y-4">
+                    <div className="flex items-start">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-500">Địa chỉ</p>
+                        <p className="text-gray-900 font-semibold text-sm leading-relaxed">
+                          {addressSource === 'current' ? currentLocationAddress :
+                           addressSource === 'custom' ? customAddress :
+                           bookingData.address}
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {bookingData.notes && (
+                      <div className="flex items-start">
+                        <div className="w-2 h-2 bg-yellow-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Ghi chú</p>
+                          <p className="text-gray-900 font-medium text-sm">{bookingData.notes}</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {selectedEmployees.length > 0 && employeesData && (
+                      <div className="flex items-start">
+                        <div className="w-2 h-2 bg-cyan-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                        <div>
+                          <p className="text-sm font-medium text-gray-500">Nhân viên được chọn</p>
+                          {employeesData
+                            .filter(emp => selectedEmployees.includes(emp.employeeId))
+                            .map(emp => (
+                              <p key={emp.employeeId} className="text-gray-900 font-semibold">{emp.fullName}</p>
+                            ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <div className="flex justify-between items-center">
+                    <span className="text-lg font-semibold text-gray-900">Tổng chi phí:</span>
+                    <span className="text-2xl font-bold text-blue-600">
+                      {(priceData?.finalPrice || estimatedPrice).toLocaleString('vi-VN')}đ
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-500 mt-1">
+                    * Giá cuối cùng có thể thay đổi tùy thuộc vào thực tế công việc
+                  </p>
                 </div>
               </div>
             </div>
 
             {/* Promo Code */}
-            <div className="space-y-4 mb-6">
-              <h4 className="font-semibold text-gray-900">Mã khuyến mãi</h4>
-              <div className="flex gap-3">
-                <input
-                  type="text"
-                  value={bookingData.promoCode || ''}
-                  onChange={(e) => setBookingData(prev => ({ ...prev, promoCode: e.target.value }))}
-                  placeholder="Nhập mã khuyến mãi (nếu có)"
-                  className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    // TODO: Apply promo code logic
-                    console.log('Applying promo code:', bookingData.promoCode);
-                  }}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Áp dụng
-                </button>
+            <div className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-200">
+              <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <svg className="w-5 h-5 mr-2 text-amber-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                </svg>
+                Mã khuyến mãi
+              </h4>
+              <div className="bg-white rounded-lg p-4 border border-amber-100">
+                <div className="flex gap-3">
+                  <input
+                    type="text"
+                    value={bookingData.promoCode || ''}
+                    onChange={(e) => setBookingData(prev => ({ ...prev, promoCode: e.target.value }))}
+                    placeholder="Nhập mã khuyến mãi (nếu có)"
+                    className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 focus:border-amber-500 transition-all"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      // TODO: Apply promo code logic
+                      console.log('Applying promo code:', bookingData.promoCode);
+                    }}
+                    className="px-6 py-3 bg-amber-600 text-white rounded-lg hover:bg-amber-700 transition-colors font-medium shadow-sm"
+                  >
+                    Áp dụng
+                  </button>
+                </div>
+                <p className="text-sm text-amber-600 mt-2 flex items-center">
+                  <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  Mã khuyến mãi sẽ được áp dụng vào tổng tiền cuối cùng
+                </p>
               </div>
-              <p className="text-sm text-gray-500">
-                Mã khuyến mãi sẽ được áp dụng vào tổng tiền cuối cùng
-              </p>
             </div>
 
             {/* Payment Method */}
-            <div className="space-y-4">
-              <h4 className="font-semibold text-gray-900">Phương thức thanh toán</h4>
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border border-green-200">
+              <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                <CreditCard className="w-5 h-5 mr-2 text-green-600" />
+                Phương thức thanh toán
+              </h4>
               <div className="space-y-3">
                 {paymentMethods.length > 0 ? (
                   paymentMethods.map((method) => (
                     <label
                       key={method.methodId}
-                      className="flex items-center p-4 border-2 border-gray-200 rounded-lg cursor-pointer hover:border-blue-300"
+                      className={`flex items-center p-4 border-2 rounded-lg cursor-pointer transition-all duration-200 hover:shadow-md ${
+                        bookingData.paymentMethod === method.methodId.toString()
+                          ? 'border-green-500 bg-green-50 shadow-green-100'
+                          : 'border-gray-200 bg-white hover:border-green-300'
+                      }`}
                     >
                       <input
                         type="radio"
@@ -1991,22 +2197,50 @@ const BookingPage: React.FC = () => {
                         value={method.methodId.toString()}
                         checked={bookingData.paymentMethod === method.methodId.toString()}
                         onChange={handleInputChange}
-                        className="mr-3"
+                        className="mr-4 text-green-600 focus:ring-green-500"
                       />
-                      <CreditCard className="w-5 h-5 mr-3 text-gray-500" />
-                      <div>
-                        <div className="font-medium">{method.methodName}</div>
-                        <div className="text-sm text-gray-500">
-                          {method.methodCode}
-                        </div>
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center mr-4 ${
+                        bookingData.paymentMethod === method.methodId.toString()
+                          ? 'bg-green-100'
+                          : 'bg-gray-100'
+                      }`}>
+                        <CreditCard className={`w-5 h-5 ${
+                          bookingData.paymentMethod === method.methodId.toString()
+                            ? 'text-green-600'
+                            : 'text-gray-600'
+                        }`} />
                       </div>
+                      <div className="flex-1">
+                        <div className="font-semibold text-gray-900">{method.methodName}</div>
+                        <div className="text-sm text-gray-600">{method.methodCode}</div>
+                      </div>
+                      {bookingData.paymentMethod === method.methodId.toString() && (
+                        <CheckCircle className="w-6 h-6 text-green-600" />
+                      )}
                     </label>
                   ))
                 ) : (
-                  <div className="p-4 bg-gray-50 rounded-lg text-center text-gray-500">
-                    Đang tải phương thức thanh toán...
+                  <div className="p-6 bg-white rounded-lg text-center border-2 border-dashed border-gray-200">
+                    <div className="animate-spin w-8 h-8 border-2 border-green-600 border-t-transparent rounded-full mx-auto mb-2"></div>
+                    <p className="text-gray-500">Đang tải phương thức thanh toán...</p>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Terms and Conditions */}
+            <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
+              <h5 className="font-semibold text-gray-900 mb-3 flex items-center">
+                <svg className="w-5 h-5 mr-2 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Điều khoản và điều kiện
+              </h5>
+              <div className="text-sm text-gray-600 space-y-2">
+                <p>✓ Bạn xác nhận rằng tất cả thông tin đã cung cấp là chính xác</p>
+                <p>✓ Dịch vụ sẽ được thực hiện theo đúng thời gian đã đặt</p>
+                <p>✓ Phí hủy đặt lịch có thể áp dụng nếu hủy trong vòng 24 giờ trước khi thực hiện</p>
+                <p>✓ Giá cuối cùng có thể thay đổi tùy thuộc vào tình hình thực tế</p>
               </div>
             </div>
           </div>
@@ -2018,125 +2252,161 @@ const BookingPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation role="CUSTOMER" />
-
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <DashboardLayout
+      role="CUSTOMER"
+      title="Đặt lịch dịch vụ"
+      description="Hoàn thành các bước sau để đặt lịch dịch vụ của bạn"
+    >
+      <div className="space-y-6">
         {/* Error Messages */}
         {errorMessages.length > 0 && (
-          <div className="mb-6 bg-red-50 border-l-4 border-red-500 p-4 rounded-md">
-            <div className="flex items-center mb-2">
-              <AlertTriangle className="w-5 h-5 text-red-500 mr-2" />
-              <h3 className="text-red-800 font-medium">Lỗi khi đặt lịch</h3>
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 shadow-sm">
+            <div className="flex items-start">
+              <div className="flex-shrink-0">
+                <AlertTriangle className="w-5 h-5 text-red-500 mt-0.5" />
+              </div>
+              <div className="ml-3 flex-1">
+                <h3 className="text-red-800 font-medium mb-1">Vui lòng kiểm tra lại thông tin</h3>
+                <div className="space-y-1">
+                  {errorMessages.map((message, index) => (
+                    <p key={index} className="text-red-700 text-sm">{message}</p>
+                  ))}
+                </div>
+              </div>
               <button 
                 onClick={() => setErrorMessages([])} 
-                className="ml-auto text-gray-400 hover:text-gray-600"
+                className="flex-shrink-0 ml-3 text-red-400 hover:text-red-600 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            <ul className="list-disc pl-5 space-y-1">
-              {errorMessages.map((message, index) => (
-                <li key={index} className="text-red-700 text-sm">{message}</li>
-              ))}
-            </ul>
           </div>
         )}
         
-        {/* Progress Bar */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            {[1, 2, 3, 4].map((stepNumber) => (
-              <div key={stepNumber} className="flex items-center">
+        {/* Enhanced Progress Bar */}
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+          <div className="flex items-center justify-between relative">
+            {/* Progress Line */}
+            <div className="absolute top-5 left-10 right-10 h-0.5 bg-gray-200">
+              <div 
+                className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-500 ease-out"
+                style={{ width: `${((step - 1) / 3) * 100}%` }}
+              />
+            </div>
+            
+            {/* Step Items */}
+            {[
+              { num: 1, title: 'Dịch vụ', subtitle: 'Chọn dịch vụ cần thiết' },
+              { num: 2, title: 'Địa điểm', subtitle: 'Xác định vị trí thực hiện' },
+              { num: 3, title: 'Thời gian', subtitle: 'Lên lịch phù hợp' },
+              { num: 4, title: 'Xác nhận', subtitle: 'Hoàn tất đặt lịch' }
+            ].map((stepItem) => (
+              <div key={stepItem.num} className="flex flex-col items-center relative z-10">
                 <div
-                  className={`flex items-center justify-center w-10 h-10 rounded-full ${
-                    step >= stepNumber
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-200 text-gray-600'
+                  className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
+                    step >= stepItem.num
+                      ? 'bg-gradient-to-r from-blue-500 to-indigo-500 border-blue-500 text-white shadow-lg'
+                      : step === stepItem.num - 1
+                        ? 'bg-blue-50 border-blue-200 text-blue-600'
+                        : 'bg-white border-gray-300 text-gray-400'
                   }`}
                 >
-                  {step > stepNumber ? (
-                    <CheckCircle className="w-6 h-6" />
+                  {step > stepItem.num ? (
+                    <CheckCircle className="w-5 h-5" />
                   ) : (
-                    stepNumber
+                    <span className="text-sm font-semibold">{stepItem.num}</span>
                   )}
                 </div>
-                {stepNumber < 4 && (
-                  <div
-                    className={`w-16 h-1 ml-4 ${
-                      step > stepNumber ? 'bg-blue-600' : 'bg-gray-200'
-                    }`}
-                  />
-                )}
+                <div className="mt-2 text-center">
+                  <p className={`text-sm font-medium ${
+                    step >= stepItem.num ? 'text-blue-600' : 'text-gray-500'
+                  }`}>
+                    {stepItem.title}
+                  </p>
+                  <p className="text-xs text-gray-400 mt-0.5 max-w-20">
+                    {stepItem.subtitle}
+                  </p>
+                </div>
               </div>
             ))}
           </div>
-          
-          <div className="flex justify-between mt-2 text-sm">
-            <span className={step >= 1 ? 'text-blue-600 font-medium' : 'text-gray-500'}>
-              Chọn dịch vụ
-            </span>
-            <span className={step >= 2 ? 'text-blue-600 font-medium' : 'text-gray-500'}>
-              Địa điểm
-            </span>
-            <span className={step >= 3 ? 'text-blue-600 font-medium' : 'text-gray-500'}>
-              Thời gian
-            </span>
-            <span className={step >= 4 ? 'text-blue-600 font-medium' : 'text-gray-500'}>
-              Xác nhận
-            </span>
-          </div>
         </div>
 
-        {/* Content */}
-        <div className="bg-white rounded-xl p-8 shadow-sm">
-          {renderStepContent()}
+        {/* Main Content Card */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="p-6 sm:p-8">
+            {renderStepContent()}
+          </div>
           
           {/* Action Buttons */}
-          <div className="flex justify-between mt-8 pt-6 border-t">
-            <button
-              onClick={handlePrev}
-              disabled={step === 1}
-              className="px-6 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Quay lại
-            </button>
-            
-            {step < 4 ? (
+          <div className="bg-gray-50 px-6 py-4 sm:px-8 sm:py-6 border-t border-gray-100">
+            <div className="flex justify-between items-center">
               <button
-                onClick={handleNext}
-                disabled={
-                  (step === 1 && !bookingData.serviceId) ||
-                  (step === 2 && (
-                    (addressSource === 'custom' && !customAddress) ||
-                    (addressSource === 'current' && !currentLocationAddress) ||
-                    (addressSource === 'profile' && (!user?.customerId))
-                  )) ||
-                  (step === 3 && (
-                    !bookingData.date || 
-                    !bookingData.time || 
-                    (timeInputType === 'custom' && !customTimeInput) ||
-                    isTimeInPast(bookingData.time)
-                  ))
-                }
-                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                onClick={handlePrev}
+                disabled={step === 1}
+                className="flex items-center px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium"
               >
-                {step === 3 && isTimeInPast(bookingData.time) && bookingData.time ? 'Vui lòng chọn thời gian hợp lệ' : 'Tiếp tục'}
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Quay lại
               </button>
-            ) : (
-              <button
-                onClick={handleSubmit}
-                className="px-8 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 font-semibold"
-              >
-                Xác nhận đặt lịch
-              </button>
-            )}
+              
+              <div className="text-sm text-gray-500 hidden sm:block">
+                Bước {step} / 4
+              </div>
+              
+              {step < 4 ? (
+                <button
+                  onClick={handleNext}
+                  disabled={
+                    (step === 1 && !bookingData.serviceId) ||
+                    (step === 2 && (
+                      (addressSource === 'custom' && !customAddress) ||
+                      (addressSource === 'current' && !currentLocationAddress) ||
+                      (addressSource === 'profile' && (!user?.customerId))
+                    )) ||
+                    (step === 3 && (
+                      !bookingData.date || 
+                      !bookingData.time || 
+                      (timeInputType === 'custom' && !customTimeInput) ||
+                      isTimeInPast(bookingData.time)
+                    ))
+                  }
+                  className="flex items-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-sm"
+                >
+                  {step === 3 && isTimeInPast(bookingData.time) && bookingData.time 
+                    ? 'Vui lòng chọn thời gian hợp lệ' 
+                    : 'Tiếp tục'
+                  }
+                  <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubmit}
+                  disabled={bookingLoading}
+                  className="flex items-center px-8 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 font-semibold shadow-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {bookingLoading ? (
+                    <>
+                      <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
+                      Đang xử lý...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="w-5 h-5 mr-2" />
+                      Xác nhận đặt lịch
+                    </>
+                  )}
+                </button>
+              )}
+            </div>
           </div>
         </div>
-      </main>
-
-
-    </div>
+      </div>
+    </DashboardLayout>
   );
 };
 

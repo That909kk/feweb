@@ -56,7 +56,7 @@ const MetricCard: React.FC<MetricCardProps> = ({
       <div className="absolute -top-12 right-0 h-24 w-24 rounded-full bg-gradient-to-br from-brand-background/60 to-transparent" />
       <div className="flex items-start justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.3em] text-brand-text/50">{label}</p>
+          <p className="text-sm font-bold uppercase tracking-[0.2em] text-brand-text/50">{label}</p>
           <p className="mt-3 text-3xl font-semibold text-brand-navy sm:text-4xl">{value}</p>
         </div>
         <div className={`flex h-11 w-11 items-center justify-center rounded-2xl ${palette.halo}`}>

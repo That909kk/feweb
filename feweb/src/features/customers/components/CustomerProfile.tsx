@@ -252,21 +252,21 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ customerId }) 
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-brand-background">
       <Navigation />
       
-      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-5xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
         {/* Success Message */}
         {showSuccess && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4">
-            <div className="flex">
+          <div className="mb-6 bg-status-success/10 border border-status-success/20 rounded-2xl p-4">
+            <div className="flex items-center">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5 text-status-success" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
               </div>
               <div className="ml-3">
-                <p className="text-sm font-medium text-green-800">
+                <p className="text-sm font-medium text-status-success">
                   {textData.messages?.updateSuccess || 'Cập nhật thông tin thành công!'}
                 </p>
               </div>
@@ -276,171 +276,214 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ customerId }) 
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
-            <div className="flex">
+          <div className="mb-6 bg-status-danger/10 border border-status-danger/20 rounded-2xl p-4">
+            <div className="flex items-center">
               <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-5 w-5 text-status-danger" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                 </svg>
               </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-red-800">{error}</p>
+              <div className="ml-3 flex-1">
+                <p className="text-sm font-medium text-status-danger">{error}</p>
               </div>
-              <div className="ml-auto pl-3">
-                <div className="-mx-1.5 -my-1.5">
-                  <button
-                    type="button"
-                    onClick={clearError}
-                    className="bg-red-50 text-red-500 p-1.5 rounded-md hover:bg-red-100"
-                  >
-                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                </div>
+              <div className="ml-3">
+                <button
+                  type="button"
+                  onClick={clearError}
+                  className="bg-status-danger/10 text-status-danger p-1.5 rounded-lg hover:bg-status-danger/20 transition-colors"
+                >
+                  <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* Header */}
-        <div className="bg-white shadow rounded-lg mb-6">
-          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-            <div className="flex items-center">
-              <div className="ml-4">
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {textData.title || 'Hồ Sơ Khách Hàng'}
-                </h1>
-              </div>
-            </div>
-            
-            {/* Action Buttons */}
-            <div className="flex space-x-3">
-              {isEditing ? (
-                <>
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    disabled={isLoading}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50"
-                  >
-                    {textData.actions?.cancel || 'Hủy'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={isLoading}
-                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 disabled:opacity-50 flex items-center"
-                  >
-                    {isLoading && (
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                    )}
-                    {textData.actions?.save || 'Lưu thay đổi'}
-                  </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  onClick={handleEdit}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
-                >
-                  <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  {textData.actions?.edit || 'Chỉnh sửa'}
-                </button>
-              )}
-            </div>
-          </div>
-
-          <div className="p-6 space-y-8">
-            {/* Customer Avatar Section */}
-            <div className="flex items-start space-x-6 pb-6 border-b border-gray-200">
-              <div className="relative flex-shrink-0">
-                {previewUrl ? (
-                  <img
-                    src={previewUrl}
-                    alt={formData.fullName}
-                    className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-lg"
-                  />
-                ) : (
-                  <div className="h-32 w-32 rounded-full bg-gradient-to-r from-purple-500 to-pink-600 flex items-center justify-center border-4 border-white shadow-lg">
-                    <span className="text-white font-medium text-4xl">
-                      {formData.fullName ? formData.fullName.charAt(0).toUpperCase() : 'C'}
-                    </span>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  className="absolute bottom-0 right-0 inline-flex items-center justify-center h-10 w-10 rounded-full bg-purple-600 text-white shadow-lg hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 border-2 border-white"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                  </svg>
-                </button>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">{formData.fullName || 'Chưa có tên'}</h2>
-                  <p className="text-sm text-gray-500">{formData.email}</p>
-                  <div className="mt-2 flex items-center space-x-4 text-sm">
-                    {/* VIP Level */}
-                    <div className="flex items-center">
-                      <svg className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3l14 9-14 9V3z" />
-                      </svg>
-                      {formData.vipLevel === 'DIAMOND' && <span className="text-purple-600 font-medium">Kim cương</span>}
-                      {formData.vipLevel === 'GOLD' && <span className="text-yellow-600 font-medium">Vàng</span>}
-                      {formData.vipLevel === 'SILVER' && <span className="text-gray-600 font-medium">Bạc</span>}
-                      {formData.vipLevel === 'BRONZE' && <span className="text-orange-600 font-medium">Đồng</span>}
-                      {(!formData.vipLevel || formData.vipLevel === '') && <span className="text-gray-500">Thành viên thường</span>}
+        {/* Profile Header Card */}
+        <div className="relative overflow-hidden rounded-3xl border border-brand-outline/40 bg-white/95 shadow-elevation-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-elevation-md mb-6">
+          {/* Decorative Background */}
+          <div className="absolute -top-12 right-0 h-32 w-32 rounded-full bg-gradient-to-br from-brand-teal/20 to-transparent" />
+          <div className="absolute -bottom-12 left-0 h-24 w-24 rounded-full bg-gradient-to-tr from-brand-secondary/20 to-transparent" />
+          
+          <div className="relative p-6 sm:p-8">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+              <div className="flex items-center space-x-6">
+                <div className="relative">
+                  {previewUrl ? (
+                    <img
+                      src={previewUrl}
+                      alt={formData.fullName}
+                      className="h-24 w-24 sm:h-32 sm:w-32 rounded-3xl object-cover border-4 border-white shadow-lg"
+                    />
+                  ) : (
+                    <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-3xl bg-gradient-to-br from-brand-teal to-brand-navy flex items-center justify-center border-4 border-white shadow-lg">
+                      <span className="text-white font-bold text-2xl sm:text-4xl">
+                        {formData.fullName ? formData.fullName.charAt(0).toUpperCase() : 'C'}
+                      </span>
                     </div>
-                    
-                    {/* Rating */}
-                    <div className="flex items-center">
-                      <svg className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                      </svg>
-                      {formData.rating && formData.rating >= 4.5 && <span className="text-emerald-600 font-medium">Xuất sắc ({formData.rating}⭐)</span>}
-                      {formData.rating && formData.rating >= 4.0 && formData.rating < 4.5 && <span className="text-blue-600 font-medium">Tốt ({formData.rating}⭐)</span>}
-                      {formData.rating && formData.rating >= 3.0 && formData.rating < 4.0 && <span className="text-yellow-600 font-medium">Trung bình ({formData.rating}⭐)</span>}
-                      {formData.rating && formData.rating >= 2.0 && formData.rating < 3.0 && <span className="text-orange-600 font-medium">Kém ({formData.rating}⭐)</span>}
-                      {formData.rating && formData.rating < 2.0 && <span className="text-red-600 font-medium">Rất kém ({formData.rating}⭐)</span>}
-                      {(!formData.rating || formData.rating === 0) && <span className="text-gray-500">Chưa đánh giá</span>}
-                    </div>
-                  </div>
+                  )}
                   {isEditing && (
-                    <div className="mt-4">
+                    <label className="absolute -bottom-2 -right-2 inline-flex items-center justify-center h-10 w-10 rounded-full bg-brand-teal text-white shadow-lg hover:bg-brand-teal/90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-teal border-2 border-white cursor-pointer transition-colors">
+                      <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                      </svg>
                       <input
                         type="file"
                         accept="image/*"
                         onChange={handleAvatarChange}
-                        className="block w-full max-w-xs text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100"
+                        className="hidden"
                       />
-                    </div>
+                    </label>
                   )}
                 </div>
+                
+                <div className="flex-1 min-w-0">
+                  <h1 className="text-2xl sm:text-3xl font-bold text-brand-navy mb-2">
+                    {formData.fullName || 'Chưa có tên'}
+                  </h1>
+                  <p className="text-brand-text/70 mb-3">{formData.email}</p>
+                  
+                  <div className="flex flex-wrap items-center gap-4 text-sm">
+                    {/* VIP Level Badge */}
+                    <div className="flex items-center">
+                      {formData.vipLevel === 'DIAMOND' && (
+                        <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 px-3 py-1 text-xs font-semibold text-white">
+                          <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 2l2 5h8l2-5-6 19L6 2z"/>
+                          </svg>
+                          Kim cương
+                        </span>
+                      )}
+                      {formData.vipLevel === 'GOLD' && (
+                        <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 px-3 py-1 text-xs font-semibold text-white">
+                          <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 2l2 5h8l2-5-6 19L6 2z"/>
+                          </svg>
+                          Vàng
+                        </span>
+                      )}
+                      {formData.vipLevel === 'SILVER' && (
+                        <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-gray-400 to-gray-600 px-3 py-1 text-xs font-semibold text-white">
+                          <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 2l2 5h8l2-5-6 19L6 2z"/>
+                          </svg>
+                          Bạc
+                        </span>
+                      )}
+                      {formData.vipLevel === 'BRONZE' && (
+                        <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-400 to-orange-600 px-3 py-1 text-xs font-semibold text-white">
+                          <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M6 2l2 5h8l2-5-6 19L6 2z"/>
+                          </svg>
+                          Đồng
+                        </span>
+                      )}
+                      {(!formData.vipLevel || formData.vipLevel === '') && (
+                        <span className="inline-flex items-center gap-2 rounded-full bg-brand-outline/20 px-3 py-1 text-xs font-medium text-brand-text/70">
+                          <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                          </svg>
+                          Thành viên thường
+                        </span>
+                      )}
+                    </div>
+                    
+                    {/* Rating Badge */}
+                    {formData.rating && formData.rating > 0 && (
+                      <div className="flex items-center gap-1 rounded-full bg-brand-secondary/20 px-3 py-1 text-xs font-medium text-brand-secondary">
+                        <svg className="h-3 w-3 fill-current" viewBox="0 0 20 20">
+                          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                        </svg>
+                        {formData.rating} điểm
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-3">
+                {isEditing ? (
+                  <>
+                    <button
+                      type="button"
+                      onClick={handleCancel}
+                      disabled={isLoading}
+                      className="inline-flex items-center gap-2 rounded-2xl border border-brand-outline/40 bg-white px-6 py-3 text-sm font-medium text-brand-text hover:bg-brand-background transition-colors disabled:opacity-50"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                      {textData.actions?.cancel || 'Hủy'}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleSubmit}
+                      disabled={isLoading}
+                      className="inline-flex items-center gap-2 rounded-2xl bg-brand-teal px-6 py-3 text-sm font-medium text-white shadow-lg hover:bg-brand-teal/90 transition-colors disabled:opacity-50"
+                    >
+                      {isLoading ? (
+                        <>
+                          <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          {textData.messages?.loading || 'Đang lưu...'}
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          {textData.actions?.save || 'Lưu thay đổi'}
+                        </>
+                      )}
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleEdit}
+                    className="inline-flex items-center gap-2 rounded-2xl bg-brand-navy px-6 py-3 text-sm font-medium text-white shadow-lg hover:bg-brand-navyHover transition-colors"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    {textData.actions?.edit || 'Chỉnh sửa'}
+                  </button>
+                )}
               </div>
             </div>
-
-            {/* Basic Information - Combined Section */}
-            <div>
-              <h4 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
-                <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                </svg>
-                Thông tin cơ bản
-              </h4>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Full Name */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {textData.form.fields.fullName}
-                  </label>
+          </div>
+        </div>
+        {/* Personal Information Section */}
+        <div className="relative overflow-hidden rounded-3xl border border-brand-outline/40 bg-white/95 shadow-elevation-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-elevation-md mb-6">
+          <div className="absolute -top-12 right-0 h-32 w-32 rounded-full bg-gradient-to-br from-brand-secondary/20 to-transparent" />
+          
+          <div className="relative p-6 sm:p-8">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-navy/10">
+                  <svg className="h-6 w-6 text-brand-navy" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-semibold text-brand-navy">
+                  Thông tin cá nhân
+                </h2>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Full Name */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  {textData.form.fields.fullName}
+                  <span className="text-status-danger ml-1">*</span>
+                </label>
+                <div className="relative">
                   <input
                     type="text"
                     name="fullName"
@@ -448,16 +491,30 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ customerId }) 
                     onChange={handleInputChange}
                     disabled={!isEditing}
                     placeholder={textData.form.placeholders.fullName}
-                    className="block w-full px-3 py-2 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 disabled:bg-purple-50 disabled:text-gray-900 border-0"
+                    className={`block w-full px-4 py-3 rounded-2xl border-0 transition-all duration-200 ${
+                      isEditing 
+                        ? 'bg-brand-background shadow-sm ring-1 ring-brand-outline/30 focus:ring-2 focus:ring-brand-teal focus:bg-white' 
+                        : 'bg-brand-outline/10 text-brand-text/90'
+                    }`}
                     required
                   />
+                  {isEditing && (
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-4">
+                      <svg className="h-4 w-4 text-brand-outline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
+              </div>
 
-                {/* Email */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {textData.form.fields.email}
-                  </label>
+              {/* Email */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  {textData.form.fields.email}
+                  <span className="text-status-danger ml-1">*</span>
+                </label>
+                <div className="relative">
                   <input
                     type="email"
                     name="email"
@@ -465,232 +522,327 @@ export const CustomerProfile: React.FC<CustomerProfileProps> = ({ customerId }) 
                     onChange={handleInputChange}
                     disabled={!isEditing}
                     placeholder={textData.form.placeholders.email}
-                    className="block w-full px-3 py-2 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 disabled:bg-purple-50 disabled:text-gray-900 border-0"
+                    className={`block w-full px-4 py-3 rounded-2xl border-0 transition-all duration-200 ${
+                      isEditing 
+                        ? 'bg-brand-background shadow-sm ring-1 ring-brand-outline/30 focus:ring-2 focus:ring-brand-teal focus:bg-white' 
+                        : 'bg-brand-outline/10 text-brand-text/90'
+                    }`}
                     required
                   />
+                  {isEditing && (
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-4">
+                      <svg className="h-4 w-4 text-brand-outline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.207" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
+              </div>
 
-                {/* Phone Number */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {textData.form.fields.phoneNumber}
-                  </label>
+              {/* Phone Number */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  {textData.form.fields.phoneNumber}
+                </label>
+                <div className="relative">
                   <input
                     type="tel"
                     name="phoneNumber"
                     value={formData.phoneNumber || ''}
                     onChange={handleInputChange}
-                    disabled={!isEditing}
+                    disabled={true} 
                     placeholder={textData.form.placeholders.phoneNumber}
-                    className="block w-full px-3 py-2 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 disabled:bg-purple-50 disabled:text-gray-900 border-0"
+                    className="block w-full px-4 py-3 rounded-2xl border-0 bg-brand-outline/10 text-brand-text/90"
                   />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-4">
+                    {formData.isPhoneVerified ? (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-status-success">
+                        <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                        </svg>
+                        Đã xác thực
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 text-xs font-medium text-status-warning">
+                        <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                        </svg>
+                        Chưa xác thực
+                      </span>
+                    )}
+                  </div>
                 </div>
+              </div>
 
-                {/* Gender */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {textData.form.fields.gender}
-                  </label>
+              {/* Gender */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  {textData.form.fields.gender}
+                </label>
+                <div className="relative">
                   <select
                     name="isMale"
                     value={formData.isMale?.toString() || 'true'}
                     onChange={handleInputChange}
                     disabled={!isEditing}
-                    className="block w-full px-3 py-2 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 disabled:bg-purple-50 disabled:text-gray-900 border-0"
+                    className={`block w-full px-4 py-3 rounded-2xl border-0 transition-all duration-200 ${
+                      isEditing 
+                        ? 'bg-brand-background shadow-sm ring-1 ring-brand-outline/30 focus:ring-2 focus:ring-brand-teal focus:bg-white' 
+                        : 'bg-brand-outline/10 text-brand-text/90'
+                    }`}
                   >
                     <option value="true">{textData.form.genderOptions.male}</option>
                     <option value="false">{textData.form.genderOptions.female}</option>
                   </select>
+                  {isEditing && (
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-4 pointer-events-none">
+                      <svg className="h-4 w-4 text-brand-outline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </div>
+                  )}
                 </div>
+              </div>
 
-                {/* Birthdate */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {textData.form.fields.birthdate}
-                  </label>
+              {/* Birthdate */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  {textData.form.fields.birthdate}
+                </label>
+                <div className="relative">
                   <input
                     type="date"
                     name="birthdate"
                     value={formData.birthdate || ''}
                     onChange={handleInputChange}
                     disabled={!isEditing}
-                    className="block w-full px-3 py-2 rounded-md shadow-sm focus:outline-none focus:ring-purple-500 focus:border-purple-500 disabled:bg-purple-50 disabled:text-gray-900 border-0"
-                    required
+                    className={`block w-full px-4 py-3 rounded-2xl border-0 transition-all duration-200 ${
+                      isEditing 
+                        ? 'bg-brand-background shadow-sm ring-1 ring-brand-outline/30 focus:ring-2 focus:ring-brand-teal focus:bg-white' 
+                        : 'bg-brand-outline/10 text-brand-text/90'
+                    }`}
+                  />
+                  {isEditing && (
+                    <div className="absolute inset-y-0 right-0 flex items-center pr-4">
+                      <svg className="h-4 w-4 text-brand-outline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Roles */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  {textData.form.fields.roles}
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {formData.roles.map((role, index) => (
+                    <span
+                      key={index}
+                      className="inline-flex items-center gap-1 rounded-full bg-brand-teal/10 border border-brand-teal/20 px-3 py-1 text-sm font-medium text-brand-teal"
+                    >
+                      <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clipRule="evenodd" />
+                      </svg>
+                      {role.roleName}
+                    </span>
+                  ))}
+                  {formData.roles.length === 0 && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-outline/10 px-3 py-1 text-sm text-brand-text/60">
+                      Chưa có vai trò
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {/* Account Information Section */}
+        <div className="relative overflow-hidden rounded-3xl border border-brand-outline/40 bg-white/95 shadow-elevation-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-elevation-md mb-6">
+          <div className="absolute -top-12 left-0 h-32 w-32 rounded-full bg-gradient-to-br from-brand-navy/20 to-transparent" />
+          
+          <div className="relative p-6 sm:p-8">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-teal/10">
+                  <svg className="h-6 w-6 text-brand-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-semibold text-brand-navy">
+                  Thông tin tài khoản
+                </h2>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Account Status */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  {textData.form.fields.accountStatus}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.accountStatus || ''}
+                    disabled={true}
+                    className="block w-full px-4 py-3 rounded-2xl border-0 bg-brand-outline/10 text-brand-text/90"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-4">
+                    <span className={`inline-flex items-center gap-1 text-xs font-medium ${
+                      formData.accountStatus === 'ACTIVE' ? 'text-status-success' : 'text-status-warning'
+                    }`}>
+                      <svg className="h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      </svg>
+                      {formData.accountStatus === 'ACTIVE' ? 'Hoạt động' : 'Không hoạt động'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Phone Verified Status */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  {textData.form.fields.isPhoneVerified}
+                </label>
+                <div className="flex items-center justify-center">
+                  <span className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ${
+                    formData.isPhoneVerified 
+                      ? 'bg-status-success/10 text-status-success border border-status-success/20' 
+                      : 'bg-status-warning/10 text-status-warning border border-status-warning/20'
+                  }`}>
+                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 20 20">
+                      {formData.isPhoneVerified ? (
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                      ) : (
+                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                      )}
+                    </svg>
+                    {formData.isPhoneVerified ? 'Đã xác thực' : 'Chưa xác thực'}
+                  </span>
+                </div>
+              </div>
+
+              {/* Rating */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  {textData.form.fields.rating}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.rating ? `${formData.rating} ⭐` : 'Chưa có đánh giá'}
+                    disabled={true}
+                    className="block w-full px-4 py-3 rounded-2xl border-0 bg-brand-outline/10 text-brand-text/90"
                   />
                 </div>
+              </div>
 
-                {/* Roles */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {textData.form.fields.roles}
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.roles.map((role, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800"
-                      >
-                        {role.roleName}
-                      </span>
-                    ))}
+              {/* VIP Level */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  {textData.form.fields.vipLevel}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.vipLevel || 'Thành viên thường'}
+                    disabled={true}
+                    className="block w-full px-4 py-3 rounded-2xl border-0 bg-brand-outline/10 text-brand-text/90"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* System Information Section */}
+        <div className="relative overflow-hidden rounded-3xl border border-brand-outline/40 bg-white/95 shadow-elevation-sm backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:shadow-elevation-md">
+          <div className="absolute -top-12 right-0 h-32 w-32 rounded-full bg-gradient-to-br from-brand-secondary/20 to-transparent" />
+          
+          <div className="relative p-6 sm:p-8">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-secondary/10">
+                  <svg className="h-6 w-6 text-brand-secondary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-semibold text-brand-navy">
+                  Thông tin hệ thống
+                </h2>
+              </div>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* Last Login */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  {textData.form.fields.lastLogin}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.lastLogin ? new Date(formData.lastLogin).toLocaleString('vi-VN') : 'Chưa có thông tin'}
+                    disabled={true}
+                    className="block w-full px-4 py-3 rounded-2xl border-0 bg-brand-outline/10 text-brand-text/90"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-4">
+                    <svg className="h-4 w-4 text-brand-outline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {/* Created At */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  {textData.form.fields.createdAt}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.createdAt ? new Date(formData.createdAt).toLocaleString('vi-VN') : 'Chưa có thông tin'}
+                    disabled={true}
+                    className="block w-full px-4 py-3 rounded-2xl border-0 bg-brand-outline/10 text-brand-text/90"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-4">
+                    <svg className="h-4 w-4 text-brand-outline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                </div>
+              </div>
+
+              {/* Updated At */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  {textData.form.fields.updatedAt}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={formData.updatedAt ? new Date(formData.updatedAt).toLocaleString('vi-VN') : 'Chưa có thông tin'}
+                    disabled={true}
+                    className="block w-full px-4 py-3 rounded-2xl border-0 bg-brand-outline/10 text-brand-text/90"
+                  />
+                  <div className="absolute inset-y-0 right-0 flex items-center pr-4">
+                    <svg className="h-4 w-4 text-brand-outline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
                   </div>
                 </div>
               </div>
             </div>
-
-            {/* Account Information - Read Only */}
-            <div className="mt-8 pt-8 border-t border-gray-200">
-              <h4 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
-                <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                Thông tin tài khoản
-              </h4>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {/* Account Status */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {textData.form.fields.accountStatus}
-                  </label>
-                  <input
-                    type="text"
-                value={formData.accountStatus || ''}
-                disabled={true}
-                className="block w-full px-3 py-2 rounded-md shadow-sm bg-purple-50 text-gray-900 border-0"
-              />
-            </div>
-
-            {/* Phone Verified */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {textData.form.fields.isPhoneVerified}
-              </label>
-              <div className="mt-1">
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                  formData.isPhoneVerified 
-                    ? 'bg-green-100 text-green-800' 
-                    : 'bg-red-100 text-red-800'
-                }`}>
-                  {formData.isPhoneVerified ? 'Đã xác thực' : 'Chưa xác thực'}
-                </span>
-              </div>
-            </div>
-
-            {/* Rating */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {textData.form.fields.rating}
-              </label>
-              <input
-                type="text"
-                value={formData.rating ? `${formData.rating} ⭐` : 'Chưa có đánh giá'}
-                disabled={true}
-                className="block w-full px-3 py-2 rounded-md shadow-sm bg-purple-50 text-gray-900 border-0"
-              />
-            </div>
-
-            {/* VIP Level */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {textData.form.fields.vipLevel}
-              </label>
-              <input
-                type="text"
-                value={formData.vipLevel || 'Thành viên thường'}
-                disabled={true}
-                className="block w-full px-3 py-2 rounded-md shadow-sm bg-purple-50 text-gray-900 border-0"
-              />
-            </div>
-              </div>
-            </div>
-
-            {/* Thông tin hệ thống */}
-            <div className="border-t border-gray-200 pt-6">
-              <h4 className="text-lg font-medium text-gray-900 mb-4">Thông tin hệ thống</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Last Login */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {textData.form.fields.lastLogin}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.lastLogin ? new Date(formData.lastLogin).toLocaleString('vi-VN') : ''}
-                    disabled={true}
-                    className="block w-full px-3 py-2 rounded-md shadow-sm bg-purple-50 text-gray-900 border-0"
-                  />
-                </div>
-
-                {/* Created At */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {textData.form.fields.createdAt}
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.createdAt ? new Date(formData.createdAt).toLocaleString('vi-VN') : ''}
-                    disabled={true}
-                    className="block w-full px-3 py-2 rounded-md shadow-sm bg-purple-50 text-gray-900 border-0"
-                  />
-                </div>
-
-            {/* Updated At */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                {textData.form.fields.updatedAt}
-              </label>
-              <input
-                type="text"
-                value={formData.updatedAt ? new Date(formData.updatedAt).toLocaleString('vi-VN') : ''}
-                disabled={true}
-                className="block w-full px-3 py-2 rounded-md shadow-sm bg-purple-50 text-gray-900 border-0"
-              />
-            </div>
-              </div>
-            </div>
-
-            {/* Action Buttons - Only show when editing */}
-            {isEditing && (
-              <div className="flex items-center justify-end space-x-3 pt-6 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={handleCancel}
-                  disabled={isLoading}
-                  className="inline-flex items-center px-6 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 transition-colors duration-200"
-                >
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                  {textData.actions.cancel}
-                </button>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="inline-flex items-center px-6 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 transition-colors duration-200"
-                >
-                  {isLoading ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      {textData.messages.loading}
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      {textData.actions.update}
-                    </>
-                  )}
-                </button>
-              </div>
-            )}
           </div>
         </div>
       </div>
     </div>
   );
 };
+
+

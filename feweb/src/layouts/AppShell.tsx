@@ -25,15 +25,15 @@ type AppShellProps = {
 };
 
 const roleBadges: Record<SupportedRole, { label: string; tone: string }> = {
-  CUSTOMER: { label: 'Workspace khach hang', tone: 'bg-brand-teal/15 text-brand-teal' },
-  EMPLOYEE: { label: 'Workspace nhan vien', tone: 'bg-emerald-100 text-emerald-700' },
-  ADMIN: { label: 'Workspace quan tri', tone: 'bg-brand-navy/10 text-brand-navy' }
+  CUSTOMER: { label: 'Workspace khách hàng', tone: 'bg-brand-teal/15 text-brand-teal' },
+  EMPLOYEE: { label: 'Workspace nhân viên', tone: 'bg-emerald-100 text-emerald-700' },
+  ADMIN: { label: 'Workspace quản trị', tone: 'bg-brand-navy/10 text-brand-navy' }
 };
 
 const roleLabels: Record<UserRole, string> = {
-  CUSTOMER: 'Khach hang',
-  EMPLOYEE: 'Nhan vien',
-  ADMIN: 'Quan tri'
+  CUSTOMER: 'Khách hàng',
+  EMPLOYEE: 'Nhân viên',
+  ADMIN: 'Quản trị'
 };
 
 const AppShell: React.FC<AppShellProps> = ({
@@ -100,7 +100,7 @@ const AppShell: React.FC<AppShellProps> = ({
             <button
               type="button"
               className="inline-flex items-center justify-center rounded-full border border-brand-outline/60 p-2 text-brand-navy transition hover:border-brand-navy hover:text-brand-navy lg:hidden"
-              aria-label="Mo menu dieu huong"
+              aria-label="Mở menu điều hướng"
               onClick={() => setSidebarOpen(true)}
             >
               <Menu className="h-5 w-5" />
@@ -143,7 +143,7 @@ const AppShell: React.FC<AppShellProps> = ({
             <button
               type="button"
               className="relative inline-flex items-center justify-center rounded-full border border-brand-outline/60 bg-white p-2 text-brand-navy shadow-sm transition hover:border-brand-navy hover:text-brand-navy"
-              aria-label="Mo thong bao"
+              aria-label="Mở thông báo"
               onClick={() => setNotifyOpen(true)}
             >
               <Bell className="h-5 w-5" />
@@ -162,8 +162,8 @@ const AppShell: React.FC<AppShellProps> = ({
                 )}
               </span>
               <div className="hidden min-w-[120px] flex-col sm:flex">
-                <span className="text-sm font-semibold text-brand-navy">{user?.fullName ?? 'Thanh vien'}</span>
-                <span className="text-xs text-brand-text/60">{user?.email ?? 'Chua cap nhat email'}</span>
+                <span className="text-sm font-semibold text-brand-navy">{user?.fullName ?? 'Thành viên'}</span>
+                <span className="text-xs text-brand-text/60">{user?.email ?? 'Chưa cập nhật email'}</span>
               </div>
               <button
                 type="button"
@@ -171,7 +171,7 @@ const AppShell: React.FC<AppShellProps> = ({
                 className="ml-2 inline-flex items-center gap-1 rounded-full border border-brand-outline/50 px-2 py-1 text-xs font-semibold text-brand-text/70 transition hover:border-brand-navy hover:text-brand-navy"
               >
                 <LogOut className="h-3.5 w-3.5" />
-                Dang xuat
+                Đăng xuất
               </button>
             </div>
           </div>
@@ -197,7 +197,7 @@ const AppShell: React.FC<AppShellProps> = ({
         </div>
 
         <footer className="mt-auto border-t border-brand-outline/40 bg-brand-surface/90 px-4 py-4 text-xs text-brand-text/60 sm:px-6 lg:px-10">
-          Gia Dung 360 © {new Date().getFullYear()} · Kien tao trai nghiem giup viec gia dinh hien dai.
+          Gia Dụng 360 © {new Date().getFullYear()} · Kiến tạo trải nghiệm giúp việc gia đình hiện đại.
         </footer>
       </div>
 

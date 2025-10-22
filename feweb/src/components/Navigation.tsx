@@ -7,6 +7,7 @@ import {
   FileText,
   HardHat,
   LayoutDashboard,
+  LogOut,
   Megaphone,
   MessageCircle,
   ShieldCheck,
@@ -40,105 +41,105 @@ type QuickActionConfig = {
 };
 
 const roleLabels: Record<UserRole, string> = {
-  CUSTOMER: 'Khach hang',
-  EMPLOYEE: 'Nhan vien',
-  ADMIN: 'Quan tri'
+  CUSTOMER: 'Khách hàng',
+  EMPLOYEE: 'Nhân viên',
+  ADMIN: 'Quản trị'
 };
 
 const navigationConfig: Record<UserRole, NavItemConfig[]> = {
   CUSTOMER: [
     {
       to: '/customer/dashboard',
-      label: 'Tong quan',
-      description: 'Trang thai moi nhat',
+      label: 'Tổng quan',
+      description: 'Trạng thái mới nhất',
       icon: LayoutDashboard
     },
     {
       to: '/customer/booking',
-      label: 'Dat lich',
-      description: 'Tao yeu cau dich vu',
+      label: 'Đặt lịch',
+      description: 'Tạo yêu cầu dịch vụ',
       icon: CalendarClock
     },
     {
       to: '/customer/orders',
-      label: 'Don hang',
-      description: 'Theo doi trang thai',
+      label: 'Đơn hàng',
+      description: 'Theo dõi trạng thái',
       icon: ClipboardList
     },
     {
       to: '/customer/payments',
-      label: 'Thanh toan',
-      description: 'Lich su giao dich',
+      label: 'Thanh toán',
+      description: 'Lịch sử giao dịch',
       icon: FileText
     },
     {
       to: '/customer/chat',
-      label: 'Trao doi',
-      description: 'Lien lac nhan vien',
+      label: 'Trao đổi',
+      description: 'Liên lạc nhân viên',
       icon: MessageCircle
     },
     {
       to: '/customer/profile',
-      label: 'Ho so',
-      description: 'Cap nhat thong tin',
+      label: 'Hồ sơ',
+      description: 'Cập nhật thông tin',
       icon: UserRound
     }
   ],
   EMPLOYEE: [
     {
       to: '/employee/dashboard',
-      label: 'Tong quan',
-      description: 'Chiem nguong lich ban',
+      label: 'Tổng quan',
+      description: 'Chiêm ngưỡng lịch bận',
       icon: LayoutDashboard
     },
     {
       to: '/employee/schedule',
-      label: 'Lich lam',
-      description: 'Quan ly ca lam',
+      label: 'Lịch làm',
+      description: 'Quản lý ca làm',
       icon: CalendarClock
     },
     {
       to: '/employee/available',
-      label: 'Cong viec',
-      description: 'Nhan them ca phu hop',
+      label: 'Công việc',
+      description: 'Nhận thêm ca phù hợp',
       icon: HardHat
     },
     {
       to: '/employee/requests',
-      label: 'Yeu cau',
-      description: 'Theo doi ho tro',
+      label: 'Yêu cầu',
+      description: 'Theo dõi hỗ trợ',
       icon: Sparkles
     },
     {
       to: '/employee/profile',
-      label: 'Ho so',
-      description: 'Cap nhat ky nang',
+      label: 'Hồ sơ',
+      description: 'Cập nhật kỹ năng',
       icon: UserCog
     }
   ],
   ADMIN: [
     {
       to: '/admin/dashboard',
-      label: 'Tong quan',
-      description: 'Chi so hoat dong',
+      label: 'Tổng quan',
+      description: 'Chỉ số hoạt động',
       icon: BarChart3
     },
     {
       to: '/admin/users',
-      label: 'Nguoi dung',
-      description: 'Quan ly tai khoan',
+      label: 'Người dùng',
+      description: 'Quản lý tài khoản',
       icon: Users
     },
     {
       to: '/admin/bookings',
-      label: 'Don hang',
-      description: 'Giam sat tien do',
+      label: 'Đơn hàng',
+      description: 'Giám sát tiến độ',
       icon: ShieldCheck
     },
     {
       to: '/admin/content',
-      label: 'Noi dung',
-      description: 'Quan tri thu vien',
+      label: 'Nội dung',
+      description: 'Quản trị thư viện',
       icon: Megaphone
     }
   ]
@@ -147,27 +148,27 @@ const navigationConfig: Record<UserRole, NavItemConfig[]> = {
 const quickActionConfig: Record<UserRole, QuickActionConfig> = {
   CUSTOMER: {
     to: '/customer/booking',
-    label: 'Dat lich nhanh',
-    hint: 'Su dung dia chi mac dinh',
+    label: 'Đặt lịch nhanh',
+    hint: 'Sử dụng địa chỉ mặc định',
     icon: Sparkles
   },
   EMPLOYEE: {
     to: '/employee/dashboard',
-    label: 'Check-in ca lam',
-    hint: 'Cap nhat trang thai cong viec',
+    label: 'Check-in ca làm',
+    hint: 'Cập nhật trạng thái công việc',
     icon: HardHat
   },
   ADMIN: {
     to: '/admin/dashboard',
-    label: 'Xem bao cao ngay',
-    hint: 'Theo doi KPI trong ngay',
+    label: 'Xem báo cáo ngày',
+    hint: 'Theo dõi KPI trong ngày',
     icon: BarChart3
   }
 };
 
-const Navigation: React.FC<NavigationProps> = ({ role, collapsed = false, onNavigate }) => {
+const Navigation: React.FC<NavigationProps> = ({ role, collapsed, onNavigate }) => {
+  const { selectedRole, logout } = useAuth();
   const location = useLocation();
-  const { selectedRole } = useAuth();
 
   const activeRole = role ?? selectedRole ?? 'CUSTOMER';
   const navItems = navigationConfig[activeRole];
@@ -230,9 +231,9 @@ const Navigation: React.FC<NavigationProps> = ({ role, collapsed = false, onNavi
             <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-brand-teal">
               Workspace
             </p>
-            <p className="mt-2 text-lg font-semibold text-brand-navy">Khu vuc {workspaceLabel}</p>
+            <p className="mt-2 text-lg font-semibold text-brand-navy">Khu vực {workspaceLabel}</p>
             <p className="mt-2 text-xs text-brand-text/60">
-              Chon chuc nang phu hop voi nhu cau cong viec cua ban.
+              Chọn chức năng phù hợp với nhu cầu công việc của bạn.
             </p>
           </div>
         )}
@@ -255,12 +256,25 @@ const Navigation: React.FC<NavigationProps> = ({ role, collapsed = false, onNavi
       </div>
 
       {!collapsed && (
-        <div className="rounded-3xl border border-brand-outline/40 bg-white/70 p-4 text-xs text-brand-text/70 shadow-inner">
-          <p className="font-semibold text-brand-navy">Trung tam ho tro</p>
-          <p className="mt-2">
-            Can ho tro? Goi <span className="font-semibold text-brand-teal">1900-9999</span> hoac
-            gui email toi <span className="font-semibold text-brand-teal">support@giadung360.vn</span>.
-          </p>
+        <div className="space-y-3">
+          <div className="rounded-3xl border border-brand-outline/40 bg-white/70 p-4 text-xs text-brand-text/70 shadow-inner">
+            <p className="font-semibold text-brand-navy">Trung tâm hỗ trợ</p>
+            <p className="mt-2">
+              Cần hỗ trợ? Gọi <span className="font-semibold text-brand-teal">1900-9999</span> hoặc
+              gửi email tới <span className="font-semibold text-brand-teal">support@giadung360.vn</span>.
+            </p>
+          </div>
+          
+          <button
+            onClick={() => logout()}
+            className="flex w-full items-center gap-3 rounded-3xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 transition hover:bg-red-100 hover:border-red-300"
+          >
+            <LogOut className="h-5 w-5" />
+            <div className="flex flex-col text-left">
+              <span className="text-sm font-semibold">Đăng xuất</span>
+              <span className="text-xs text-red-600/70">Thoát khỏi tài khoản</span>
+            </div>
+          </button>
         </div>
       )}
     </div>
