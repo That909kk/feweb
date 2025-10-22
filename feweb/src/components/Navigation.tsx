@@ -226,87 +226,93 @@ const Navigation: React.FC<NavigationProps> = ({ role, collapsed, onNavigate }) 
   return (
     <div
       className={[
-        'flex h-full flex-col justify-between border-r border-brand-outline/40 bg-gradient-to-b from-brand-surface/70 via-brand-surface to-brand-background/60 px-4 py-6 transition-all duration-300',
+        'flex h-full flex-col border-r border-brand-outline/40 bg-gradient-to-b from-brand-surface/70 via-brand-surface to-brand-background/60 px-4 py-6 transition-all duration-300 overflow-y-auto',
         collapsed ? 'w-20' : 'w-72'
       ].join(' ')}
     >
-      <div className="space-y-6">
-        {!collapsed && (
-          <div className="rounded-3xl border border-brand-outline/60 bg-white/90 p-5 shadow-sm">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-brand-teal">
-              Workspace
-            </p>
-            <p className="mt-2 text-lg font-semibold text-brand-navy">Khu vực {workspaceLabel}</p>
-            <p className="mt-2 text-xs text-brand-text/60">
-              Chọn chức năng phù hợp với nhu cầu công việc của bạn.
-            </p>
-          </div>
-        )}
-
-        {quickAction && !collapsed && (
-          <Link
-            to={quickAction.to}
-            onClick={onNavigate}
-            className="flex items-center gap-3 rounded-3xl bg-brand-navy px-4 py-4 text-white shadow-elevation-sm transition hover:-translate-y-0.5 hover:bg-brand-navyHover"
-          >
-            <quickAction.icon className="h-5 w-5 text-white/90" />
-            <div className="flex flex-col text-left">
-              <span className="text-sm font-semibold">{quickAction.label}</span>
-              <span className="text-xs text-white/70">{quickAction.hint}</span>
+      <div className="flex flex-col justify-between min-h-full">
+        {/* Top section */}
+        <div className="space-y-6 flex-shrink-0">
+          {!collapsed && (
+            <div className="rounded-3xl border border-brand-outline/60 bg-white/90 p-5 shadow-sm">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.3em] text-brand-teal">
+                Workspace
+              </p>
+              <p className="mt-2 text-lg font-semibold text-brand-navy">Khu vực {workspaceLabel}</p>
+              <p className="mt-2 text-xs text-brand-text/60">
+                Chọn chức năng phù hợp với nhu cầu công việc của bạn.
+              </p>
             </div>
-          </Link>
-        )}
+          )}
 
-        {/* Collapsed quick action */}
-        {quickAction && collapsed && (
-          <Link
-            to={quickAction.to}
-            onClick={onNavigate}
-            className="flex items-center justify-center rounded-full bg-brand-navy p-3 text-white shadow-elevation-sm transition hover:-translate-y-0.5 hover:bg-brand-navyHover"
-            title={quickAction.label}
-          >
-            <quickAction.icon className="h-5 w-5" />
-          </Link>
-        )}
+          {quickAction && !collapsed && (
+            <Link
+              to={quickAction.to}
+              onClick={onNavigate}
+              className="flex items-center gap-3 rounded-3xl bg-brand-navy px-4 py-4 text-white shadow-elevation-sm transition hover:-translate-y-0.5 hover:bg-brand-navyHover"
+            >
+              <quickAction.icon className="h-5 w-5 text-white/90" />
+              <div className="flex flex-col text-left">
+                <span className="text-sm font-semibold">{quickAction.label}</span>
+                <span className="text-xs text-white/70">{quickAction.hint}</span>
+              </div>
+            </Link>
+          )}
 
-        <nav className="space-y-2">{navContent}</nav>
+          {/* Collapsed quick action */}
+          {quickAction && collapsed && (
+            <Link
+              to={quickAction.to}
+              onClick={onNavigate}
+              className="flex items-center justify-center rounded-full bg-brand-navy p-3 text-white shadow-elevation-sm transition hover:-translate-y-0.5 hover:bg-brand-navyHover"
+              title={quickAction.label}
+            >
+              <quickAction.icon className="h-5 w-5" />
+            </Link>
+          )}
+
+          <nav className="space-y-2">{navContent}</nav>
+        </div>
+
+        {/* Bottom section */}
+        <div className="flex-shrink-0 mt-6">
+          {!collapsed && (
+            <div className="space-y-3">
+              <div className="rounded-3xl border border-brand-outline/40 bg-white/70 p-4 text-xs text-brand-text/70 shadow-inner">
+                <p className="font-semibold text-brand-navy">Trung tâm hỗ trợ</p>
+                <p className="mt-2">
+                  Cần hỗ trợ? Gọi <span className="font-semibold text-brand-teal">1900-9999</span> hoặc
+                  gửi email tới <span className="font-semibold text-brand-teal">support@giadung360.vn</span>.
+                </p>
+              </div>
+              
+              <button
+                onClick={() => logout()}
+                className="flex w-full items-center gap-3 rounded-3xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 transition hover:bg-red-100 hover:border-red-300"
+              >
+                <LogOut className="h-5 w-5" />
+                <div className="flex flex-col text-left">
+                  <span className="text-sm font-semibold">Đăng xuất</span>
+                  <span className="text-xs text-red-600/70">Thoát khỏi tài khoản</span>
+                </div>
+              </button>
+            </div>
+          )}
+
+          {/* Collapsed footer */}
+          {collapsed && (
+            <div className="space-y-3">
+              <button
+                onClick={() => logout()}
+                className="flex w-full items-center justify-center rounded-full border border-red-200 bg-red-50 p-3 text-red-700 transition hover:bg-red-100 hover:border-red-300"
+                title="Đăng xuất"
+              >
+                <LogOut className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+        </div>
       </div>
-
-      {!collapsed && (
-        <div className="space-y-3">
-          <div className="rounded-3xl border border-brand-outline/40 bg-white/70 p-4 text-xs text-brand-text/70 shadow-inner">
-            <p className="font-semibold text-brand-navy">Trung tâm hỗ trợ</p>
-            <p className="mt-2">
-              Cần hỗ trợ? Gọi <span className="font-semibold text-brand-teal">1900-9999</span> hoặc
-              gửi email tới <span className="font-semibold text-brand-teal">support@giadung360.vn</span>.
-            </p>
-          </div>
-          
-          <button
-            onClick={() => logout()}
-            className="flex w-full items-center gap-3 rounded-3xl border border-red-200 bg-red-50 px-4 py-3 text-red-700 transition hover:bg-red-100 hover:border-red-300"
-          >
-            <LogOut className="h-5 w-5" />
-            <div className="flex flex-col text-left">
-              <span className="text-sm font-semibold">Đăng xuất</span>
-              <span className="text-xs text-red-600/70">Thoát khỏi tài khoản</span>
-            </div>
-          </button>
-        </div>
-      )}
-
-      {/* Collapsed footer */}
-      {collapsed && (
-        <div className="space-y-3">
-          <button
-            onClick={() => logout()}
-            className="flex w-full items-center justify-center rounded-full border border-red-200 bg-red-50 p-3 text-red-700 transition hover:bg-red-100 hover:border-red-300"
-            title="Đăng xuất"
-          >
-            <LogOut className="h-5 w-5" />
-          </button>
-        </div>
-      )}
     </div>
   );
 };
