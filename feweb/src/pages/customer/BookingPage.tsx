@@ -30,6 +30,7 @@ const validateBookingForm = (
     address: string;
     date: string;
     time: string;
+    duration: number | null;
   }
 ): string[] => {
   const errors: string[] = [];
@@ -38,6 +39,7 @@ const validateBookingForm = (
   if (!formData.address) errors.push('Vui lòng nhập địa chỉ');
   if (!formData.date) errors.push('Vui lòng chọn ngày đặt lịch');
   if (!formData.time) errors.push('Vui lòng chọn giờ đặt lịch');
+  if (!formData.duration || formData.duration <= 0) errors.push('Vui lòng chọn thời lượng dự kiến');
   
   // Validate time format
   if (formData.time && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(formData.time)) {
@@ -98,7 +100,7 @@ const BookingPage: React.FC = () => {
     address: '',
     date: '',
     time: '',
-    duration: 120,
+    duration: null as number | null,
     notes: '',
     paymentMethod: '1', // Default to first payment method ID
     promoCode: ''
@@ -140,6 +142,8 @@ const BookingPage: React.FC = () => {
   const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(false);
   const [showMap, setShowMap] = useState<boolean>(false);
   const [showPromoCodeInput, setShowPromoCodeInput] = useState<boolean>(false);
+  const [durationInputType, setDurationInputType] = useState<'preset' | 'custom'>('preset');
+  const [customDuration, setCustomDuration] = useState<string>('');
   
   // Thêm state cho các trường địa chỉ chi tiết
   const [addressDetails, setAddressDetails] = useState({
@@ -839,6 +843,10 @@ const BookingPage: React.FC = () => {
     if (!bookingData.time) {
       validationErrors.push('Vui lòng chọn giờ đặt lịch trước khi tìm nhân viên');
     }
+
+    if (!bookingData.duration || bookingData.duration <= 0) {
+      validationErrors.push('Vui lòng chọn thời lượng dự kiến trước khi tìm nhân viên');
+    }
     
     // If there are validation errors, show them locally and return
     if (validationErrors.length > 0) {
@@ -847,7 +855,7 @@ const BookingPage: React.FC = () => {
     }
     
     // If all validations pass, proceed to load suitable employees
-    if (bookingData.serviceId && bookingData.date && bookingData.time) {
+    if (bookingData.serviceId && bookingData.date && bookingData.time && bookingData.duration) {
       const bookingDateTime = `${bookingData.date}T${bookingData.time}:00`;
       
       try {
@@ -1902,23 +1910,110 @@ const BookingPage: React.FC = () => {
                     <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
-                    Thời lượng dự kiến
+                    Thời lượng dự kiến <span className="text-red-500">*</span>
                   </h5>
-                  <select
-                    name="duration"
-                    value={bookingData.duration}
-                    onChange={handleInputChange}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all bg-white"
-                  >
-                    <option value={60}>60 phút (1 giờ)</option>
-                    <option value={90}>90 phút (1.5 giờ)</option>
-                    <option value={120}>120 phút (2 giờ)</option>
-                    <option value={180}>180 phút (3 giờ)</option>
-                    <option value={240}>240 phút (4 giờ)</option>
-                  </select>
-                  <p className="mt-2 text-sm text-purple-600">
-                    💡 Thời gian có thể điều chỉnh khi thực hiện
-                  </p>
+                  
+                  {/* Duration Selection Type */}
+                  <div className="mb-4">
+                    <div className="flex space-x-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDurationInputType('preset');
+                          setCustomDuration('');
+                          if (bookingData.duration) {
+                            // Keep current duration if it's one of the presets
+                            const presets = [60, 90, 120, 180, 240];
+                            if (!presets.includes(bookingData.duration)) {
+                              setBookingData(prev => ({ ...prev, duration: null }));
+                            }
+                          }
+                        }}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          durationInputType === 'preset'
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        Chọn sẵn
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDurationInputType('custom');
+                          setBookingData(prev => ({ ...prev, duration: null }));
+                        }}
+                        className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                          durationInputType === 'custom'
+                            ? 'bg-purple-600 text-white'
+                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
+                        }`}
+                      >
+                        Tự nhập
+                      </button>
+                    </div>
+                  </div>
+
+                  {durationInputType === 'preset' ? (
+                    <select
+                      name="duration"
+                      value={bookingData.duration || ''}
+                      onChange={(e) => {
+                        const value = e.target.value ? parseInt(e.target.value) : null;
+                        setBookingData(prev => ({ ...prev, duration: value }));
+                      }}
+                      className={`w-full p-3 border rounded-lg transition-all bg-white ${
+                        !bookingData.duration 
+                          ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-red-500' 
+                          : 'border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500'
+                      }`}
+                    >
+                      <option value="">Chọn thời lượng</option>
+                      <option value={60}>60 phút (1 giờ)</option>
+                      <option value={90}>90 phút (1.5 giờ)</option>
+                      <option value={120}>120 phút (2 giờ)</option>
+                      <option value={180}>180 phút (3 giờ)</option>
+                      <option value={240}>240 phút (4 giờ)</option>
+                      <option value={300}>300 phút (5 giờ)</option>
+                      <option value={360}>360 phút (6 giờ)</option>
+                    </select>
+                  ) : (
+                    <div className="flex gap-3">
+                      <input
+                        type="number"
+                        value={customDuration}
+                        onChange={(e) => {
+                          setCustomDuration(e.target.value);
+                          const value = parseInt(e.target.value);
+                          if (value > 0) {
+                            setBookingData(prev => ({ ...prev, duration: value }));
+                          } else {
+                            setBookingData(prev => ({ ...prev, duration: null }));
+                          }
+                        }}
+                        placeholder="Nhập số phút"
+                        min="30"
+                        max="480"
+                        className={`flex-1 p-3 border rounded-lg transition-all ${
+                          !bookingData.duration 
+                            ? 'border-red-300 focus:ring-2 focus:ring-red-500 focus:border-red-500' 
+                            : 'border-gray-300 focus:ring-2 focus:ring-purple-500 focus:border-purple-500'
+                        }`}
+                      />
+                      <span className="flex items-center px-3 text-gray-500 bg-gray-100 border border-gray-300 rounded-lg">
+                        phút
+                      </span>
+                    </div>
+                  )}
+                  
+                  {!bookingData.duration && (
+                    <p className="mt-2 text-sm text-red-600 flex items-center">
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                      </svg>
+                      Vui lòng chọn thời lượng dự kiến
+                    </p>
+                  )}
                 </div>
 
                 <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl p-6 border border-orange-200">
@@ -2135,7 +2230,27 @@ const BookingPage: React.FC = () => {
                       <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
                       <div>
                         <p className="text-sm font-medium text-gray-500">Thời gian</p>
-                        <p className="text-gray-900 font-semibold">{bookingData.time} ({bookingData.duration} phút)</p>
+                        <p className="text-gray-900 font-semibold">
+                          {(() => {
+                            if (!bookingData.time || !bookingData.duration) {
+                              return bookingData.time || 'Chưa chọn';
+                            }
+                            
+                            // Parse start time
+                            const [hours, minutes] = bookingData.time.split(':').map(Number);
+                            const startDate = new Date();
+                            startDate.setHours(hours, minutes, 0, 0);
+                            
+                            // Calculate end time
+                            const endDate = new Date(startDate.getTime() + bookingData.duration * 60000);
+                            
+                            // Format times
+                            const startTime = bookingData.time;
+                            const endTime = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
+                            
+                            return `${startTime}~${endTime} (${bookingData.duration} phút)`;
+                          })()}
+                        </p>
                       </div>
                     </div>
                   </div>
@@ -2520,6 +2635,8 @@ const BookingPage: React.FC = () => {
                     (step === 3 && (
                       !bookingData.date || 
                       !bookingData.time || 
+                      !bookingData.duration ||
+                      bookingData.duration <= 0 ||
                       (timeInputType === 'custom' && !customTimeInput) ||
                       isTimeInPast(bookingData.time)
                     ))
