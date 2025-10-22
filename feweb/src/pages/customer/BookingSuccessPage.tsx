@@ -1,6 +1,22 @@
 import React from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, CheckCircle } from 'lucide-react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { 
+  CheckCircle, 
+  Clock, 
+  MapPin, 
+  CreditCard, 
+  User, 
+  Sparkles,
+  Calendar,
+  Phone,
+  Star,
+  ArrowRight,
+  MessageCircle,
+  Eye
+} from 'lucide-react';
+import { DashboardLayout } from '../../layouts';
+import { SectionCard, MetricCard } from '../../shared/components';
+import { getBookingStatusInVietnamese, getBookingStatusAccent, formatEndTime } from '../../shared/utils/bookingUtils';
 
 const BookingSuccessPage: React.FC = () => {
   const navigate = useNavigate();
@@ -13,73 +29,128 @@ const BookingSuccessPage: React.FC = () => {
     return null;
   }
 
+  // Lấy trạng thái tiếng Việt và accent color
+  const vietnameseStatus = getBookingStatusInVietnamese(bookingData.status);
+  const statusAccent = getBookingStatusAccent(bookingData.status);
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white shadow-sm border-b">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <button
-            onClick={() => navigate('/customer/dashboard')}
-            className="flex items-center text-gray-600 hover:text-gray-900 transition-colors"
+    <DashboardLayout
+      role="CUSTOMER"
+      title="Đặt lịch thành công!"
+      description={`Đơn hàng ${bookingData.bookingCode} đã được tạo thành công. Chúng tôi sẽ liên hệ sớm nhất.`}
+      actions={
+        <div className="flex gap-3">
+          <Link
+            to="/customer/orders"
+            className="inline-flex items-center gap-2 rounded-full border border-brand-outline/40 bg-white px-5 py-2 text-sm font-semibold text-brand-navy shadow-sm transition hover:-translate-y-0.5 hover:border-brand-teal/40"
           >
-            <ArrowLeft className="w-5 h-5 mr-2" />
-            Về Dashboard
-          </button>
+            <Eye className="h-4 w-4" />
+            Xem đơn hàng
+          </Link>
+          <Link
+            to="/customer/booking"
+            className="inline-flex items-center gap-2 rounded-full bg-brand-teal px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-brand-teal/20 transition hover:-translate-y-0.5 hover:bg-brand-tealHover"
+          >
+            <Calendar className="h-4 w-4" />
+            Đặt lịch mới
+          </Link>
+        </div>
+      }
+    >
+      {/* Success Banner */}
+      <div className="mb-8 rounded-3xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 p-8 text-white shadow-xl">
+        <div className="flex flex-col items-center text-center">
+          <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+            <CheckCircle className="h-10 w-10 text-white drop-shadow-sm" />
+          </div>
+          <h1 className="mb-3 text-3xl font-bold">Đặt lịch thành công!</h1>
+          <p className="mb-4 text-lg text-emerald-50">
+            Đơn hàng <span className="font-mono font-semibold text-white">{bookingData.bookingCode}</span> đã được tạo
+          </p>
+          <div className="rounded-2xl bg-white/15 px-6 py-3 backdrop-blur-sm">
+            <div className="text-sm text-emerald-50">Tổng thanh toán</div>
+            <div className="text-2xl font-bold">{bookingData.formattedTotalAmount}</div>
+          </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-4xl mx-auto px-4 py-8">
-        {/* Success Header */}
-        <div className="bg-green-600 text-white p-8 rounded-t-lg text-center">
-          <div className="flex items-center justify-center mb-4">
-            <div className="w-20 h-20 bg-white rounded-full flex items-center justify-center">
-              <CheckCircle className="w-10 h-10 text-green-600" />
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold mb-2">Đặt lịch thành công!</h1>
-          <p className="text-green-100 text-lg">Mã đơn hàng: {bookingData.bookingCode}</p>
-        </div>
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Quick Info Cards */}
+        <MetricCard
+          icon={Clock}
+          label="Trạng thái đơn"
+          value={vietnameseStatus}
+          accent={statusAccent}
+          trendLabel="Sẽ được xử lý trong vòng 24h"
+        />
+        <MetricCard
+          icon={Calendar}
+          label="Thời gian thực hiện"
+          value={new Date(bookingData.bookingTime).toLocaleDateString('vi-VN', { 
+            day: '2-digit', 
+            month: '2-digit',
+            year: 'numeric'
+          })}
+          accent="teal"
+          trendLabel={`${new Date(bookingData.bookingTime).toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit'
+          })} - ${bookingData.estimatedDuration}`}
+        />
+        <MetricCard
+          icon={CreditCard}
+          label="Thanh toán"
+          value={bookingData.paymentInfo.paymentStatus === 'PENDING' ? 'Chờ thanh toán' : 'Đã thanh toán'}
+          accent={bookingData.paymentInfo.paymentStatus === 'PENDING' ? 'amber' : 'teal'}
+          trendLabel={bookingData.paymentInfo.paymentMethod}
+        />
+      </div>
 
-        {/* Booking Details */}
-        <div className="bg-white rounded-b-lg shadow-sm p-8">
-          <div className="space-y-8">
-            {/* Thông tin dịch vụ */}
-            {bookingData.serviceDetails?.map((serviceDetail, index) => (
-              <div key={index} className="border-b pb-6 last:border-b-0">
-                <h3 className="font-semibold text-gray-900 mb-4 flex items-center text-lg">
-                  <svg className="w-6 h-6 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 9.172V5L8 4z" />
-                  </svg>
-                  Dịch vụ đã chọn
-                </h3>
-                <div className="ml-9">
-                  <p className="font-medium text-xl mb-2">{serviceDetail.service.name}</p>
-                  <p className="text-gray-600 mb-3">{serviceDetail.service.description}</p>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div>
-                      <span className="font-medium text-gray-700">Số lượng:</span>
-                      <span className="ml-2">{serviceDetail.quantity} {serviceDetail.service.unit}</span>
+      {/* Service Details */}
+      <SectionCard
+        title="Chi tiết dịch vụ"
+        description="Thông tin đầy đủ về các dịch vụ bạn đã đặt."
+        className="mt-6"
+      >
+        <div className="space-y-6">
+          {bookingData.serviceDetails?.map((serviceDetail: any, index: number) => (
+            <div key={index} className="rounded-2xl border border-brand-outline/20 bg-gradient-to-r from-white to-slate-50/50 p-6 shadow-sm">
+              <div className="flex items-start gap-4">
+                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-teal/10">
+                  <Sparkles className="h-6 w-6 text-brand-teal" />
+                </div>
+                <div className="flex-1">
+                  <h3 className="mb-2 text-xl font-semibold text-brand-navy">{serviceDetail.service.name}</h3>
+                  <p className="mb-4 text-brand-text/70">{serviceDetail.service.description}</p>
+                  
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                    <div className="rounded-xl bg-white p-4">
+                      <div className="text-sm font-medium text-brand-text/70">Số lượng</div>
+                      <div className="text-lg font-semibold text-brand-navy">
+                        {serviceDetail.quantity} {serviceDetail.service.unit}
+                      </div>
                     </div>
-                    <div>
-                      <span className="font-medium text-gray-700">Thời gian:</span>
-                      <span className="ml-2">{serviceDetail.formattedDuration}</span>
+                    <div className="rounded-xl bg-white p-4">
+                      <div className="text-sm font-medium text-brand-text/70">Thời gian</div>
+                      <div className="text-lg font-semibold text-brand-navy">{serviceDetail.formattedDuration}</div>
                     </div>
-                    <div>
-                      <span className="font-medium text-gray-700">Giá:</span>
-                      <span className="ml-2 font-semibold text-green-600">{serviceDetail.formattedSubTotal}</span>
+                    <div className="rounded-xl bg-white p-4">
+                      <div className="text-sm font-medium text-brand-text/70">Thành tiền</div>
+                      <div className="text-lg font-semibold text-emerald-600">{serviceDetail.formattedSubTotal}</div>
                     </div>
                   </div>
+
+                  {/* Service Options */}
                   {serviceDetail.selectedChoices?.length > 0 && (
                     <div className="mt-4">
-                      <p className="font-medium text-gray-700 mb-2">Tùy chọn thêm:</p>
-                      <div className="bg-gray-50 p-3 rounded-lg">
-                        {serviceDetail.selectedChoices.map((choice, choiceIndex) => (
-                          <div key={choiceIndex} className="flex justify-between items-center py-1">
-                            <span className="text-sm">
-                              <strong>{choice.choiceName}</strong> ({choice.optionName})
+                      <div className="mb-3 text-sm font-medium text-brand-text/70">Tùy chọn thêm</div>
+                      <div className="space-y-2">
+                        {serviceDetail.selectedChoices.map((choice: any, choiceIndex: number) => (
+                          <div key={choiceIndex} className="flex items-center justify-between rounded-xl bg-brand-teal/5 px-4 py-3">
+                            <span className="text-sm font-medium text-brand-navy">
+                              {choice.choiceName} ({choice.optionName})
                             </span>
-                            <span className="text-sm font-semibold text-green-600">
+                            <span className="text-sm font-semibold text-emerald-600">
                               {choice.formattedPriceAdjustment}
                             </span>
                           </div>
@@ -89,183 +160,264 @@ const BookingSuccessPage: React.FC = () => {
                   )}
                 </div>
               </div>
-            ))}
+            </div>
+          ))}
+        </div>
+      </SectionCard>
 
-            {/* Grid Layout cho các thông tin khác */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Thông tin thời gian */}
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-4 flex items-center text-lg">
-                  <svg className="w-6 h-6 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Thời gian thực hiện
-                </h3>
-                <div className="ml-9 space-y-2">
-                  <p className="font-medium text-lg">
-                    {new Date(bookingData.bookingTime).toLocaleDateString('vi-VN', { 
-                      weekday: 'long', 
-                      year: 'numeric', 
-                      month: 'long', 
-                      day: 'numeric' 
-                    })}
-                  </p>
-                  <p className="text-gray-700">
-                    Lúc {new Date(bookingData.bookingTime).toLocaleTimeString('vi-VN', {
-                      hour: '2-digit',
-                      minute: '2-digit'
-                    })}
-                  </p>
-                  <p className="text-sm text-gray-500">Thời gian dự kiến: {bookingData.estimatedDuration}</p>
-                  <span className={`inline-block px-3 py-1 text-sm rounded-full ${
-                    bookingData.status === 'PENDING' 
-                      ? 'bg-yellow-100 text-yellow-800' 
-                      : 'bg-green-100 text-green-800'
-                  }`}>
-                    {bookingData.status === 'PENDING' ? 'Chờ xác nhận' : bookingData.status}
-                  </span>
+      <div className="mt-6 grid gap-6 lg:grid-cols-2">
+        {/* Booking Information */}
+        <SectionCard
+          title="Thông tin đặt lịch"
+          description="Chi tiết về thời gian và địa điểm thực hiện dịch vụ."
+        >
+          <div className="space-y-6">
+            {/* Time Info */}
+            <div className="rounded-2xl border border-brand-outline/20 bg-gradient-to-br from-blue-50 to-sky-50 p-5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-100">
+                  <Clock className="h-5 w-5 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-brand-navy">Thời gian thực hiện</h3>
+                  <p className="text-sm text-brand-text/70">Dự kiến: {bookingData.estimatedDuration}</p>
                 </div>
               </div>
-
-              {/* Thông tin địa chỉ */}
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-4 flex items-center text-lg">
-                  <svg className="w-6 h-6 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                  </svg>
-                  Địa chỉ khách hàng
-                </h3>
-                <div className="ml-9">
-                  <p className="font-medium text-lg mb-2">{bookingData.customerInfo.fullAddress}</p>
-                  <p className="text-gray-600 mb-2">
-                    {bookingData.customerInfo.ward}, {bookingData.customerInfo.district}, {bookingData.customerInfo.city}
-                  </p>
-                  {bookingData.customerInfo.isDefault && (
-                    <span className="inline-block px-3 py-1 bg-blue-100 text-blue-800 text-sm rounded-full">
-                      Địa chỉ mặc định
-                    </span>
-                  )}
+              
+              <div className="space-y-4">
+                {/* Ngày thực hiện */}
+                <div className="text-lg font-semibold text-brand-navy">
+                  {new Date(bookingData.bookingTime).toLocaleDateString('vi-VN', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </div>
+                
+                {/* Khung thời gian - Hiển thị thời gian bắt đầu và dự kiến kết thúc */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="rounded-xl bg-white p-3 shadow-sm">
+                    <div className="text-xs font-medium text-brand-text/70 mb-1">Bắt đầu</div>
+                    <div className="text-lg font-bold text-blue-600">
+                      {new Date(bookingData.bookingTime).toLocaleTimeString('vi-VN', {
+                        hour: '2-digit',
+                        minute: '2-digit'
+                      })}
+                    </div>
+                  </div>
+                  
+                  <div className="rounded-xl bg-white p-3 shadow-sm">
+                    <div className="text-xs font-medium text-brand-text/70 mb-1">Dự kiến kết thúc</div>
+                    <div className="text-lg font-bold text-emerald-600">
+                      {formatEndTime(bookingData.bookingTime, bookingData.estimatedDuration)}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Duration badge */}
+                <div className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
+                  <Clock className="h-4 w-4" />
+                  Thời lượng: {bookingData.estimatedDuration}
                 </div>
               </div>
             </div>
 
-            {/* Thông tin nhân viên */}
-            {bookingData.assignedEmployees?.length > 0 && (
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-4 flex items-center text-lg">
-                  <svg className="w-6 h-6 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  Nhân viên được phân công ({bookingData.totalEmployees})
-                </h3>
-                <div className="ml-9">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {bookingData.assignedEmployees.map((employee, index) => (
-                      <div key={index} className="flex items-center space-x-4 p-4 bg-gray-50 rounded-lg">
-                        <img 
-                          src={employee.avatar} 
-                          alt={employee.fullName}
-                          className="w-16 h-16 rounded-full object-cover"
-                        />
-                        <div className="flex-1">
-                          <p className="font-medium text-lg">{employee.fullName}</p>
-                          <p className="text-gray-600">{employee.phoneNumber}</p>
-                          <p className="text-sm text-gray-500">
-                            Kỹ năng: {employee.skills.join(', ')}
-                          </p>
-                          {employee.rating && (
-                            <p className="text-sm text-yellow-600">⭐ {employee.rating}/5</p>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+            {/* Address Info */}
+            <div className="rounded-2xl border border-brand-outline/20 bg-gradient-to-br from-emerald-50 to-teal-50 p-5">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100">
+                  <MapPin className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-brand-navy">Địa chỉ khách hàng</h3>
+                  {bookingData.customerInfo.isDefault && (
+                    <span className="text-xs text-emerald-600 font-medium">Địa chỉ mặc định</span>
+                  )}
                 </div>
               </div>
-            )}
-
-            {/* Thông tin thanh toán */}
-            <div>
-              <h3 className="font-semibold text-gray-900 mb-4 flex items-center text-lg">
-                <svg className="w-6 h-6 mr-3 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
-                </svg>
-                Chi phí và thanh toán
-              </h3>
-              <div className="ml-9">
-                <div className="bg-gray-50 p-6 rounded-lg">
-                  {/* Chi tiết từng dịch vụ */}
-                  {bookingData.serviceDetails?.map((serviceDetail, index) => (
-                    <div key={index} className="mb-4 last:mb-0">
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium">{serviceDetail.service.name} x{serviceDetail.quantity}</span>
-                        <span className="font-semibold">{serviceDetail.formattedSubTotal}</span>
-                      </div>
-                      {serviceDetail.selectedChoices?.map((choice, choiceIndex) => (
-                        <div key={choiceIndex} className="flex justify-between text-sm text-gray-600 ml-4 mb-1">
-                          <span>+ {choice.choiceName}</span>
-                          <span>{choice.formattedPriceAdjustment}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ))}
-                  
-                  <hr className="my-4" />
-                  <div className="flex justify-between items-center">
-                    <span className="text-xl font-bold">Tổng cộng:</span>
-                    <span className="text-3xl font-bold text-green-600">
-                      {bookingData.formattedTotalAmount}
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <p><strong>Phương thức thanh toán:</strong></p>
-                    <p className="text-gray-600">{bookingData.paymentInfo.paymentMethod}</p>
-                  </div>
-                  <div>
-                    <p><strong>Mã giao dịch:</strong></p>
-                    <p className="text-gray-600 font-mono">{bookingData.paymentInfo.transactionCode}</p>
-                  </div>
-                  <div>
-                    <p><strong>Trạng thái thanh toán:</strong></p>
-                    <span className={`inline-block px-3 py-1 text-xs rounded-full ${
-                      bookingData.paymentInfo.paymentStatus === 'PENDING' 
-                        ? 'bg-yellow-100 text-yellow-800' 
-                        : 'bg-green-100 text-green-800'
-                    }`}>
-                      {bookingData.paymentInfo.paymentStatus === 'PENDING' ? 'Chờ thanh toán' : 'Đã thanh toán'}
-                    </span>
-                  </div>
-                  <div>
-                    <p><strong>Ngày tạo đơn:</strong></p>
-                    <p className="text-gray-600">{new Date(bookingData.createdAt).toLocaleString('vi-VN')}</p>
-                  </div>
+              <div className="space-y-1">
+                <div className="font-medium text-brand-navy">{bookingData.customerInfo.fullAddress}</div>
+                <div className="text-sm text-brand-text/70">
+                  {bookingData.customerInfo.ward}, {bookingData.customerInfo.district}, {bookingData.customerInfo.city}
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        </SectionCard>
 
-        {/* Action Buttons */}
-        <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-          <button
-            onClick={() => navigate('/customer/dashboard')}
-            className="px-8 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors font-medium"
+        {/* Employee Assignment */}
+        {bookingData.assignedEmployees?.length > 0 ? (
+          <SectionCard
+            title={`Nhân viên phân công (${bookingData.totalEmployees})`}
+            description="Đội ngũ chuyên nghiệp sẽ thực hiện dịch vụ cho bạn."
           >
-            Về Dashboard
-          </button>
-          <button
-            onClick={() => navigate(`/customer/bookings/${bookingData.bookingId}`)}
-            className="px-8 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
+            <div className="space-y-4">
+              {bookingData.assignedEmployees.map((employee: any, index: number) => (
+                <div key={index} className="flex items-center gap-4 rounded-2xl border border-brand-outline/20 bg-gradient-to-r from-white to-slate-50/50 p-4">
+                  <img 
+                    src={employee.avatar} 
+                    alt={employee.fullName}
+                    className="h-14 w-14 rounded-full border-2 border-white object-cover shadow-md"
+                  />
+                  <div className="flex-1">
+                    <h3 className="font-semibold text-brand-navy">{employee.fullName}</h3>
+                    <div className="flex items-center gap-2 text-sm text-brand-text/70">
+                      <Phone className="h-4 w-4" />
+                      {employee.phoneNumber}
+                    </div>
+                    <div className="mt-1 text-xs text-brand-text/60">
+                      Kỹ năng: {employee.skills.join(', ')}
+                    </div>
+                    {employee.rating && (
+                      <div className="mt-1 flex items-center gap-1 text-xs text-amber-600">
+                        <Star className="h-3 w-3 fill-current" />
+                        {employee.rating}/5
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SectionCard>
+        ) : (
+          <SectionCard
+            title="Chờ phân công nhân viên"
+            description="Chúng tôi đang tìm nhân viên phù hợp nhất cho bạn."
           >
-            Theo dõi đơn hàng
-          </button>
-        </div>
+            <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-6 text-center">
+              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
+                <User className="h-8 w-8 text-amber-600" />
+              </div>
+              <h3 className="mb-2 font-semibold text-amber-900">Đang phân công nhân viên</h3>
+              <p className="text-sm text-amber-700">
+                Chúng tôi sẽ thông báo ngay khi có nhân viên phù hợp được phân công cho đơn hàng của bạn.
+              </p>
+            </div>
+          </SectionCard>
+        )}
       </div>
-    </div>
+
+      {/* Payment Summary */}
+      <SectionCard
+        title="Tóm tắt thanh toán"
+        description="Chi tiết về các khoản phí và phương thức thanh toán."
+        className="mt-6"
+      >
+        <div className="space-y-6">
+          {/* Service Breakdown */}
+          <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/50 p-6">
+            <h3 className="mb-4 font-semibold text-brand-navy">Chi tiết dịch vụ</h3>
+            <div className="space-y-3">
+              {bookingData.serviceDetails?.map((serviceDetail: any, index: number) => (
+                <div key={index}>
+                  <div className="flex items-center justify-between py-2">
+                    <span className="font-medium text-brand-navy">
+                      {serviceDetail.service.name} × {serviceDetail.quantity}
+                    </span>
+                    <span className="font-semibold text-brand-navy">{serviceDetail.formattedSubTotal}</span>
+                  </div>
+                  {serviceDetail.selectedChoices?.map((choice: any, choiceIndex: number) => (
+                    <div key={choiceIndex} className="flex items-center justify-between py-1 pl-4 text-sm text-brand-text/70">
+                      <span>+ {choice.choiceName}</span>
+                      <span>{choice.formattedPriceAdjustment}</span>
+                    </div>
+                  ))}
+                </div>
+              ))}
+              
+              <div className="border-t border-brand-outline/20 pt-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-xl font-bold text-brand-navy">Tổng cộng</span>
+                  <span className="text-2xl font-bold text-emerald-600">{bookingData.formattedTotalAmount}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          {/* Payment Info */}
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div className="rounded-xl border border-brand-outline/20 bg-white p-4">
+              <div className="text-sm font-medium text-brand-text/70">Phương thức thanh toán</div>
+              <div className="mt-1 font-semibold text-brand-navy">{bookingData.paymentInfo.paymentMethod}</div>
+            </div>
+            <div className="rounded-xl border border-brand-outline/20 bg-white p-4">
+              <div className="text-sm font-medium text-brand-text/70">Mã giao dịch</div>
+              <div className="mt-1 font-mono text-sm text-brand-navy">{bookingData.paymentInfo.transactionCode}</div>
+            </div>
+            <div className="rounded-xl border border-brand-outline/20 bg-white p-4">
+              <div className="text-sm font-medium text-brand-text/70">Trạng thái thanh toán</div>
+              <div className="mt-1">
+                <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                  bookingData.paymentInfo.paymentStatus === 'PENDING' 
+                    ? 'border border-amber-200 bg-amber-50 text-amber-700' 
+                    : 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                }`}>
+                  {bookingData.paymentInfo.paymentStatus === 'PENDING' ? 'Chờ thanh toán' : 'Đã thanh toán'}
+                </span>
+              </div>
+            </div>
+            <div className="rounded-xl border border-brand-outline/20 bg-white p-4">
+              <div className="text-sm font-medium text-brand-text/70">Ngày tạo đơn</div>
+              <div className="mt-1 text-sm text-brand-navy">
+                {new Date(bookingData.createdAt).toLocaleString('vi-VN')}
+              </div>
+            </div>
+          </div>
+        </div>
+      </SectionCard>
+
+      {/* Quick Actions */}
+      <SectionCard
+        title="Thao tác nhanh"
+        description="Các hành động hữu ích cho đơn hàng của bạn."
+        className="mt-6"
+      >
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+          <Link
+            to={`/customer/orders/${bookingData.bookingId}`}
+            className="group flex items-center gap-4 rounded-2xl border border-brand-outline/20 bg-gradient-to-r from-white to-blue-50/50 p-4 transition hover:-translate-y-1 hover:border-blue-200 hover:shadow-lg"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-100 group-hover:bg-blue-200">
+              <Eye className="h-6 w-6 text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-brand-navy group-hover:text-blue-600">Theo dõi đơn hàng</h3>
+              <p className="text-sm text-brand-text/70">Xem chi tiết và cập nhật</p>
+            </div>
+            <ArrowRight className="h-5 w-5 text-brand-text/40 group-hover:text-blue-600" />
+          </Link>
+
+          <Link
+            to="/customer/chat"
+            className="group flex items-center gap-4 rounded-2xl border border-brand-outline/20 bg-gradient-to-r from-white to-emerald-50/50 p-4 transition hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 group-hover:bg-emerald-200">
+              <MessageCircle className="h-6 w-6 text-emerald-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-brand-navy group-hover:text-emerald-600">Trao đổi</h3>
+              <p className="text-sm text-brand-text/70">Chat với nhân viên</p>
+            </div>
+            <ArrowRight className="h-5 w-5 text-brand-text/40 group-hover:text-emerald-600" />
+          </Link>
+
+          <Link
+            to="/customer/booking"
+            className="group flex items-center gap-4 rounded-2xl border border-brand-outline/20 bg-gradient-to-r from-white to-teal-50/50 p-4 transition hover:-translate-y-1 hover:border-teal-200 hover:shadow-lg"
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-teal-100 group-hover:bg-teal-200">
+              <Calendar className="h-6 w-6 text-teal-600" />
+            </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-brand-navy group-hover:text-teal-600">Đặt lịch mới</h3>
+              <p className="text-sm text-brand-text/70">Tạo đơn hàng khác</p>
+            </div>
+            <ArrowRight className="h-5 w-5 text-brand-text/40 group-hover:text-teal-600" />
+          </Link>
+        </div>
+      </SectionCard>
+    </DashboardLayout>
   );
 };
 
