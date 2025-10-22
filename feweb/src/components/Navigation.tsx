@@ -187,16 +187,21 @@ const Navigation: React.FC<NavigationProps> = ({ role, collapsed, onNavigate }) 
             to={item.to}
             onClick={onNavigate}
             className={[
-              'group flex w-full items-start gap-3 rounded-2xl border px-4 py-3 transition-all duration-200',
+              'group flex w-full items-center gap-3 rounded-2xl border px-4 py-3 transition-all duration-200',
+              collapsed ? 'justify-center' : 'items-start',
               active
                 ? 'border-brand-teal bg-white shadow-elevation-sm'
                 : 'border-transparent bg-transparent hover:border-brand-outline/60 hover:bg-white/60 hover:shadow-sm'
             ].join(' ')}
+            title={collapsed ? item.label : undefined}
           >
             <item.icon
               className={[
-                'h-5 w-5 flex-shrink-0 rounded-full p-1 transition-colors',
-                active ? 'bg-brand-teal/10 text-brand-teal' : 'bg-brand-outline/20 text-brand-navy'
+                'h-5 w-5 flex-shrink-0 transition-colors',
+                collapsed ? 'mx-auto' : '',
+                active 
+                  ? 'text-brand-teal' 
+                  : 'text-brand-navy'
               ].join(' ')}
             />
             {!collapsed && (
@@ -221,8 +226,8 @@ const Navigation: React.FC<NavigationProps> = ({ role, collapsed, onNavigate }) 
   return (
     <div
       className={[
-        'flex h-full flex-col justify-between border-r border-brand-outline/40 bg-gradient-to-b from-brand-surface/70 via-brand-surface to-brand-background/60 px-4 py-6',
-        collapsed ? 'w-full' : 'w-72'
+        'flex h-full flex-col justify-between border-r border-brand-outline/40 bg-gradient-to-b from-brand-surface/70 via-brand-surface to-brand-background/60 px-4 py-6 transition-all duration-300',
+        collapsed ? 'w-20' : 'w-72'
       ].join(' ')}
     >
       <div className="space-y-6">
@@ -252,6 +257,18 @@ const Navigation: React.FC<NavigationProps> = ({ role, collapsed, onNavigate }) 
           </Link>
         )}
 
+        {/* Collapsed quick action */}
+        {quickAction && collapsed && (
+          <Link
+            to={quickAction.to}
+            onClick={onNavigate}
+            className="flex items-center justify-center rounded-full bg-brand-navy p-3 text-white shadow-elevation-sm transition hover:-translate-y-0.5 hover:bg-brand-navyHover"
+            title={quickAction.label}
+          >
+            <quickAction.icon className="h-5 w-5" />
+          </Link>
+        )}
+
         <nav className="space-y-2">{navContent}</nav>
       </div>
 
@@ -274,6 +291,19 @@ const Navigation: React.FC<NavigationProps> = ({ role, collapsed, onNavigate }) 
               <span className="text-sm font-semibold">Đăng xuất</span>
               <span className="text-xs text-red-600/70">Thoát khỏi tài khoản</span>
             </div>
+          </button>
+        </div>
+      )}
+
+      {/* Collapsed footer */}
+      {collapsed && (
+        <div className="space-y-3">
+          <button
+            onClick={() => logout()}
+            className="flex w-full items-center justify-center rounded-full border border-red-200 bg-red-50 p-3 text-red-700 transition hover:bg-red-100 hover:border-red-300"
+            title="Đăng xuất"
+          >
+            <LogOut className="h-5 w-5" />
           </button>
         </div>
       )}

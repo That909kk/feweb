@@ -6,7 +6,9 @@ import {
   Crown,
   LogOut,
   Menu,
-  MonitorSmartphone
+  MonitorSmartphone,
+  PanelLeftClose,
+  PanelLeftOpen
 } from 'lucide-react';
 import Navigation from '../components/Navigation';
 import NotificationCenter from '../components/NotificationCenter';
@@ -46,6 +48,7 @@ const AppShell: React.FC<AppShellProps> = ({
 }) => {
   const { user, availableRoles, selectedRole, selectRole, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
   const [notifyOpen, setNotifyOpen] = useState(false);
 
   const badge = roleBadges[role];
@@ -72,9 +75,28 @@ const AppShell: React.FC<AppShellProps> = ({
   return (
     <div className="flex min-h-screen bg-brand-background text-brand-text">
       {/* Desktop sidebar */}
-      <aside className="hidden lg:block">
-        <Navigation role={role} />
-      </aside>
+      <div className="relative hidden lg:block">
+        <aside className="fixed left-0 top-0 z-30 h-screen">
+          <Navigation role={role} collapsed={sidebarCollapsed} />
+        </aside>
+        
+        {/* Sidebar toggle button */}
+        <button
+          type="button"
+          className="fixed left-16 top-6 z-40 flex h-7 w-7 items-center justify-center rounded-full border border-brand-outline/60 bg-white text-brand-navy shadow-md transition hover:border-brand-navy hover:text-brand-navy hover:shadow-lg"
+          style={{ 
+            left: sidebarCollapsed ? '68px' : '276px'
+          }}
+          aria-label="Thu gọn/Mở rộng menu điều hướng"
+          onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+        >
+          {sidebarCollapsed ? (
+            <PanelLeftOpen className="h-3.5 w-3.5" />
+          ) : (
+            <PanelLeftClose className="h-3.5 w-3.5" />
+          )}
+        </button>
+      </div>
 
       {/* Mobile sidebar */}
       {sidebarOpen && (
@@ -94,9 +116,15 @@ const AppShell: React.FC<AppShellProps> = ({
         </div>
       )}
 
-      <div className="relative flex flex-1 flex-col">
+      <div 
+        className={[
+          "relative flex flex-1 flex-col transition-all duration-300",
+          sidebarCollapsed ? "lg:ml-20" : "lg:ml-72"
+        ].join(' ')}
+      >
         <header className="sticky top-0 z-30 flex items-center justify-between border-b border-brand-outline/40 bg-brand-surface/90 px-4 py-3 backdrop-blur-xl sm:px-6 lg:px-10">
           <div className="flex items-center gap-3">
+            {/* Mobile menu button */}
             <button
               type="button"
               className="inline-flex items-center justify-center rounded-full border border-brand-outline/60 p-2 text-brand-navy transition hover:border-brand-navy hover:text-brand-navy lg:hidden"
