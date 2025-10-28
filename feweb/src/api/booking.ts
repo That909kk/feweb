@@ -81,6 +81,7 @@ export const createBookingApi = async (data: CreateBookingRequest): Promise<Book
 // Get customer bookings
 // Dựa theo API-TestCases-Customer-Bookings.md
 // Endpoint: GET /api/v1/customer/bookings/customer/{customerId}
+// Response: Pagination object trực tiếp (KHÔNG có ApiResponse wrapper)
 export const getCustomerBookingsApi = async (
   customerId: string,
   params?: PaginationParams & {
@@ -88,7 +89,7 @@ export const getCustomerBookingsApi = async (
     fromDate?: string;
     toDate?: string;
   }
-): Promise<ApiResponse<BookingResponse['data'][] | PaginatedResponse<BookingResponse['data']>['data']>> => {
+): Promise<any> => {
   console.log(`[API] Fetching bookings for customer ${customerId}`);
   
   // Validate customerId format
@@ -98,7 +99,19 @@ export const getCustomerBookingsApi = async (
   
   try {
     // Endpoint theo tài liệu: GET /api/v1/customer/bookings/customer/{customerId}
-    const response = await api.get<ApiResponse<PaginatedResponse<BookingResponse['data']>['data']>>(
+    // API trả về trực tiếp pagination object { content: [], pageable: {}, ... }
+    const response = await api.get<{
+      content: any[];
+      pageable: any;
+      totalElements: number;
+      totalPages: number;
+      last: boolean;
+      first: boolean;
+      numberOfElements: number;
+      size: number;
+      number: number;
+      empty: boolean;
+    }>(
       `/customer/bookings/customer/${customerId}`,
       {
         params: {
@@ -111,8 +124,13 @@ export const getCustomerBookingsApi = async (
         }
       }
     );
-    console.log(`[API] Got response for customer bookings:`, response.data);
-    return response.data;
+    console.log(`[API] Got pagination response for customer bookings:`, response.data);
+    // Wrap trong ApiResponse để tương thích với code hiện tại
+    return {
+      success: true,
+      message: 'Lấy danh sách booking thành công',
+      data: response.data // Toàn bộ pagination object
+    };
   } catch (error: any) {
     console.error(`[API] Error fetching customer bookings:`, error);
     
@@ -122,8 +140,8 @@ export const getCustomerBookingsApi = async (
       return {
         success: false,
         message: 'Không thể tải dữ liệu booking lúc này',
-        data: []
-      } as ApiResponse<BookingResponse['data'][]>;
+        data: { content: [], totalElements: 0, totalPages: 0 }
+      };
     }
     
     throw error;
@@ -146,9 +164,92 @@ export const updateBookingApi = async (
 };
 
 // Cancel booking
-export const cancelBookingApi = async (bookingId: string, reason?: string): Promise<BookingResponse> => {
-  const response = await api.patch<BookingResponse>(`/customer/bookings/${bookingId}/cancel`, {
-    reason
-  });
-  return response.data;
+// Endpoint: PUT /api/v1/customer/bookings/{bookingId}/cancel
+// Theo API-TestCases-CancelBooking.md
+export const cancelBookingApi = async (bookingId: string, reason?: string): Promise<ApiResponse<BookingResponse['data']>> => {
+  try {
+    console.log(`[API] Cancelling booking ${bookingId} with reason:`, reason);
+    const response = await api.put<ApiResponse<BookingResponse['data']>>(
+      `/customer/bookings/${bookingId}/cancel`, 
+      { reason }
+    );
+    console.log(`[API] Booking cancelled successfully:`, response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error(`[API] Error cancelling booking:`, error);
+    throw error;
+  }
+};
+
+// Convert booking to post
+// Endpoint: PUT /api/v1/customer/bookings/{bookingId}/convert-to-post
+// Theo API-Booking-Post-Feature.md - Section 2
+export const convertBookingToPostApi = async (
+  bookingId: string, 
+  data: { title: string; imageUrl?: string }
+): Promise<ApiResponse<BookingResponse['data']>> => {
+  try {
+    console.log(`[API] Converting booking ${bookingId} to post:`, data);
+    const response = await api.put<ApiResponse<BookingResponse['data']>>(
+      `/customer/bookings/${bookingId}/convert-to-post`, 
+      data
+    );
+    console.log(`[API] Booking converted to post successfully:`, response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error(`[API] Error converting booking to post:`, error);
+    throw error;
+  }
+};
+
+// Admin: Get unverified bookings
+// Endpoint: GET /api/v1/customer/bookings/admin/unverified
+// Theo API-Booking-Post-Feature.md - Section 3
+// Quyền: ROLE_ADMIN
+export const getUnverifiedBookingsApi = async (
+  params?: PaginationParams
+): Promise<ApiResponse<PaginatedResponse<BookingResponse['data']>['data']>> => {
+  try {
+    console.log(`[API] Admin fetching unverified bookings`);
+    const response = await api.get<ApiResponse<PaginatedResponse<BookingResponse['data']>['data']>>(
+      `/customer/bookings/admin/unverified`,
+      {
+        params: {
+          page: params?.page || 0,
+          size: params?.size || 10
+        }
+      }
+    );
+    console.log(`[API] Got unverified bookings:`, response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error(`[API] Error fetching unverified bookings:`, error);
+    throw error;
+  }
+};
+
+// Admin: Verify or reject booking post
+// Endpoint: PUT /api/v1/customer/bookings/admin/{bookingId}/verify
+// Theo API-Booking-Post-Feature.md - Section 4
+// Quyền: ROLE_ADMIN
+export const verifyBookingApi = async (
+  bookingId: string,
+  data: { 
+    approve: boolean; 
+    adminComment?: string;
+    rejectionReason?: string;
+  }
+): Promise<ApiResponse<BookingResponse['data']>> => {
+  try {
+    console.log(`[API] Admin ${data.approve ? 'approving' : 'rejecting'} booking ${bookingId}`);
+    const response = await api.put<ApiResponse<BookingResponse['data']>>(
+      `/customer/bookings/admin/${bookingId}/verify`, 
+      data
+    );
+    console.log(`[API] Booking verification completed:`, response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error(`[API] Error verifying booking:`, error);
+    throw error;
+  }
 };

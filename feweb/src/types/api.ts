@@ -364,6 +364,9 @@ export interface CreateBookingRequest {
   bookingTime: string;
   note?: string | null;
   promoCode?: string | null;
+  // Booking Post Feature fields (khi không chọn nhân viên)
+  title?: string | null;
+  imageUrl?: string | null;
   bookingDetails: BookingDetailRequest[];
   assignments?: BookingAssignmentRequest[];
   paymentMethodId: number;
@@ -434,13 +437,67 @@ export interface BookingResponse extends ApiResponse {
     serviceId: number;
     status: string;
     totalPrice: number;
+    totalAmount?: number;
+    formattedTotalAmount?: string;
     scheduledDate: string;
     scheduledTime: string;
+    bookingTime?: string;
     address: string;
     notes?: string;
+    note?: string;
     employeeId?: string;
     createdAt: string;
     updatedAt: string;
+    // Booking Post Feature fields
+    title?: string;
+    imageUrl?: string;
+    isVerified?: boolean;
+    adminComment?: string;
+    // Additional fields
+    totalServices?: number;
+    totalEmployees?: number;
+    customerInfo?: {
+      customerId: string;
+      fullName: string;
+      email: string;
+      phoneNumber: string;
+      addressId?: string;
+      fullAddress?: string;
+      ward?: string;
+      district?: string;
+      city?: string;
+      latitude?: number;
+      longitude?: number;
+      isDefault?: boolean;
+    };
+    serviceDetails?: Array<{
+      bookingDetailId: string;
+      serviceId: number;
+      serviceName: string;
+      price: number;
+      formattedPrice?: string;
+      maxEmployees: number;
+      startTime?: string;
+      endTime?: string;
+    }>;
+    paymentInfo?: {
+      paymentId: string;
+      methodId: number;
+      methodName: string;
+      amount: number;
+      formattedAmount?: string;
+      status: string;
+      transactionCode?: string;
+      paidAt?: string;
+    };
+    assignedEmployees?: Array<{
+      assignmentId: string;
+      employeeId: string;
+      employeeName: string;
+      phoneNumber: string;
+      avatar?: string;
+      status: string;
+    }>;
   };
 }
 

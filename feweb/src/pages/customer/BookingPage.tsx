@@ -138,6 +138,11 @@ const BookingPage: React.FC = () => {
   const [durationInputType, setDurationInputType] = useState<'preset' | 'custom'>('preset');
   const [customDuration, setCustomDuration] = useState<string>('');
   
+  // State for booking post (when no employee selected)
+  const [postTitle, setPostTitle] = useState<string>('');
+  const [postImageUrl, setPostImageUrl] = useState<string>('');
+  const [showPostFields, setShowPostFields] = useState<boolean>(false);
+  
   // State cho địa chỉ 2 cấp mới
   const [selectedProvinceCode, setSelectedProvinceCode] = useState<string>('');
   const [selectedProvinceName, setSelectedProvinceName] = useState<string>('');
@@ -1051,6 +1056,9 @@ const BookingPage: React.FC = () => {
         bookingTime: bookingDateTime,
         note: bookingData.notes || null,
         promoCode: bookingData.promoCode || null,
+        // Thêm title và imageUrl nếu không chọn nhân viên (booking post)
+        title: selectedEmployees.length === 0 && postTitle ? postTitle : undefined,
+        imageUrl: selectedEmployees.length === 0 && postImageUrl ? postImageUrl : undefined,
         bookingDetails: [
           {
             serviceId: serviceId,
@@ -2117,13 +2125,99 @@ const BookingPage: React.FC = () => {
                   </button>
                 </div>
 
+                {/* Thông báo về booking post khi không chọn nhân viên */}
+                {!showEmployeeSelection && (
+                  <div className="space-y-4">
+                    <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 shadow-sm">
+                      <div className="flex items-start">
+                        <div className="flex-shrink-0">
+                          <svg className="w-5 h-5 text-indigo-500 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        <div className="ml-3 flex-1">
+                          <h4 className="text-indigo-800 font-medium text-sm mb-1">Đặt lịch không chọn nhân viên</h4>
+                          <p className="text-indigo-700 text-sm">
+                            Nếu không chọn nhân viên, đơn của bạn sẽ trở thành <strong>bài đăng tìm nhân viên</strong> và cần được admin xác minh trước khi hiển thị công khai.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Nút hiển thị form nhập title và image cho bài post */}
+                    <button
+                      type="button"
+                      onClick={() => setShowPostFields(!showPostFields)}
+                      className="w-full px-4 py-3 bg-white border-2 border-indigo-200 rounded-lg hover:border-indigo-300 transition-colors font-medium text-indigo-700 hover:bg-indigo-50"
+                    >
+                      {showPostFields ? '▼ Ẩn thông tin bài đăng' : '▶ Thêm tiêu đề và hình ảnh cho bài đăng (Tùy chọn)'}
+                    </button>
+
+                    {/* Form nhập title và imageUrl cho booking post */}
+                    {showPostFields && (
+                      <div className="bg-white border border-indigo-200 rounded-lg p-5 space-y-4">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Tiêu đề bài đăng
+                            <span className="text-gray-400 font-normal ml-1">(Tùy chọn, tối đa 255 ký tự)</span>
+                          </label>
+                          <input
+                            type="text"
+                            value={postTitle}
+                            onChange={(e) => setPostTitle(e.target.value.slice(0, 255))}
+                            maxLength={255}
+                            placeholder="VD: Cần nhân viên dọn dẹp nhà cấp tốc"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                          />
+                          <p className="mt-1 text-xs text-gray-500">
+                            {postTitle.length}/255 ký tự
+                          </p>
+                        </div>
+
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">
+                            Đường dẫn hình ảnh
+                            <span className="text-gray-400 font-normal ml-1">(Tùy chọn, URL hình ảnh)</span>
+                          </label>
+                          <input
+                            type="url"
+                            value={postImageUrl}
+                            onChange={(e) => setPostImageUrl(e.target.value)}
+                            placeholder="https://example.com/image.jpg"
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                          />
+                          {postImageUrl && (
+                            <div className="mt-3">
+                              <p className="text-xs text-gray-500 mb-2">Xem trước:</p>
+                              <img 
+                                src={postImageUrl} 
+                                alt="Preview" 
+                                className="w-full max-w-xs rounded-lg shadow-md"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x200?text=Invalid+Image+URL';
+                                }}
+                              />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                          <p className="text-xs text-indigo-700">
+                            💡 <strong>Mẹo:</strong> Thêm tiêu đề và hình ảnh sẽ giúp bài đăng của bạn thu hút nhân viên phù hợp hơn!
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {showEmployeeSelection && (
                   <div className="space-y-6">
                     <div className="bg-white rounded-lg p-4 border border-cyan-200">
                       <div className="flex items-center justify-between">
                         <div className="flex-1 pr-4">
                           <p className="text-gray-700 text-sm leading-relaxed">
-                            Bạn có thể chọn nhân viên cụ thể hoặc để hệ thống tự động phân công nhân viên phù hợp nhất.
+                            Chọn nhân viên cụ thể để đặt lịch ngay, hoặc để trống để tạo bài đăng tìm nhân viên.
                           </p>
                         </div>
                         <button

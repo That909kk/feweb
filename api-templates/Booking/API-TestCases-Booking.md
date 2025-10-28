@@ -857,25 +857,60 @@ Based on housekeeping_service_v8.sql:
 - **Expected Output**:
   ```json
   {
-    "bookingId": "7a35373e-20c6-43a2-aab2-1486fb6c89e5",
-    "bookingCode": "BK62589569",
-    "status": "PENDING",
-    "totalAmount": 700000.00,
-    "formattedTotalAmount": "900,000đ",
-    "bookingTime": "2025-09-26T10:00:00",
-    "createdAt": "2025-09-24T14:39:22.589451644",
-    "customerInfo": {
-      // ...customer and address details...
-    },
-    "serviceDetails": [
-      // ...service details with assignments...
-    ],
-    "paymentInfo": {
-      // ...payment information...
-    },
-    "assignedEmployees": [
-      // ...employee details...
-    ]
+    "success": true,
+    "message": "Đặt lịch thành công",
+    "data": {
+        "bookingId": "book0004-0000-0000-0000-000000000001",
+        "bookingCode": "HKS000004",
+        "customerId": "c1000001-0000-0000-0000-000000000001",
+        "customerName": "Lê Minh Thật",
+        "address": {
+            "addressId": "adrs0001-0000-0000-0000-000000000004",
+            "fullAddress": "789 Nguyễn Văn Cừ, Phường Chợ Quán, TP. Hồ Chí Minh",
+            "ward": "Phường Chợ Quán",
+            "city": "TP. Hồ Chí Minh",
+            "latitude": 10.7594,
+            "longitude": 106.6822,
+            "isDefault": false
+        },
+        "bookingTime": "2025-10-05T08:00:00",
+        "note": "Cần dọn dẹp tổng quát, chú ý khu vực bếp",
+        "totalAmount": 450000.00,
+        "formattedTotalAmount": "450,000đ",
+        "status": "AWAITING_EMPLOYEE",
+        "title": null,
+        "imageUrl": null,
+        "isVerified": true,
+        "adminComment": null,
+        "promotion": null,
+        "bookingDetails": [
+            {
+                "bookingDetailId": "bd000004-0000-0000-0000-000000000001",
+                "service": {
+                    "serviceId": 1,
+                    "name": "Dọn dẹp theo giờ",
+                    "description": "Lau dọn, hút bụi, làm sạch các bề mặt cơ bản trong nhà. Phù hợp cho nhu cầu duy trì vệ sinh hàng tuần.",
+                    "basePrice": 60000.00,
+                    "unit": "Giờ",
+                    "estimatedDurationHours": 2.0,
+                    "iconUrl": "https://res.cloudinary.com/dkzemgit8/image/upload/v1757599899/Cleaning_Clock_z29juh.png",
+                    "categoryName": "Dọn dẹp nhà",
+                    "isActive": true
+                },
+                "quantity": 1,
+                "pricePerUnit": 450000.00,
+                "formattedPricePerUnit": "450,000đ",
+                "subTotal": 450000.00,
+                "formattedSubTotal": "450,000đ",
+                "selectedChoices": [],
+                "assignments": [],
+                "duration": "2 giờ",
+                "formattedDuration": "2 giờ"
+            }
+        ],
+        "payment": null,
+        "createdAt": "2025-10-27T09:24:56"
+    }
   }
   ```
 - **Status Code**: `200 OK`

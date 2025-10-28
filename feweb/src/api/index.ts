@@ -10,3 +10,4 @@ export * from './customer';
 export * from './employee';
 export * from './address';
 export * from './review';
+export * from './permission';

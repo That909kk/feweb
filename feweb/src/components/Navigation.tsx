@@ -141,6 +141,12 @@ const navigationConfig: Record<UserRole, NavItemConfig[]> = {
       label: 'Nội dung',
       description: 'Quản trị thư viện',
       icon: Megaphone
+    },
+    {
+      to: '/admin/permissions',
+      label: 'Phân quyền',
+      description: 'Cấu hình quyền truy cập',
+      icon: ShieldCheck
     }
   ]
 };

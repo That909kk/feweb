@@ -43,6 +43,12 @@ type SessionResponse = ApiResponse<{
   mobileSessions: number;
 }>;
 
+const roleLabels: Record<SupportedRole, string> = {
+  CUSTOMER: 'khach hang',
+  EMPLOYEE: 'nhan vien',
+  ADMIN: 'quan tri'
+};
+
 const statusPalette: Record<string, { label: string; tone: string }> = {
   COMPLETED: { label: 'Hoan thanh', tone: 'bg-status-success/10 text-status-success' },
   CONFIRMED: { label: 'Da xac nhan', tone: 'bg-brand-teal/10 text-brand-teal' },
@@ -273,12 +279,6 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ role, isOpen, o
       </aside>
     </>
   );
-};
-
-const roleLabels: Record<SupportedRole, string> = {
-  CUSTOMER: 'khach hang',
-  EMPLOYEE: 'nhan vien',
-  ADMIN: 'quan tri'
 };
 
 export default NotificationCenter;

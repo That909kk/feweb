@@ -3,7 +3,11 @@ import {
   createBookingApi, 
   getCustomerDefaultAddressApi,
   getCustomerBookingsApi,
-  updateBookingApi
+  updateBookingApi,
+  cancelBookingApi,
+  convertBookingToPostApi,
+  getUnverifiedBookingsApi,
+  verifyBookingApi
 } from '../api/booking';
 import { getPaymentMethodsApi } from '../api/payment';
 import type { 
@@ -182,12 +186,118 @@ export const useBooking = () => {
     }
   };
 
+  const cancelBooking = async (
+    bookingId: string,
+    reason?: string
+  ): Promise<BookingResponse['data'] | null> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await cancelBookingApi(bookingId, reason);
+      return response.data;
+    } catch (err: any) {
+      const errorMessage =
+        err?.response?.data?.message || err?.message || 'Không thể hủy đơn dịch vụ';
+      setError(errorMessage);
+      console.error('Cancel booking error:', err);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const convertBookingToPost = async (
+    bookingId: string,
+    data: { title: string; imageUrl?: string }
+  ): Promise<BookingResponse['data'] | null> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await convertBookingToPostApi(bookingId, data);
+      return response.data;
+    } catch (err: any) {
+      const errorMessage =
+        err?.response?.data?.message || err?.message || 'Không thể chuyển đơn thành bài post';
+      setError(errorMessage);
+      console.error('Convert booking to post error:', err);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const getUnverifiedBookings = async (
+    params?: { page?: number; size?: number }
+  ): Promise<any[]> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await getUnverifiedBookingsApi(params);
+      
+      if (!response) {
+        return [];
+      }
+
+      const data = response.data as any;
+
+      if (Array.isArray(data)) {
+        return data;
+      }
+
+      if (data?.content && Array.isArray(data.content)) {
+        return data.content;
+      }
+
+      return [];
+    } catch (err: any) {
+      const errorMessage =
+        err?.response?.data?.message || err?.message || 'Không thể tải danh sách booking chưa xác minh';
+      setError(errorMessage);
+      console.error('Get unverified bookings error:', err);
+      return [];
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const verifyBooking = async (
+    bookingId: string,
+    data: { 
+      approve: boolean; 
+      adminComment?: string;
+      rejectionReason?: string;
+    }
+  ): Promise<BookingResponse['data'] | null> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await verifyBookingApi(bookingId, data);
+      return response.data;
+    } catch (err: any) {
+      const errorMessage =
+        err?.response?.data?.message || err?.message || 'Không thể xác minh đơn dịch vụ';
+      setError(errorMessage);
+      console.error('Verify booking error:', err);
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return {
     createBooking,
     getDefaultAddress,
     getPaymentMethods,
     getCustomerBookings,
     updateBooking,
+    cancelBooking,
+    convertBookingToPost,
+    getUnverifiedBookings,
+    verifyBooking,
     isLoading,
     error
   };

@@ -28,7 +28,8 @@ import {
   AdminDashboard,
   AdminUserManagement,
   AdminBookingManagement,
-  AdminContentManagement 
+  AdminContentManagement,
+  AdminPermissionManagement
 } from './pages/admin';
 
 import './App.css';
@@ -119,6 +120,11 @@ function App() {
             <Route path="/admin/content" element={
               <ProtectedRoute requiredRole="ADMIN">
                 <AdminContentManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/permissions" element={
+              <ProtectedRoute requiredRole="ADMIN">
+                <AdminPermissionManagement />
               </ProtectedRoute>
             } />
             

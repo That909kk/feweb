@@ -19,7 +19,7 @@ import { useEmployeeAssignments } from '../../hooks/useEmployee';
 import AvailableBookings from '../../components/AvailableBookings';
 import EmployeeBookings from '../../components/EmployeeBookings';
 import { SectionCard, MetricCard } from '../../shared/components';
-import { cancelAssignmentApi } from '../../api/employee';
+import { cancelAssignmentApi, checkInAssignmentApi, checkOutAssignmentApi } from '../../api/employee';
 
 type AssignmentStatus =
   | 'ALL'
@@ -122,6 +122,50 @@ const EmployeeDashboard: React.FC = () => {
       setStatusBanner({
         type: 'error',
         text: err?.response?.data?.message || err?.message || 'Không thể hủy công việc lúc này. Vui lòng thử lại sau.'
+      });
+    } finally {
+      setIsActioning(false);
+    }
+  };
+
+  const handleCheckIn = async (assignmentId: string) => {
+    if (!employeeId) return;
+    
+    setIsActioning(true);
+    try {
+      await checkInAssignmentApi(assignmentId, employeeId);
+      await getAssignments(employeeId, statusFilter === 'ALL' ? undefined : statusFilter);
+      setStatusBanner({
+        type: 'success',
+        text: 'Check-in thành công! Chúc bạn làm việc hiệu quả.'
+      });
+    } catch (err: any) {
+      console.error('Check-in error:', err);
+      setStatusBanner({
+        type: 'error',
+        text: err?.message || 'Không thể check-in lúc này. Vui lòng thử lại sau.'
+      });
+    } finally {
+      setIsActioning(false);
+    }
+  };
+
+  const handleCheckOut = async (assignmentId: string) => {
+    if (!employeeId) return;
+    
+    setIsActioning(true);
+    try {
+      await checkOutAssignmentApi(assignmentId, employeeId);
+      await getAssignments(employeeId, statusFilter === 'ALL' ? undefined : statusFilter);
+      setStatusBanner({
+        type: 'success',
+        text: 'Check-out thành công! Công việc đã được hoàn thành.'
+      });
+    } catch (err: any) {
+      console.error('Check-out error:', err);
+      setStatusBanner({
+        type: 'error',
+        text: err?.message || 'Không thể check-out lúc này. Vui lòng thử lại sau.'
       });
     } finally {
       setIsActioning(false);
@@ -288,6 +332,30 @@ const EmployeeDashboard: React.FC = () => {
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-2">
+                      {/* Nút Check-in - hiển thị cho CONFIRMED */}
+                      {assignment.status === 'CONFIRMED' && !assignment.checkInTime && (
+                        <button
+                          onClick={() => handleCheckIn(assignment.assignmentId)}
+                          disabled={isActioning}
+                          className="inline-flex items-center gap-2 rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <PlayCircle className="h-4 w-4" />
+                          Check-in
+                        </button>
+                      )}
+                      
+                      {/* Nút Check-out - hiển thị cho IN_PROGRESS */}
+                      {assignment.status === 'IN_PROGRESS' && assignment.checkInTime && !assignment.checkOutTime && (
+                        <button
+                          onClick={() => handleCheckOut(assignment.assignmentId)}
+                          disabled={isActioning}
+                          className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Check-out
+                        </button>
+                      )}
+                      
                       {assignment.status === 'ASSIGNED' && (
                         <button
                           onClick={() => openCancelModal(assignment.assignmentId)}
@@ -304,12 +372,6 @@ const EmployeeDashboard: React.FC = () => {
                           Hủy công việc
                         </button>
                       )}
-                      <button
-                        className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-500"
-                      >
-                        <PlayCircle className="h-4 w-4" />
-                        Mở hướng dẫn
-                      </button>
                     </div>
                   </div>
                 </div>

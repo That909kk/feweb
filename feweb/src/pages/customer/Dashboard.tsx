@@ -92,7 +92,8 @@ const CustomerDashboard: React.FC = () => {
     };
 
     loadRecentBookings();
-  }, [getCustomerBookings, user]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   const firstName = useMemo(() => {
     if (!user?.fullName) return 'Khách hàng';

@@ -267,7 +267,7 @@ const BookingSuccessPage: React.FC = () => {
                       {employee.phoneNumber}
                     </div>
                     <div className="mt-1 text-xs text-brand-text/60">
-                      Kỹ năng: {employee.skills.join(', ')}
+                      Kỹ năng: {employee.skills?.join(', ') || 'N/A'}
                     </div>
                     {employee.rating && (
                       <div className="mt-1 flex items-center gap-1 text-xs text-amber-600">
@@ -282,18 +282,34 @@ const BookingSuccessPage: React.FC = () => {
           </SectionCard>
         ) : (
           <SectionCard
-            title="Chờ phân công nhân viên"
-            description="Chúng tôi đang tìm nhân viên phù hợp nhất cho bạn."
+            title={bookingData.status === 'AWAITING_EMPLOYEE' && bookingData.isVerified === false ? 'Bài đăng tìm nhân viên' : 'Chờ phân công nhân viên'}
+            description={bookingData.status === 'AWAITING_EMPLOYEE' && bookingData.isVerified === false ? 'Đơn của bạn đang chờ admin xác minh.' : 'Chúng tôi đang tìm nhân viên phù hợp nhất cho bạn.'}
           >
-            <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-6 text-center">
-              <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
-                <User className="h-8 w-8 text-amber-600" />
+            {bookingData.status === 'AWAITING_EMPLOYEE' && bookingData.isVerified === false ? (
+              <div className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-6 text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-indigo-100">
+                  <User className="h-8 w-8 text-indigo-600" />
+                </div>
+                <h3 className="mb-2 font-semibold text-indigo-900">Bài đăng đang chờ xác minh</h3>
+                <p className="text-sm text-indigo-700 mb-4">
+                  Đơn của bạn đã được tạo thành <strong>bài đăng tìm nhân viên</strong> và đang chờ admin xác minh. Sau khi được duyệt, bài đăng sẽ hiển thị công khai để nhân viên có thể đăng ký.
+                </p>
+                <div className="inline-flex items-center gap-2 rounded-full bg-indigo-100 px-4 py-2 text-sm font-medium text-indigo-700">
+                  <Clock className="h-4 w-4" />
+                  Thời gian xử lý: 1-24 giờ
+                </div>
               </div>
-              <h3 className="mb-2 font-semibold text-amber-900">Đang phân công nhân viên</h3>
-              <p className="text-sm text-amber-700">
-                Chúng tôi sẽ thông báo ngay khi có nhân viên phù hợp được phân công cho đơn hàng của bạn.
-              </p>
-            </div>
+            ) : (
+              <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-6 text-center">
+                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-amber-100">
+                  <User className="h-8 w-8 text-amber-600" />
+                </div>
+                <h3 className="mb-2 font-semibold text-amber-900">Đang phân công nhân viên</h3>
+                <p className="text-sm text-amber-700">
+                  Chúng tôi sẽ thông báo ngay khi có nhân viên phù hợp được phân công cho đơn hàng của bạn.
+                </p>
+              </div>
+            )}
           </SectionCard>
         )}
       </div>

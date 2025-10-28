@@ -121,6 +121,31 @@ interface AcceptBookingResponse {
 
 // Employee API functions - No mock data, only real API calls
 
+// Response interface for all employees
+interface AllEmployeesResponse {
+  employeeId: string;
+  fullName: string;
+  email: string;
+  skills: string[];
+  avatar?: string;
+  rating?: string;
+  employeeStatus?: string;
+}
+
+// Get all employees
+// Endpoint: GET /api/v1/employee/
+export const getAllEmployeesApi = async (): Promise<AllEmployeesResponse[]> => {
+  try {
+    console.log('[API] Get All Employees Request');
+    const response = await api.get<AllEmployeesResponse[]>('/employee/');
+    console.log('[API] Get All Employees Response:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('[API] Error fetching all employees:', error);
+    throw error;
+  }
+};
+
 // Response interface for assignments API
 interface AssignmentsResponse {
   data: Assignment[];
@@ -437,7 +462,78 @@ export const updateEmployeeProfileApi = async (
   }
 };
 
+// Check-in assignment
+// Endpoint: POST /api/v1/employee/assignments/{assignmentId}/check-in
+export const checkInAssignmentApi = async (
+  assignmentId: string,
+  employeeId: string
+): Promise<ApiResponse<Assignment>> => {
+  try {
+    console.log('[API] Check-in Assignment Request:', {
+      assignmentId,
+      employeeId,
+      url: `/employee/assignments/${assignmentId}/check-in`
+    });
+    
+    const response = await api.post<ApiResponse<Assignment>>(
+      `/employee/assignments/${assignmentId}/check-in`,
+      { employeeId }
+    );
+    
+    console.log('[API] Check-in Assignment Response:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error(`[API] Error checking in assignment ${assignmentId}:`, error);
+    
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else if (error.response?.status === 400) {
+      throw new Error('Không thể check-in công việc này - kiểm tra trạng thái và thời gian');
+    } else if (error.response?.status === 404) {
+      throw new Error('Không tìm thấy công việc này');
+    } else {
+      throw new Error(error.message || 'Có lỗi xảy ra khi check-in');
+    }
+  }
+};
+
+// Check-out assignment
+// Endpoint: POST /api/v1/employee/assignments/{assignmentId}/check-out
+export const checkOutAssignmentApi = async (
+  assignmentId: string,
+  employeeId: string
+): Promise<ApiResponse<Assignment>> => {
+  try {
+    console.log('[API] Check-out Assignment Request:', {
+      assignmentId,
+      employeeId,
+      url: `/employee/assignments/${assignmentId}/check-out`
+    });
+    
+    const response = await api.post<ApiResponse<Assignment>>(
+      `/employee/assignments/${assignmentId}/check-out`,
+      { employeeId }
+    );
+    
+    console.log('[API] Check-out Assignment Response:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error(`[API] Error checking out assignment ${assignmentId}:`, error);
+    
+    if (error.response?.data?.message) {
+      throw new Error(error.response.data.message);
+    } else if (error.response?.status === 400) {
+      throw new Error('Không thể check-out công việc này - chưa check-in hoặc đã check-out');
+    } else if (error.response?.status === 404) {
+      throw new Error('Không tìm thấy công việc này');
+    } else {
+      throw new Error(error.message || 'Có lỗi xảy ra khi check-out');
+    }
+  }
+};
+
 export default {
+  getAllEmployeesApi,
   getEmployeeAssignmentsApi,
   updateAssignmentStatusApi,
   getEmployeeStatisticsApi,
@@ -445,5 +541,7 @@ export default {
   getAvailableBookingsApi,
   acceptBookingDetailApi,
   getEmployeeProfileApi,
-  updateEmployeeProfileApi
+  updateEmployeeProfileApi,
+  checkInAssignmentApi,
+  checkOutAssignmentApi
 };
