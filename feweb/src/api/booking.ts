@@ -4,9 +4,7 @@ import type {
   BookingResponse,
   PaginationParams,
   PaginatedResponse,
-  ApiResponse,
-  BookingValidationRequest,
-  BookingValidationResponse
+  ApiResponse
 } from '../types/api';
 
 // Interface for default address response
@@ -81,6 +79,8 @@ export const createBookingApi = async (data: CreateBookingRequest): Promise<Book
 };
 
 // Get customer bookings
+// Dựa theo API-TestCases-Customer-Bookings.md
+// Endpoint: GET /api/v1/customer/bookings/customer/{customerId}
 export const getCustomerBookingsApi = async (
   customerId: string,
   params?: PaginationParams & {
@@ -97,20 +97,20 @@ export const getCustomerBookingsApi = async (
   }
   
   try {
-    // Dựa theo API-TestCases-Booking.md, endpoint lấy booking của customer là:
-    // GET /api/v1/customer/bookings hoặc theo customer-specific API
-    const response = await api.get<ApiResponse<BookingResponse['data'][] | PaginatedResponse<BookingResponse['data']>['data']>>('/customer/bookings', {
-      params: {
-        customerId, // Thêm customerId vào query params
-        page: params?.page || 0,
-        size: params?.size || 20,
-        sort: params?.sort || 'createdAt',
-        direction: params?.direction || 'DESC',
-        status: params?.status,
-        fromDate: params?.fromDate,
-        toDate: params?.toDate
+    // Endpoint theo tài liệu: GET /api/v1/customer/bookings/customer/{customerId}
+    const response = await api.get<ApiResponse<PaginatedResponse<BookingResponse['data']>['data']>>(
+      `/customer/bookings/customer/${customerId}`,
+      {
+        params: {
+          page: params?.page || 0,
+          size: params?.size || 10,
+          sort: params?.sort || 'createdAt,desc',
+          status: params?.status,
+          fromDate: params?.fromDate,
+          toDate: params?.toDate
+        }
       }
-    });
+    );
     console.log(`[API] Got response for customer bookings:`, response.data);
     return response.data;
   } catch (error: any) {
@@ -151,22 +151,4 @@ export const cancelBookingApi = async (bookingId: string, reason?: string): Prom
     reason
   });
   return response.data;
-};
-
-// Validate booking before creation
-export const validateBookingApi = async (data: BookingValidationRequest): Promise<BookingValidationResponse> => {
-  try {
-    console.log('🔍 [VALIDATION API] Sending request to /customer/bookings/validate:', JSON.stringify(data, null, 2));
-    const response = await api.post<BookingValidationResponse>('/customer/bookings/validate', data);
-    console.log('🔍 [VALIDATION API] Response:', response.data);
-    return response.data;
-  } catch (error: any) {
-    console.error('🚨 [VALIDATION API ERROR]:', {
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data,
-      message: error.message
-    });
-    throw error;
-  }
 };

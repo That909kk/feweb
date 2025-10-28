@@ -436,7 +436,7 @@ Based on housekeeping_service_v8.sql:
 - **Input**:
   - **Method**: `GET`
   - **URL**: `/api/v1/customer/payments/methods`
-   - **Headers**: 
+  - **Headers**: 
     ```
     Content-Type: application/json
     ```

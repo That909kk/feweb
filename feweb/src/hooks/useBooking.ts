@@ -2,7 +2,6 @@ import { useState, useCallback } from 'react';
 import { 
   createBookingApi, 
   getCustomerDefaultAddressApi,
-  validateBookingApi,
   getCustomerBookingsApi,
   updateBookingApi
 } from '../api/booking';
@@ -10,9 +9,7 @@ import { getPaymentMethodsApi } from '../api/payment';
 import type { 
   CreateBookingRequest, 
   BookingResponse,
-  PaymentMethod,
-  BookingValidationRequest,
-  BookingValidationResponse
+  PaymentMethod
 } from '../types/api';
 
 interface DefaultAddressResponse {
@@ -83,47 +80,14 @@ export const useBooking = () => {
     }
   };
 
-  const validateBooking = async (request: BookingValidationRequest): Promise<BookingValidationResponse | null> => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await validateBookingApi(request);
-      return response;
-    } catch (err: any) {
-      let errorMessage;
-      
-      console.error('🚨 [HOOK] Validate booking error details:', {
-        status: err?.response?.status,
-        statusText: err?.response?.statusText,
-        responseData: err?.response?.data,
-        message: err?.message
-      });
-      
-      if (err?.response?.data) {
-        errorMessage = err.response.data.message || 'Failed to validate booking';
-      } else if (err?.message) {
-        errorMessage = err.message;
-      } else {
-        errorMessage = 'An unexpected error occurred';
-      }
-      
-      setError(errorMessage);
-      console.error('Validate booking error:', err);
-      return null;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   const getPaymentMethods = useCallback(async (): Promise<PaymentMethod[] | null> => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await getPaymentMethodsApi();
-      // API returns array directly
-      return response;
+      const methods = await getPaymentMethodsApi();
+      // API trả về trực tiếp PaymentMethod[], không có wrapper
+      return methods || [];
     } catch (err: any) {
       let errorMessage;
       
@@ -221,7 +185,6 @@ export const useBooking = () => {
   return {
     createBooking,
     getDefaultAddress,
-    validateBooking,
     getPaymentMethods,
     getCustomerBookings,
     updateBooking,

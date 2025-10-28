@@ -7,7 +7,6 @@ import type {
   LoginResponse,
   RegisterRequest,
   RegisterResponse,
-  RefreshTokenRequest,
   RefreshTokenResponse,
   ValidateTokenResponse,
   ActiveSessionsResponse,
@@ -163,4 +162,21 @@ export const getUserProfile = async (
     default:
       throw new Error(`Unsupported role: ${role}`);
   }
+};
+
+// Change password
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface ChangePasswordResponse {
+  success: boolean;
+  message: string;
+}
+
+export const changePasswordApi = async (data: ChangePasswordRequest): Promise<ChangePasswordResponse> => {
+  const response = await api.post<ChangePasswordResponse>('/auth/change-password', data);
+  return response.data;
 };

@@ -7,8 +7,6 @@ import type {
   PaginationParams,
   PaginatedResponse,
   ServiceWithOptions,
-  PriceCalculationRequest,
-  PriceCalculationResponse,
   SuitableEmployeesResponse
 } from '../types/api';
 
@@ -83,25 +81,28 @@ export const getServiceOptionsApi = async (serviceId: number): Promise<ApiRespon
 };
 
 // Calculate service price with options
-export const calculateServicePriceApi = async (data: PriceCalculationRequest): Promise<PriceCalculationResponse> => {
-  const response = await api.post<PriceCalculationResponse>('/customer/services/calculate-price', data);
+// Note: API uses the simple format with selectedChoiceIds array, not the new selections format
+export const calculateServicePriceApi = async (data: CalculatePriceRequest): Promise<CalculatePriceResponse> => {
+  const response = await api.post<CalculatePriceResponse>('/customer/services/calculate-price', data);
   return response.data;
 };
 
 // Get suitable employees for service
+// Dựa theo API-TestCases-Service-Suitable.md
+// Endpoint: GET /api/v1/customer/services/employee/suitable
 export const getSuitableEmployeesApi = async (params: {
   serviceId: number;
   bookingTime: string;
-  district?: string;
+  ward?: string;
   city?: string;
   latitude?: number;
   longitude?: number;
 }): Promise<SuitableEmployeesResponse> => {
-  const response = await api.get<SuitableEmployeesResponse>('/employee-schedule/suitable', {
+  const response = await api.get<SuitableEmployeesResponse>('/customer/services/employee/suitable', {
     params: {
       serviceId: params.serviceId,
       bookingTime: params.bookingTime,
-      district: params.district,
+      ward: params.ward,
       city: params.city,
       latitude: params.latitude,
       longitude: params.longitude
@@ -110,3 +111,8 @@ export const getSuitableEmployeesApi = async (params: {
   return response.data;
 };
 
+// Get total count of active services
+export const getServicesCountApi = async (): Promise<ApiResponse<{ totalServices: number }>> => {
+  const response = await api.get<ApiResponse<{ totalServices: number }>>('/customer/services/count');
+  return response.data;
+};

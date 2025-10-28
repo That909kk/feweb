@@ -1,0 +1,70 @@
+{
+  "vi": {
+    "title": "Đánh giá dịch vụ",
+    "subtitle": "Chia sẻ trải nghiệm của bạn",
+    "labels": {
+      "employee": "Nhân viên",
+      "booking": "Mã đặt dịch vụ",
+      "comment": "Nhận xét",
+      "rating": "Đánh giá",
+      "criteria": "Tiêu chí đánh giá",
+      "selectCriteria": "Chọn tiêu chí",
+      "commentPlaceholder": "Chia sẻ trải nghiệm của bạn về dịch vụ..."
+    },
+    "actions": {
+      "submit": "Gửi đánh giá",
+      "cancel": "Hủy",
+      "viewAllReviews": "Xem tất cả đánh giá",
+      "writeReview": "Viết đánh giá"
+    },
+    "messages": {
+      "success": "Gửi đánh giá thành công",
+      "error": "Có lỗi xảy ra khi gửi đánh giá",
+      "noReviews": "Chưa có đánh giá nào",
+      "reviewAdded": "Đánh giá của bạn đã được ghi nhận. Cảm ơn bạn!",
+      "selectRating": "Vui lòng chọn đánh giá cho từng tiêu chí",
+      "enterComment": "Vui lòng nhập nhận xét của bạn",
+      "onlyCompleted": "Chỉ có thể đánh giá dịch vụ đã hoàn thành",
+      "alreadyReviewed": "Bạn đã đánh giá nhân viên này cho dịch vụ này rồi"
+    },
+    "stats": {
+      "totalReviews": "Tổng đánh giá",
+      "averageRating": "Đánh giá trung bình",
+      "rating": "đánh giá"
+    }
+  },
+  "en": {
+    "title": "Service Review",
+    "subtitle": "Share your experience",
+    "labels": {
+      "employee": "Employee",
+      "booking": "Booking Code",
+      "comment": "Comment",
+      "rating": "Rating",
+      "criteria": "Review Criteria",
+      "selectCriteria": "Select criteria",
+      "commentPlaceholder": "Share your experience about the service..."
+    },
+    "actions": {
+      "submit": "Submit Review",
+      "cancel": "Cancel",
+      "viewAllReviews": "View All Reviews",
+      "writeReview": "Write Review"
+    },
+    "messages": {
+      "success": "Review submitted successfully",
+      "error": "Error submitting review",
+      "noReviews": "No reviews yet",
+      "reviewAdded": "Your review has been recorded. Thank you!",
+      "selectRating": "Please select rating for each criteria",
+      "enterComment": "Please enter your comment",
+      "onlyCompleted": "Can only review completed services",
+      "alreadyReviewed": "You already reviewed this employee for this service"
+    },
+    "stats": {
+      "totalReviews": "Total Reviews",
+      "averageRating": "Average Rating",
+      "rating": "reviews"
+    }
+  }
+}

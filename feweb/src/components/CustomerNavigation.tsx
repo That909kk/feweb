@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { Home, Calendar, CreditCard, User, Menu, LogOut, X, MessageSquare } from 'lucide-react';
+import { Home, Calendar, CreditCard, User, Menu, LogOut, X, MessageSquare, Lock } from 'lucide-react';
 
 interface CustomerNavigationProps {
   className?: string;
@@ -27,6 +27,7 @@ const CustomerNavigation: React.FC<CustomerNavigationProps> = ({ className = '' 
     { path: '/customer/orders', label: 'Đơn hàng', icon: <CreditCard className="w-5 h-5" /> },
     { path: '/customer/chat', label: 'Nhắn tin', icon: <MessageSquare className="w-5 h-5" /> },
     { path: '/customer/profile', label: 'Hồ sơ', icon: <User className="w-5 h-5" /> },
+    { path: '/customer/change-password', label: 'Đổi mật khẩu', icon: <Lock className="w-5 h-5" /> },
   ];
 
   return (

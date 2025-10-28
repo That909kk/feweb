@@ -1,0 +1,76 @@
+{
+  "vi": {
+    "title": "Lịch sử thanh toán",
+    "subtitle": "Quản lý các giao dịch của bạn",
+    "labels": {
+      "bookingCode": "Mã đặt dịch vụ",
+      "amount": "Số tiền",
+      "status": "Trạng thái",
+      "paymentMethod": "Phương thức",
+      "transactionCode": "Mã giao dịch",
+      "createdAt": "Ngày tạo",
+      "paidAt": "Ngày thanh toán",
+      "totalPayments": "Tổng giao dịch"
+    },
+    "status": {
+      "PENDING": "Chờ thanh toán",
+      "PAID": "Đã thanh toán",
+      "FAILED": "Thất bại",
+      "CANCELED": "Đã hủy",
+      "REFUNDED": "Đã hoàn tiền"
+    },
+    "actions": {
+      "viewDetails": "Xem chi tiết",
+      "retry": "Thử lại",
+      "download": "Tải xuống"
+    },
+    "messages": {
+      "noPayments": "Chưa có giao dịch nào",
+      "loadingError": "Không thể tải lịch sử thanh toán",
+      "retrySuccess": "Thử lại thanh toán thành công"
+    },
+    "filters": {
+      "all": "Tất cả",
+      "thisMonth": "Tháng này",
+      "lastMonth": "Tháng trước",
+      "last3Months": "3 tháng gần đây"
+    }
+  },
+  "en": {
+    "title": "Payment History",
+    "subtitle": "Manage your transactions",
+    "labels": {
+      "bookingCode": "Booking Code",
+      "amount": "Amount",
+      "status": "Status",
+      "paymentMethod": "Payment Method",
+      "transactionCode": "Transaction Code",
+      "createdAt": "Created At",
+      "paidAt": "Paid At",
+      "totalPayments": "Total Payments"
+    },
+    "status": {
+      "PENDING": "Pending",
+      "PAID": "Paid",
+      "FAILED": "Failed",
+      "CANCELED": "Canceled",
+      "REFUNDED": "Refunded"
+    },
+    "actions": {
+      "viewDetails": "View Details",
+      "retry": "Retry",
+      "download": "Download"
+    },
+    "messages": {
+      "noPayments": "No payments yet",
+      "loadingError": "Unable to load payment history",
+      "retrySuccess": "Retry payment successful"
+    },
+    "filters": {
+      "all": "All",
+      "thisMonth": "This Month",
+      "lastMonth": "Last Month",
+      "last3Months": "Last 3 Months"
+    }
+  }
+}

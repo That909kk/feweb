@@ -8,3 +8,5 @@ export * from './client';
 export * from './categories';
 export * from './customer';
 export * from './employee';
+export * from './address';
+export * from './review';

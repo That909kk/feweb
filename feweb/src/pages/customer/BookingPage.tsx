@@ -15,11 +15,11 @@ import { useServices, useServiceOptions, useServicePriceCalculation, useSuitable
 import { useBooking } from '../../hooks/useBooking';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCategories } from '../../hooks/useCategories';
+import { useAddress } from '../../hooks/useAddress';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import type { 
   CreateBookingRequest,
   SuitableEmployee,
-  BookingValidationRequest,
   PaymentMethod
 } from '../../types/api';
 
@@ -87,7 +87,6 @@ const BookingPage: React.FC = () => {
   const { 
     createBooking, 
     getDefaultAddress, 
-    validateBooking, 
     getPaymentMethods, 
     isLoading: bookingLoading, 
     error: bookingError 
@@ -116,7 +115,6 @@ const BookingPage: React.FC = () => {
   const [addressSource, setAddressSource] = useState<'profile' | 'current' | 'custom'>('profile');
   const [customAddress, setCustomAddress] = useState('');
   const [currentLocationAddress, setCurrentLocationAddress] = useState('');
-  const [locationAccuracy, setLocationAccuracy] = useState<number | null>(null);
   const [customTimeInput, setCustomTimeInput] = useState('');
   const [timeInputType, setTimeInputType] = useState<'preset' | 'custom'>('preset');
   const [quickDateOptions, setQuickDateOptions] = useState<Array<{date: string, label: string, dayOfWeek: string}>>([]);
@@ -132,28 +130,33 @@ const BookingPage: React.FC = () => {
   
   // State for booking flow
   const [selectedChoiceIds, setSelectedChoiceIds] = useState<number[]>([]);
-  const [selectedOptions, setSelectedOptions] = useState<Array<{choiceId: number, choiceName: string}>>([]);
-  const [currentPrice, setCurrentPrice] = useState<number>(0);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
   const [showEmployeeSelection, setShowEmployeeSelection] = useState<boolean>(false);
   const [employeeSelectionErrors, setEmployeeSelectionErrors] = useState<string[]>([]);
-  const [suggestedStaff, setSuggestedStaff] = useState<number>(1);
-  const [estimatedDuration, setEstimatedDuration] = useState<number>(0);
   const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(false);
-  const [showMap, setShowMap] = useState<boolean>(false);
   const [showPromoCodeInput, setShowPromoCodeInput] = useState<boolean>(false);
   const [durationInputType, setDurationInputType] = useState<'preset' | 'custom'>('preset');
   const [customDuration, setCustomDuration] = useState<string>('');
   
-  // Thêm state cho các trường địa chỉ chi tiết
-  const [addressDetails, setAddressDetails] = useState({
-    street: '',         // Tên đường
-    houseNumber: '',    // Số nhà
-    alley: '',          // Hẻm/ngõ
-    ward: '',           // Phường/xã
-    district: '',       // Quận/huyện
-    city: ''            // Thành phố
-  });
+  // State cho địa chỉ 2 cấp mới
+  const [selectedProvinceCode, setSelectedProvinceCode] = useState<string>('');
+  const [selectedProvinceName, setSelectedProvinceName] = useState<string>('');
+  const [selectedCommuneCode, setSelectedCommuneCode] = useState<string>('');
+  const [selectedCommuneName, setSelectedCommuneName] = useState<string>('');
+  const [streetAddress, setStreetAddress] = useState<string>(''); // Số nhà, tên đường
+  const [manualAddress, setManualAddress] = useState<string>(''); // Địa chỉ nhập tay
+  const [isManualAddress, setIsManualAddress] = useState<boolean>(false);
+  
+  // Hook cho địa chỉ
+  const { 
+    provinces, 
+    communes, 
+    isLoadingProvinces, 
+    isLoadingCommunes, 
+    loadCommunes, 
+    resetCommunes,
+    getFullAddress 
+  } = useAddress();
   
   // Tạo các tùy chọn ngày nhanh (hôm nay, ngày mai, ngày kia...)
   useEffect(() => {
@@ -226,15 +229,6 @@ const BookingPage: React.FC = () => {
       handlePriceCalculation();
     }
   }, [bookingData.serviceId, selectedChoiceIds]);
-
-  // Update local price state when calculation completes
-  useEffect(() => {
-    if (priceData) {
-      setCurrentPrice(priceData.finalPrice);
-      setSuggestedStaff(priceData.suggestedStaff);
-      setEstimatedDuration(priceData.estimatedDurationHours);
-    }
-  }, [priceData]);
 
   // Khởi tạo và cập nhật bản đồ khi có tọa độ và step là 2 (trang địa điểm)
   useEffect(() => {
@@ -361,12 +355,8 @@ const BookingPage: React.FC = () => {
             
             if (formattedAddress) {
               setCurrentLocationAddress(formattedAddress);
-              setLocationAccuracy(bestPosition.coords.accuracy);
               setBookingData(prev => ({ ...prev, address: formattedAddress }));
               setAddressSource('current');
-              
-              // Tự động hiển thị bản đồ sau khi lấy được vị trí
-              setShowMap(true);
             }
             
             setIsLoadingLocation(false);
@@ -404,10 +394,8 @@ const BookingPage: React.FC = () => {
               .then(formattedAddress => {
                 if (formattedAddress && bestPosition) {
                   setCurrentLocationAddress(formattedAddress);
-                  setLocationAccuracy(bestPosition.coords.accuracy);
                   setBookingData(prev => ({ ...prev, address: formattedAddress }));
                   setAddressSource('current');
-                  setShowMap(true);
                 }
               });
           } else if (attempts < maxAttempts) {
@@ -605,6 +593,14 @@ const BookingPage: React.FC = () => {
       setCustomAddress('');
       setCurrentLocationAddress('');
       setMapCoordinates(null);
+      // Reset địa chỉ 2 cấp
+      setSelectedProvinceCode('');
+      setSelectedProvinceName('');
+      setSelectedCommuneCode('');
+      setSelectedCommuneName('');
+      setStreetAddress('');
+      setManualAddress('');
+      resetCommunes();
     } else if (source === 'current') {
       setCustomAddress('');
       setCurrentLocationAddress('');
@@ -614,6 +610,101 @@ const BookingPage: React.FC = () => {
       setCustomAddress('');
       setCurrentLocationAddress('');
       setMapCoordinates(null);
+      // Reset địa chỉ 2 cấp
+      setSelectedProvinceCode('');
+      setSelectedProvinceName('');
+      setSelectedCommuneCode('');
+      setSelectedCommuneName('');
+      setStreetAddress('');
+      setManualAddress('');
+      resetCommunes();
+    }
+  };
+
+  // Xử lý khi chọn tỉnh/thành phố
+  const handleProvinceChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const provinceCode = e.target.value;
+    const province = provinces.find(p => p.code === provinceCode);
+    
+    setSelectedProvinceCode(provinceCode);
+    setSelectedProvinceName(province?.name || '');
+    
+    // Reset commune selection
+    setSelectedCommuneCode('');
+    setSelectedCommuneName('');
+    
+    // Load communes for selected province
+    if (provinceCode) {
+      await loadCommunes(provinceCode);
+    } else {
+      resetCommunes();
+    }
+    
+    // Update full address
+    updateFullAddress(streetAddress, '', province?.name || '');
+  };
+
+  // Xử lý khi chọn phường/xã
+  const handleCommuneChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const communeCode = e.target.value;
+    const commune = communes.find(c => c.code === communeCode);
+    
+    setSelectedCommuneCode(communeCode);
+    setSelectedCommuneName(commune?.name || '');
+    
+    // Update full address
+    updateFullAddress(streetAddress, commune?.name || '', selectedProvinceName);
+  };
+
+  // Xử lý khi nhập số nhà, tên đường
+  const handleStreetAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setStreetAddress(value);
+    
+    // Update full address
+    updateFullAddress(value, selectedCommuneName, selectedProvinceName);
+  };
+
+  // Cập nhật địa chỉ đầy đủ
+  const updateFullAddress = (street: string, commune: string, province: string) => {
+    const fullAddr = getFullAddress({
+      provinceCode: selectedProvinceCode,
+      provinceName: province,
+      communeCode: selectedCommuneCode,
+      communeName: commune,
+      streetAddress: street,
+      fullAddress: ''
+    });
+    
+    setBookingData(prev => ({ ...prev, address: fullAddr }));
+    
+    if (addressSource === 'custom') {
+      setCustomAddress(fullAddr);
+    }
+  };
+
+  // Xử lý nhập địa chỉ thủ công
+  const handleManualAddressChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value;
+    setManualAddress(value);
+    setBookingData(prev => ({ ...prev, address: value }));
+    
+    if (addressSource === 'custom') {
+      setCustomAddress(value);
+    }
+  };
+
+  // Toggle giữa nhập có hỗ trợ và nhập thủ công
+  const toggleAddressInputMode = () => {
+    setIsManualAddress(!isManualAddress);
+    
+    if (!isManualAddress) {
+      // Switching to manual mode - preserve current address
+      setManualAddress(bookingData.address);
+    } else {
+      // Switching back to assisted mode - clear manual input
+      setManualAddress('');
+      updateFullAddress(streetAddress, selectedCommuneName, selectedProvinceName);
     }
   };
 
@@ -633,20 +724,6 @@ const BookingPage: React.FC = () => {
   //   return parts.join(', ');
   // };
   
-  // Hàm tạo địa chỉ đầy đủ từ dữ liệu được truyền vào
-  const generateFullAddressFromDetails = (details: typeof addressDetails): string => {
-    const { houseNumber, alley, street, ward, city } = details;
-    let parts = [];
-    
-    if (houseNumber) parts.push(`Số ${houseNumber}`);
-    if (alley) parts.push(`Hẻm ${alley}`);
-    if (street) parts.push(`Đường ${street}`);
-    if (ward) parts.push(`Phường ${ward}`);
-    if (city) parts.push(city);
-    
-    return parts.join(', ');
-  };
-
   // Hàm xử lý nhập thời gian tùy chỉnh
   const handleCustomTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -775,7 +852,6 @@ const BookingPage: React.FC = () => {
   // Handle service selection - load options when service changes
   const handleServiceSelect = async (serviceId: string) => {
     setBookingData(prev => ({ ...prev, serviceId }));
-    setSelectedOptions([]);
     setSelectedChoiceIds([]);
     clearServiceOptions();
     clearPriceData();
@@ -786,18 +862,9 @@ const BookingPage: React.FC = () => {
   };
 
   // Handle option selection
-  const handleOptionSelect = (choiceId: number, choiceName: string, isMultiple: boolean = false) => {
+  const handleOptionSelect = (choiceId: number, _choiceName: string, isMultiple: boolean = false) => {
     if (isMultiple) {
       // For multiple choice options
-      setSelectedOptions(prev => {
-        const exists = prev.find(opt => opt.choiceId === choiceId);
-        if (exists) {
-          return prev.filter(opt => opt.choiceId !== choiceId);
-        } else {
-          return [...prev, { choiceId, choiceName }];
-        }
-      });
-      
       setSelectedChoiceIds(prev => {
         const exists = prev.includes(choiceId);
         if (exists) {
@@ -808,14 +875,14 @@ const BookingPage: React.FC = () => {
       });
     } else {
       // For single choice options
-      setSelectedOptions([{ choiceId, choiceName }]);
       setSelectedChoiceIds([choiceId]);
     }
   };
 
   // Calculate price when options change
   const handlePriceCalculation = async () => {
-    if (bookingData.serviceId && selectedChoiceIds.length >= 0) {
+    if (bookingData.serviceId) {
+      // API expects simple format: { serviceId, selectedChoiceIds, quantity }
       await calculateServicePrice({
         serviceId: parseInt(bookingData.serviceId),
         selectedChoiceIds: selectedChoiceIds,
@@ -862,7 +929,7 @@ const BookingPage: React.FC = () => {
         await loadSuitableEmployees({
           serviceId: parseInt(bookingData.serviceId),
           bookingTime: bookingDateTime,
-          district: 'Quận Tân Phú', // Default district
+          ward: 'Phường Tây Thạnh', // Default ward
           city: 'TP. Hồ Chí Minh', // Default city
           latitude: mapCoordinates?.lat || 10.7769,
           longitude: mapCoordinates?.lng || 106.6601
@@ -870,104 +937,6 @@ const BookingPage: React.FC = () => {
       } catch (error) {
         setEmployeeSelectionErrors(['Không thể tải danh sách nhân viên phù hợp. Vui lòng thử lại sau.']);
       }
-    }
-  };
-
-  // Validate booking before submission
-  const handleBookingValidation = async (): Promise<boolean> => {
-    if (!user?.customerId || !bookingData.serviceId) return false;
-
-    try {
-      // Handle address selection for validation
-      let addressId: string | null = null;
-      let newAddress: any = null;
-
-      if (addressSource === 'profile') {
-        const defaultAddress = await getDefaultAddress(user.customerId);
-        if (!defaultAddress?.addressId) {
-          setErrorMessages(['Không thể lấy địa chỉ mặc định']);
-          return false;
-        }
-        addressId = defaultAddress.addressId;
-      } else if (addressSource === 'current' || addressSource === 'custom') {
-        const finalAddress = addressSource === 'current' ? currentLocationAddress : customAddress;
-        const finalCoordinates = addressSource === 'current' ? mapCoordinates : null;
-        
-        if (!finalAddress) {
-          setErrorMessages(['Vui lòng nhập địa chỉ']);
-          return false;
-        }
-
-        newAddress = {
-          customerId: user.customerId,
-          fullAddress: finalAddress,
-          ward: addressDetails.ward || 'Phường/Xã',
-          district: addressDetails.district || 'Quận/Huyện', 
-          city: addressDetails.city || 'TP. Hồ Chí Minh',
-          latitude: finalCoordinates?.lat || null,
-          longitude: finalCoordinates?.lng || null
-        };
-      }
-
-      // Format date and time consistently (YYYY-MM-DDTHH:MM:SS format)
-      const timeWithSeconds = bookingData.time.includes(':') && bookingData.time.split(':').length === 2
-        ? `${bookingData.time}:00`
-        : bookingData.time;
-      const bookingTimeISO = `${bookingData.date}T${timeWithSeconds}`;
-      
-      const validationRequest: BookingValidationRequest = {
-        addressId: addressId || undefined,
-        newAddress: newAddress || undefined,
-        bookingTime: bookingTimeISO,
-        note: bookingData.notes || undefined,
-        promoCode: bookingData.promoCode || null,
-        bookingDetails: [{
-          serviceId: parseInt(bookingData.serviceId),
-          quantity: 1,
-          expectedPrice: priceData?.finalPrice || (services.find(s => s.serviceId === parseInt(bookingData.serviceId))?.basePrice || 0),
-          expectedPricePerUnit: priceData?.finalPrice || (services.find(s => s.serviceId === parseInt(bookingData.serviceId))?.basePrice || 0),
-          selectedChoiceIds: selectedChoiceIds
-        }],
-        assignments: selectedEmployees.length > 0 ? selectedEmployees.map(employeeId => ({
-          serviceId: parseInt(bookingData.serviceId),
-          employeeId: employeeId
-        })) : null, // Use null when no assignments (as per API spec)
-        paymentMethodId: parseInt(bookingData.paymentMethod) || 1
-      };
-
-      console.log('🔍 [VALIDATION DEBUG] Sending validation request:', JSON.stringify(validationRequest, null, 2));
-      
-      const validationResult = await validateBooking(validationRequest);
-      
-      console.log('🔍 [VALIDATION DEBUG] Validation response:', JSON.stringify(validationResult, null, 2));
-      
-      // If validation API failed (returned null), skip validation and proceed
-      if (validationResult === null) {
-        console.log('⚠️ [VALIDATION] Validation API failed - skipping validation and proceeding with booking');
-        return true; // Allow booking to proceed even if validation fails
-      }
-      
-      if (validationResult?.valid) {
-        console.log('✅ [VALIDATION] Booking validation passed');
-        return true;
-      } else {
-        // Combine errors and conflicts into error messages
-        const allErrors = [
-          ...(validationResult?.errors || []),
-          ...(validationResult?.conflicts?.map(c => c.reason) || [])
-        ];
-        console.log('❌ [VALIDATION] Booking validation failed:', {
-          errors: validationResult?.errors || [],
-          conflicts: validationResult?.conflicts || [],
-          allErrors
-        });
-        setErrorMessages(allErrors.length > 0 ? allErrors : ['Đặt lịch không hợp lệ']);
-        return false;
-      }
-    } catch (error) {
-      console.error('Validation error:', error);
-      setErrorMessages(['Lỗi khi kiểm tra thông tin đặt lịch']);
-      return false;
     }
   };
 
@@ -1009,12 +978,6 @@ const BookingPage: React.FC = () => {
         setErrorMessages(['Thời gian đặt lịch phải cách hiện tại ít nhất 2 giờ theo quy định']);
         return;
       }
-
-      // Validate booking before proceeding
-      const isValidBooking = await handleBookingValidation();
-      if (!isValidBooking) {
-        return; // Error messages already set by validation
-      }
       
       // Handle address selection logic
       let addressId: string | null = null;
@@ -1048,11 +1011,19 @@ const BookingPage: React.FC = () => {
         }
       } else if (addressSource === 'current' || addressSource === 'custom') {
         // Use new address (current location or custom input)
-        const finalAddress = addressSource === 'current' ? currentLocationAddress : customAddress;
+        let finalAddress = '';
+        
+        if (addressSource === 'current') {
+          finalAddress = currentLocationAddress;
+        } else if (addressSource === 'custom') {
+          // Use manualAddress if in manual mode, otherwise use bookingData.address (auto-formatted)
+          finalAddress = isManualAddress ? manualAddress : bookingData.address;
+        }
+        
         const finalCoordinates = addressSource === 'current' ? mapCoordinates : null;
         
-        if (!finalAddress) {
-          setErrorMessages(['Vui lòng nhập địa chỉ']);
+        if (!finalAddress || !finalAddress.trim()) {
+          setErrorMessages(['Vui lòng nhập địa chỉ đầy đủ']);
           return;
         }
 
@@ -1060,9 +1031,9 @@ const BookingPage: React.FC = () => {
         newAddress = {
           customerId: user.customerId,
           fullAddress: finalAddress,
-          ward: addressDetails.ward || 'Phường/Xã',
-          district: addressDetails.district || 'Quận/Huyện', 
-          city: addressDetails.city || 'TP. Hồ Chí Minh',
+          ward: addressSource === 'custom' && !isManualAddress ? selectedCommuneName : '',
+          district: '',
+          city: addressSource === 'custom' && !isManualAddress ? selectedProvinceName : '',
           latitude: finalCoordinates?.lat || null,
           longitude: finalCoordinates?.lng || null
         };
@@ -1075,8 +1046,8 @@ const BookingPage: React.FC = () => {
 
       // Convert data to match API request format based on API docs
       const bookingRequest: CreateBookingRequest = {
-        addressId: addressId, // Use existing address ID or null for new address
-        newAddress: newAddress, // Use new address object or null for existing address
+        addressId: addressId || null, // Use existing address ID or null for new address
+        fullAddress: newAddress ? newAddress.fullAddress : undefined,
         bookingTime: bookingDateTime,
         note: bookingData.notes || null,
         promoCode: bookingData.promoCode || null,
@@ -1093,12 +1064,19 @@ const BookingPage: React.FC = () => {
         assignments: selectedEmployees.length > 0 ? selectedEmployees.map(employeeId => ({
           serviceId: serviceId,
           employeeId: employeeId
-        })) : null, // Use null when no assignments (as per API spec)
+        })) : undefined,
         paymentMethodId: parseInt(bookingData.paymentMethod) || 1 // Use selected payment method ID
       };
 
       // Debug: Log booking request
       console.log('📋 [REQUEST] Sending booking request:', JSON.stringify(bookingRequest, null, 2));
+      
+      // Additional validation before sending
+      if (!bookingRequest.addressId && !bookingRequest.fullAddress) {
+        console.error('❌ [VALIDATION] Neither addressId nor fullAddress is provided!');
+        setErrorMessages(['Lỗi: Thiếu thông tin địa chỉ. Vui lòng kiểm tra lại.']);
+        return;
+      }
       
       // Call API to create booking
       const result = await createBooking(bookingRequest);
@@ -1144,7 +1122,9 @@ const BookingPage: React.FC = () => {
   };
 
   const selectedService = services.find(s => s.serviceId === parseInt(bookingData.serviceId));
-  const estimatedPrice = selectedService ? selectedService.basePrice * (bookingData.duration / (selectedService.estimatedDurationHours * 60 || 120)) : 0;
+  const estimatedPrice = selectedService && bookingData.duration 
+    ? selectedService.basePrice * (bookingData.duration / (selectedService.estimatedDurationHours * 60 || 120)) 
+    : 0;
 
   const getServiceIcon = (category: string) => {
     switch (category) {
@@ -1337,7 +1317,7 @@ const BookingPage: React.FC = () => {
                     <div key={option.optionId} className="bg-white rounded-lg p-4 shadow-sm border border-amber-100">
                       <label className="block text-sm font-semibold text-gray-800 mb-3">
                         {option.optionName} 
-                        {option.isRequired && <span className="text-red-500 ml-1">*</span>}
+                        {option.required && <span className="text-red-500 ml-1">*</span>}
                       </label>
                       
                       {option.optionType === 'SINGLE_CHOICE_RADIO' && option.choices && (
@@ -1363,12 +1343,12 @@ const BookingPage: React.FC = () => {
                           className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
                           onChange={(e) => {
                             const choiceId = parseInt(e.target.value);
-                            const choice = option.choices.find(c => c.choiceId === choiceId);
+                            const choice = option.choices?.find(c => c.choiceId === choiceId);
                             if (choice) {
                               handleOptionSelect(choiceId, choice.choiceName, false);
                             }
                           }}
-                          value={selectedChoiceIds.find(id => option.choices.some(c => c.choiceId === id)) || ''}
+                          value={selectedChoiceIds.find(id => option.choices?.some(c => c.choiceId === id)) || ''}
                         >
                           <option value="">Chọn {option.optionName.toLowerCase()}</option>
                           {option.choices && option.choices.map((choice) => (
@@ -1421,10 +1401,16 @@ const BookingPage: React.FC = () => {
                         <span className="text-gray-600">Giá cơ bản:</span>
                         <span className="font-medium">{priceData.basePrice.toLocaleString('vi-VN')}đ</span>
                       </div>
-                      {priceData.totalAdjustment > 0 && (
-                        <div className="flex justify-between items-center">
-                          <span className="text-gray-600">Phụ thu:</span>
-                          <span className="font-medium text-orange-600">+{priceData.totalAdjustment.toLocaleString('vi-VN')}đ</span>
+                      {priceData.breakdown?.selectedOptions && priceData.breakdown.selectedOptions.length > 0 && (
+                        <div className="space-y-2">
+                          {priceData.breakdown.selectedOptions.map((opt: any, idx: number) => (
+                            <div key={idx} className="flex justify-between items-center">
+                              <span className="text-gray-600">{opt.choiceName}:</span>
+                              <span className={`font-medium ${opt.priceAdjustment > 0 ? 'text-orange-600' : 'text-green-600'}`}>
+                                {opt.priceAdjustment > 0 ? '+' : ''}{opt.priceAdjustment.toLocaleString('vi-VN')}đ
+                              </span>
+                            </div>
+                          ))}
                         </div>
                       )}
                       <div className="border-t pt-3">
@@ -1439,13 +1425,13 @@ const BookingPage: React.FC = () => {
                             <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                             </svg>
-                            <span className="text-gray-700">Thời gian: <strong>{priceData.formattedDuration}</strong></span>
+                            <span className="text-gray-700">Thời gian: <strong>{priceData.estimatedDurationHours ? `${priceData.estimatedDurationHours}h` : 'Đang tính'}</strong></span>
                           </div>
                           <div className="flex items-center">
                             <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                             </svg>
-                            <span className="text-gray-700">Nhân viên: <strong>{priceData.suggestedStaff}</strong></span>
+                            <span className="text-gray-700">Nhân viên: <strong>{priceData.suggestedStaff ?? 1}</strong></span>
                           </div>
                         </div>
                       </div>
@@ -1661,64 +1647,140 @@ const BookingPage: React.FC = () => {
 
               {addressSource === 'custom' && (
                 <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
-                  <h5 className="font-semibold text-gray-900 mb-4 flex items-center">
-                    <MapPin className="w-5 h-5 mr-2 text-purple-600" />
-                    Nhập địa chỉ chi tiết
-                  </h5>
-                  
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-semibold text-gray-800 mb-2">
-                        Địa chỉ đầy đủ <span className="text-red-500">*</span>
-                      </label>
-                      <textarea
-                        value={customAddress}
-                        onChange={(e) => setCustomAddress(e.target.value)}
-                        placeholder="Ví dụ: 123 Nguyễn Văn Linh, Phường An Phú, Quận 2, TP. Hồ Chí Minh"
-                        className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all resize-none"
-                        rows={3}
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Phường/Xã
-                        </label>
-                        <input
-                          type="text"
-                          value={addressDetails.ward}
-                          onChange={(e) => setAddressDetails(prev => ({ ...prev, ward: e.target.value }))}
-                          placeholder="Phường An Phú"
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Quận/Huyện
-                        </label>
-                        <input
-                          type="text"
-                          value={addressDetails.district}
-                          onChange={(e) => setAddressDetails(prev => ({ ...prev, district: e.target.value }))}
-                          placeholder="Quận 2"
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Thành phố
-                        </label>
-                        <input
-                          type="text"
-                          value={addressDetails.city}
-                          onChange={(e) => setAddressDetails(prev => ({ ...prev, city: e.target.value }))}
-                          placeholder="TP. Hồ Chí Minh"
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
-                        />
-                      </div>
-                    </div>
+                  <div className="flex items-center justify-between mb-4">
+                    <h5 className="font-semibold text-gray-900 flex items-center">
+                      <MapPin className="w-5 h-5 mr-2 text-purple-600" />
+                      Nhập địa chỉ chi tiết
+                    </h5>
+                    
+                    <button
+                      type="button"
+                      onClick={toggleAddressInputMode}
+                      className="px-3 py-1.5 text-sm bg-white border border-purple-300 text-purple-700 rounded-lg hover:bg-purple-50 transition-colors"
+                    >
+                      {isManualAddress ? '✏️ Nhập có hỗ trợ' : '⌨️ Nhập thủ công'}
+                    </button>
                   </div>
+                  
+                  {!isManualAddress ? (
+                    <div className="space-y-4">
+                      {/* Form có hỗ trợ - Địa chỉ 2 cấp */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* Tỉnh/Thành phố */}
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-800 mb-2">
+                            Tỉnh/Thành phố <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            value={selectedProvinceCode}
+                            onChange={handleProvinceChange}
+                            disabled={isLoadingProvinces}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          >
+                            <option value="">-- Chọn tỉnh/thành phố --</option>
+                            {provinces.map(province => (
+                              <option key={province.code} value={province.code}>
+                                {province.name}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Phường/Xã */}
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-800 mb-2">
+                            Phường/Xã <span className="text-red-500">*</span>
+                          </label>
+                          <select
+                            value={selectedCommuneCode}
+                            onChange={handleCommuneChange}
+                            disabled={!selectedProvinceCode || isLoadingCommunes}
+                            className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
+                          >
+                            <option value="">-- Chọn phường/xã --</option>
+                            {communes.map(commune => (
+                              <option key={commune.code} value={commune.code}>
+                                {commune.name}
+                              </option>
+                            ))}
+                          </select>
+                          {!selectedProvinceCode && (
+                            <p className="text-xs text-gray-500 mt-1">Vui lòng chọn tỉnh/thành phố trước</p>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Số nhà, tên đường */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-800 mb-2">
+                          Số nhà, tên đường <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={streetAddress}
+                          onChange={handleStreetAddressChange}
+                          placeholder="Ví dụ: 123 Nguyễn Văn Linh"
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+                        />
+                      </div>
+
+                      {/* Hiển thị địa chỉ đầy đủ */}
+                      {bookingData.address && (
+                        <div className="p-4 bg-white border border-purple-200 rounded-lg">
+                          <p className="text-sm font-medium text-gray-700 mb-1">Địa chỉ đầy đủ:</p>
+                          <p className="text-gray-900">{bookingData.address}</p>
+                        </div>
+                      )}
+
+                      {/* Validation warning */}
+                      {(!selectedProvinceCode || !selectedCommuneCode || !streetAddress.trim()) && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                          <p className="text-sm text-amber-800 flex items-start">
+                            <AlertTriangle className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
+                            <span>
+                              <strong>Chưa đủ thông tin:</strong> Vui lòng điền đầy đủ các trường có dấu <span className="text-red-500">*</span> để tiếp tục.
+                            </span>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {/* Form nhập thủ công */}
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-800 mb-2">
+                          Địa chỉ đầy đủ <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          value={manualAddress}
+                          onChange={handleManualAddressChange}
+                          placeholder="Ví dụ: 123 Nguyễn Văn Linh, Phường An Phú, Thành phố Hồ Chí Minh"
+                          className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all resize-none"
+                          rows={4}
+                        />
+                      </div>
+
+                      {/* Hướng dẫn */}
+                      <div className="bg-white rounded-lg p-3 border border-purple-200">
+                        <p className="text-sm text-gray-600">
+                          💡 <strong>Lưu ý:</strong> Nhập địa chỉ đầy đủ theo định dạng: 
+                          Số nhà Tên đường, Phường/Xã, Tỉnh/Thành phố
+                        </p>
+                      </div>
+
+                      {/* Validation warning */}
+                      {!manualAddress.trim() && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3">
+                          <p className="text-sm text-amber-800 flex items-start">
+                            <AlertTriangle className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
+                            <span>
+                              <strong>Chưa nhập địa chỉ:</strong> Vui lòng nhập địa chỉ đầy đủ để tiếp tục.
+                            </span>
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -2137,7 +2199,7 @@ const BookingPage: React.FC = () => {
                                     <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 ml-2" />
                                   )}
                                 </div>
-                                <p className="text-sm text-gray-600 mb-2">{employee.workingCity}</p>
+                                <p className="text-sm text-gray-600 mb-2">TP. Hồ Chí Minh</p>
                                 <div className="flex items-center justify-between mb-2">
                                   <div className="flex items-center">
                                     <svg className="w-4 h-4 text-yellow-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -2145,18 +2207,18 @@ const BookingPage: React.FC = () => {
                                     </svg>
                                     <span className="text-sm text-gray-700">{employee.rating || 'Mới'}</span>
                                   </div>
-                                  <span className="text-sm text-green-600 font-medium">{employee.completedJobs} việc</span>
+                                  <span className="text-sm text-green-600 font-medium">{employee.totalCompletedJobs || 0} việc</span>
                                 </div>
-                                {employee.skills && employee.skills.length > 0 && (
+                                {employee.primarySkills && employee.primarySkills.length > 0 && (
                                   <div className="flex flex-wrap gap-1">
-                                    {employee.skills.slice(0, 2).map((skill, index) => (
+                                    {employee.primarySkills.slice(0, 2).map((skill: string, index: number) => (
                                       <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                                         {skill}
                                       </span>
                                     ))}
-                                    {employee.skills.length > 2 && (
+                                    {employee.primarySkills.length > 2 && (
                                       <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                                        +{employee.skills.length - 2}
+                                        +{employee.primarySkills.length - 2}
                                       </span>
                                     )}
                                   </div>
@@ -2303,7 +2365,7 @@ const BookingPage: React.FC = () => {
                                         <h6 className="font-semibold text-gray-900 text-sm">{employee.fullName}</h6>
                                         <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0 ml-2" />
                                       </div>
-                                      <p className="text-xs text-gray-600 mb-2">{employee.workingCity || 'TP. Hồ Chí Minh'}</p>
+                                      <p className="text-xs text-gray-600 mb-2">TP. Hồ Chí Minh</p>
                                       <div className="flex items-center justify-between mb-2">
                                         <div className="flex items-center">
                                           <svg className="w-3 h-3 text-yellow-500 mr-1" fill="currentColor" viewBox="0 0 20 20">
@@ -2311,11 +2373,11 @@ const BookingPage: React.FC = () => {
                                           </svg>
                                           <span className="text-xs text-gray-700">{employee.rating || 'Mới'}</span>
                                         </div>
-                                        <span className="text-xs text-green-600 font-medium">{employee.totalCompletedJobs || employee.completedJobs || 0} việc</span>
+                                        <span className="text-xs text-green-600 font-medium">{employee.totalCompletedJobs || 0} việc</span>
                                       </div>
                                       {employee.primarySkills && employee.primarySkills.length > 0 && (
                                         <div className="flex flex-wrap gap-1">
-                                          {employee.primarySkills.slice(0, 2).map((skill, index) => (
+                                          {employee.primarySkills.slice(0, 2).map((skill: string, index: number) => (
                                             <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                                               {skill}
                                             </span>
@@ -2323,20 +2385,6 @@ const BookingPage: React.FC = () => {
                                           {employee.primarySkills.length > 2 && (
                                             <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
                                               +{employee.primarySkills.length - 2}
-                                            </span>
-                                          )}
-                                        </div>
-                                      )}
-                                      {employee.skills && employee.skills.length > 0 && !employee.primarySkills && (
-                                        <div className="flex flex-wrap gap-1">
-                                          {employee.skills.slice(0, 2).map((skill, index) => (
-                                            <span key={index} className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                                              {skill}
-                                            </span>
-                                          ))}
-                                          {employee.skills.length > 2 && (
-                                            <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full">
-                                              +{employee.skills.length - 2}
                                             </span>
                                           )}
                                         </div>
@@ -2628,7 +2676,11 @@ const BookingPage: React.FC = () => {
                   disabled={
                     (step === 1 && !bookingData.serviceId) ||
                     (step === 2 && (
-                      (addressSource === 'custom' && !customAddress) ||
+                      (addressSource === 'custom' && (
+                        isManualAddress 
+                          ? !manualAddress.trim()
+                          : (!selectedProvinceCode || !selectedCommuneCode || !streetAddress.trim())
+                      )) ||
                       (addressSource === 'current' && !currentLocationAddress) ||
                       (addressSource === 'profile' && (!user?.customerId))
                     )) ||

@@ -21,11 +21,13 @@ export const usePaymentMethods = () => {
 
     try {
       const methods = await getPaymentMethodsApi();
-      setPaymentMethods(methods);
+      // API trả về trực tiếp PaymentMethod[], không có wrapper
+      setPaymentMethods(methods || []);
     } catch (err: any) {
       const errorMessage = err?.response?.data?.message || err.message || 'Failed to load payment methods';
       setError(errorMessage);
       console.error('Payment methods loading error:', err);
+      setPaymentMethods([]);
     } finally {
       setIsLoading(false);
     }

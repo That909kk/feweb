@@ -259,9 +259,15 @@ export interface CalculatePriceRequest {
 
 export interface CalculatePriceResponse extends ApiResponse {
   data: {
+    serviceId: number;
+    serviceName: string;
     basePrice: number;
-    optionAdjustments: number;
-    total: number;
+    totalAdjustment: number;
+    finalPrice: number;
+    suggestedStaff: number;
+    estimatedDurationHours: number;
+    formattedPrice?: string;
+    formattedDuration?: string;
     breakdown?: {
       serviceName: string;
       basePrice: number;
@@ -353,8 +359,8 @@ export interface BookingAssignmentRequest {
 }
 
 export interface CreateBookingRequest {
-  addressId: string; // Required by backend validation (@NotBlank)
-  fullAddress?: string | null; // Optional alternative (not currently used)
+  addressId: string | null; // Can be null when using fullAddress
+  fullAddress?: string | null; // Optional alternative for new address
   bookingTime: string;
   note?: string | null;
   promoCode?: string | null;

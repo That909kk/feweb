@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import {
   getServicesApi,
-  getServiceByIdApi,
   calculatePriceApi,
   getServiceOptionsApi,
   calculateServicePriceApi,
@@ -12,8 +11,6 @@ import type {
   CalculatePriceRequest,
   CalculatePriceResponse,
   ServiceWithOptions,
-  PriceCalculationRequest,
-  PriceCalculationResponse,
   SuitableEmployee
 } from '../types/api';export const useServices = () => {
   const [services, setServices] = useState<Service[]>([]);
@@ -131,13 +128,13 @@ export const useServiceOptions = () => {
   };
 };
 
-// Hook for new price calculation with options
+// Hook for price calculation with options
 export const useServicePriceCalculation = () => {
-  const [priceData, setPriceData] = useState<PriceCalculationResponse['data'] | null>(null);
+  const [priceData, setPriceData] = useState<CalculatePriceResponse['data'] | null>(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const calculateServicePrice = async (request: PriceCalculationRequest) => {
+  const calculateServicePrice = async (request: CalculatePriceRequest) => {
     setIsCalculating(true);
     setError(null);
 
@@ -180,7 +177,7 @@ export const useSuitableEmployees = () => {
   const loadSuitableEmployees = async (params: {
     serviceId: number;
     bookingTime: string;
-    district?: string;
+    ward?: string;
     city?: string;
     latitude?: number;
     longitude?: number;
