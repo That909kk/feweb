@@ -189,8 +189,8 @@ const Navigation: React.FC<NavigationProps> = ({ role, collapsed, onNavigate }) 
   const location = useLocation();
 
   const activeRole = role ?? selectedRole ?? 'CUSTOMER';
-  const navItems = navigationConfig[activeRole];
-  const quickAction = quickActionConfig[activeRole];
+  const navItems = useMemo(() => navigationConfig[activeRole], [activeRole]);
+  const quickAction = useMemo(() => quickActionConfig[activeRole], [activeRole]);
   const workspaceLabel = roleLabels[activeRole];
 
   const isActive = (path: string) => location.pathname.startsWith(path);

@@ -77,6 +77,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   // Load auth data from localStorage on mount
   useEffect(() => {
+    let mounted = true;
+    
     const initializeAuth = async () => {
       const storedUser = localStorage.getItem('user');
       const storedRole = localStorage.getItem('selectedRole');
@@ -87,14 +89,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           const userData = JSON.parse(storedUser);
           
           // Validate token before restoring session
-          setIsLoading(true);
+          if (mounted) setIsLoading(true);
           const isTokenValid = await validateTokenSilently();
           
-          if (isTokenValid) {
+          if (isTokenValid && mounted) {
             setUser(userData);
             setSelectedRole(storedRole as UserRole);
             console.log('✅ Session restored successfully');
-          } else {
+          } else if (mounted) {
             console.log('❌ Token invalid, clearing stored data');
             // Clear invalid data
             localStorage.removeItem('user');
@@ -110,23 +112,33 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } catch (error) {
           console.error('Error loading stored auth data:', error);
           // Clear corrupted data
-          localStorage.removeItem('user');
-          localStorage.removeItem('selectedRole');
-          localStorage.removeItem('accessToken');
-          localStorage.removeItem('refreshToken');
-          localStorage.removeItem('expireIn');
-          localStorage.removeItem('deviceType');
-          localStorage.removeItem('customerId');
-          localStorage.removeItem('employeeId');
-          localStorage.removeItem('adminProfileId');
+          if (mounted) {
+            localStorage.removeItem('user');
+            localStorage.removeItem('selectedRole');
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('expireIn');
+            localStorage.removeItem('deviceType');
+            localStorage.removeItem('customerId');
+            localStorage.removeItem('employeeId');
+            localStorage.removeItem('adminProfileId');
+          }
         } finally {
-          setIsLoading(false);
+          if (mounted) {
+            setIsLoading(false);
+          }
         }
       }
-      setIsInitialized(true);
+      if (mounted) {
+        setIsInitialized(true);
+      }
     };
 
     initializeAuth();
+    
+    return () => {
+      mounted = false;
+    };
   }, []);
 
   // Step 1: Get available roles

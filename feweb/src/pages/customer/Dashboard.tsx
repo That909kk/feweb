@@ -93,9 +93,43 @@ const CustomerDashboard: React.FC = () => {
   const [recentBookings, setRecentBookings] = useState<CustomerBooking[]>([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(false);
 
+  const firstName = useMemo(() => {
+    if (!user?.fullName) return 'Khách hàng';
+    const parts = user.fullName.trim().split(' ');
+    return parts[parts.length - 1] || user.fullName;
+  }, [user?.fullName]);
+
+  const metrics = useMemo(() => {
+    const total = recentBookings.length;
+    const completed = recentBookings.filter(item => item.status === 'COMPLETED').length;
+    const awaiting = recentBookings.filter(item => item.status === 'AWAITING_EMPLOYEE' || item.status === 'PENDING').length;
+
+    return {
+      total,
+      completed,
+      awaiting
+    };
+  }, [recentBookings]);
+
+  const upcomingBookings = useMemo(() => {
+    const now = new Date();
+    return recentBookings
+      .filter(item => {
+        if (!item.bookingTime) return false;
+        return new Date(item.bookingTime) >= now;
+      })
+      .sort((a, b) => (a.bookingTime || '').localeCompare(b.bookingTime || ''))
+      .slice(0, 3);
+  }, [recentBookings]);
+
+  const featuredServices = useMemo(() => services.slice(0, 4), [services]);
+
   useEffect(() => {
     const loadRecentBookings = async () => {
-      if (!user?.id) return;
+      if (!user?.id) {
+        setRecentBookings([]);
+        return;
+      }
 
       setIsLoadingBookings(true);
       try {
@@ -122,39 +156,9 @@ const CustomerDashboard: React.FC = () => {
     };
 
     loadRecentBookings();
+    // getCustomerBookings is stable (wrapped in useCallback with [])
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
-
-  const firstName = useMemo(() => {
-    if (!user?.fullName) return 'Khách hàng';
-    const parts = user.fullName.trim().split(' ');
-    return parts[parts.length - 1] || user.fullName;
-  }, [user]);
-
-  const metrics = useMemo(() => {
-    const total = recentBookings.length;
-    const completed = recentBookings.filter(item => item.status === 'COMPLETED').length;
-    const awaiting = recentBookings.filter(item => item.status === 'AWAITING_EMPLOYEE' || item.status === 'PENDING').length;
-
-    return {
-      total,
-      completed,
-      awaiting
-    };
-  }, [recentBookings]);
-
-  const upcomingBookings = useMemo(() => {
-    const now = new Date();
-    return recentBookings
-      .filter(item => {
-        if (!item.bookingTime) return false;
-        return new Date(item.bookingTime) >= now;
-      })
-      .sort((a, b) => (a.bookingTime || '').localeCompare(b.bookingTime || ''))
-      .slice(0, 3);
-  }, [recentBookings]);
-
-  const featuredServices = useMemo(() => services.slice(0, 4), [services]);
 
   const renderStatusBadge = (status: string) => {
     const badgeClass = statusBadgeMap[status] || statusBadgeMap.default;

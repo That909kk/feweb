@@ -10,6 +10,28 @@ const AuthPage: React.FC = () => {
   const { user, login, getRoles, isAuthenticated, isInitialized } = useAuth();
   const [isRedirecting, setIsRedirecting] = useState(false);
   
+  const initialMode = searchParams.get('mode') === 'register' ? 'register' : 'login';
+  const [mode, setMode] = useState<'login' | 'register' | 'selectRole'>(
+    user && user.roles.length > 1 ? 'selectRole' : initialMode
+  );
+  
+  const [availableRoles, setAvailableRoles] = useState<UserRole[]>([]);
+  
+  const [formData, setFormData] = useState({
+    username: '',
+    password: '',
+    confirmPassword: '',
+    fullName: '',
+    email: '',
+    phone: '',
+    userType: 'customer' as UserRole
+  });
+  
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  
   // Redirect to dashboard if already authenticated
   useEffect(() => {
     if (isInitialized && isAuthenticated && user && !isRedirecting) {
@@ -30,30 +52,6 @@ const AuthPage: React.FC = () => {
     }
   }, [isInitialized, isAuthenticated, user, navigate, isRedirecting]);
 
-  // Show loading while checking authentication status or redirecting
-  if (!isInitialized || isRedirecting) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-4 border-brand-teal border-t-transparent mx-auto"></div>
-          <p className="mt-4 text-brand-navy font-medium">Đang kiểm tra trạng thái đăng nhập...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Don't render auth form if user is authenticated (safety check)
-  if (isAuthenticated && user) {
-    return null; // Component will redirect in useEffect above
-  }
-  
-  const initialMode = searchParams.get('mode') === 'register' ? 'register' : 'login';
-  const [mode, setMode] = useState<'login' | 'register' | 'selectRole'>(
-    user && user.roles.length > 1 ? 'selectRole' : initialMode
-  );
-  
-  const [availableRoles, setAvailableRoles] = useState<UserRole[]>([]);
-  
   // Cập nhật availableRoles khi chuyển sang chế độ chọn vai trò
   useEffect(() => {
     console.log(`🔍 [DEBUG] useEffect chạy với mode=${mode}, availableRoles.length=${availableRoles.length}`);
@@ -76,21 +74,6 @@ const AuthPage: React.FC = () => {
       }
     }
   }, [mode, availableRoles.length, getRoles]);
-  
-  const [formData, setFormData] = useState({
-    username: '',
-    password: '',
-    confirmPassword: '',
-    fullName: '',
-    email: '',
-    phone: '',
-    userType: 'customer' as UserRole
-  });
-  
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
 
   // Đặt lại availableRoles khi quay lại màn hình đăng nhập
   useEffect(() => {
@@ -98,6 +81,23 @@ const AuthPage: React.FC = () => {
       setAvailableRoles([]);
     }
   }, [mode]);
+
+  // Show loading while checking authentication status or redirecting
+  if (!isInitialized || isRedirecting) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-green-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-brand-teal border-t-transparent mx-auto"></div>
+          <p className="mt-4 text-brand-navy font-medium">Đang kiểm tra trạng thái đăng nhập...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Don't render auth form if user is authenticated (safety check)
+  if (isAuthenticated && user) {
+    return null; // Component will redirect in useEffect above
+  }
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
