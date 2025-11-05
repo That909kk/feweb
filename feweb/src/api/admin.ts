@@ -417,24 +417,48 @@ export const deleteAdminPricingRuleApi = async (ruleId: number): Promise<ApiResp
  * Get all bookings (Admin only)
  * Endpoint: GET /api/v1/admin/bookings
  * Theo API-TestCases-Admin-GetAllBookings.md
- * Response: Pagination object trực tiếp
+ * Response format:
+ * {
+ *   success: true,
+ *   data: [
+ *     { success: true, message: "...", data: {...booking} },
+ *     ...
+ *   ],
+ *   currentPage: 0,
+ *   totalItems: 50,
+ *   totalPages: 5
+ * }
  */
 export const getAllBookingsApi = async (params?: {
   page?: number;
   size?: number;
-  sort?: string;
-}): Promise<any> => {
+}): Promise<{
+  success: boolean;
+  data: any[];
+  currentPage: number;
+  totalItems: number;
+  totalPages: number;
+}> => {
   try {
     console.log('[API] Admin fetching all bookings with params:', params);
     const response = await api.get('/admin/bookings', {
       params: {
-        page: params?.page || 0,
-        size: params?.size || 10,
-        sort: params?.sort || 'bookingTime,desc'
+        page: params?.page ?? 0,
+        size: params?.size ?? 10
       }
     });
     console.log('[API] Got all bookings:', response.data);
-    return response.data;
+    
+    // Extract actual booking data from nested wrapper
+    const flattenedData = response.data.data?.map((item: any) => {
+      // Each item has structure: { success, message, data: {...actualBooking} }
+      return item.data || item;
+    }) || [];
+    
+    return {
+      ...response.data,
+      data: flattenedData
+    };
   } catch (error: any) {
     console.error('[API] Error fetching all bookings:', error);
     throw error;
@@ -459,6 +483,20 @@ export const getUnverifiedBookingsApi = async (params?: {
       }
     });
     console.log('[API] Got unverified bookings:', response.data);
+    
+    // Extract actual booking data from nested wrapper if present
+    if (response.data.data && Array.isArray(response.data.data)) {
+      const flattenedData = response.data.data.map((item: any) => {
+        // Each item might have structure: { success, message, data: {...actualBooking} }
+        return item.data || item;
+      });
+      
+      return {
+        ...response.data,
+        data: flattenedData
+      };
+    }
+    
     return response.data;
   } catch (error: any) {
     console.error('[API] Error fetching unverified bookings:', error);
@@ -468,8 +506,8 @@ export const getUnverifiedBookingsApi = async (params?: {
 
 /**
  * Verify or reject booking post
- * Endpoint: PUT /api/v1/customer/bookings/admin/{bookingId}/verify
- * Theo API-Admin-Booking-Verification.md
+ * Endpoint: PUT /api/v1/admin/bookings/{bookingId}/verify
+ * Theo API-TestCases-Admin-BookingManagement.md
  */
 export const verifyBookingApi = async (
   bookingId: string,
@@ -482,7 +520,7 @@ export const verifyBookingApi = async (
   try {
     console.log(`[API] Admin verifying booking ${bookingId}:`, data);
     const response = await api.put<ApiResponse<any>>(
-      `/customer/bookings/admin/${bookingId}/verify`,
+      `/admin/bookings/${bookingId}/verify`,
       data
     );
     console.log('[API] Booking verification result:', response.data);

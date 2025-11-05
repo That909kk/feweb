@@ -97,6 +97,7 @@ type BookingItem = {
 
 type StatusKey =
   | 'ALL'
+  | 'PENDING'
   | 'AWAITING_EMPLOYEE'
   | 'CONFIRMED'
   | 'IN_PROGRESS'
@@ -105,6 +106,7 @@ type StatusKey =
 
 const statusConfig: Record<StatusKey, { label: string; badge: string }> = {
   ALL: { label: 'Tất cả', badge: 'bg-slate-100 text-slate-700' },
+  PENDING: { label: 'Chờ xử lý', badge: 'bg-violet-100 text-violet-700' },
   AWAITING_EMPLOYEE: { label: 'Chờ phân công', badge: 'bg-indigo-100 text-indigo-700' },
   CONFIRMED: { label: 'Đã xác nhận', badge: 'bg-sky-100 text-sky-700' },
   IN_PROGRESS: { label: 'Đang thực hiện', badge: 'bg-amber-100 text-amber-700' },
@@ -114,6 +116,7 @@ const statusConfig: Record<StatusKey, { label: string; badge: string }> = {
 
 const filterOrder: StatusKey[] = [
   'ALL',
+  'PENDING',
   'AWAITING_EMPLOYEE',
   'CONFIRMED',
   'IN_PROGRESS',
@@ -138,6 +141,7 @@ const OrdersPage: React.FC = () => {
   const [cancelReason, setCancelReason] = useState('');
   const [isCancelling, setIsCancelling] = useState(false);
   const [showCancelDialog, setShowCancelDialog] = useState(false);
+  const [bookingToCancel, setBookingToCancel] = useState<BookingItem | null>(null);
   
   // State for convert to post feature
   const [showConvertDialog, setShowConvertDialog] = useState(false);
@@ -216,16 +220,22 @@ const OrdersPage: React.FC = () => {
       document.body.style.top = '';
       document.body.style.width = '';
       if (scrollY) {
-        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+        const yPosition = Math.abs(parseInt(scrollY));
+        window.scrollTo(0, yPosition);
       }
     }
 
     return () => {
       // Cleanup on unmount
+      const scrollY = document.body.style.top;
       document.body.style.overflow = '';
       document.body.style.position = '';
       document.body.style.top = '';
       document.body.style.width = '';
+      if (scrollY) {
+        const yPosition = Math.abs(parseInt(scrollY));
+        window.scrollTo(0, yPosition);
+      }
     };
   }, [selectedBooking, showCancelDialog, showConvertDialog, showReviewDialog]);
 
@@ -284,16 +294,16 @@ const OrdersPage: React.FC = () => {
   };
 
   const handleCancelBooking = async () => {
-    if (!selectedBooking?.bookingId) return;
+    if (!bookingToCancel?.bookingId) return;
     
     setIsCancelling(true);
     try {
-      await cancelBooking(selectedBooking.bookingId, cancelReason || undefined);
+      await cancelBooking(bookingToCancel.bookingId, cancelReason || undefined);
       // Refresh bookings list
       await loadBookings();
       // Close dialogs
       setShowCancelDialog(false);
-      setSelectedBooking(null);
+      setBookingToCancel(null);
       setCancelReason('');
     } catch (err: any) {
       console.error('Failed to cancel booking:', err);
@@ -1037,6 +1047,18 @@ const OrdersPage: React.FC = () => {
                             Liên hệ nhân viên
                           </Link>
                         )}
+                        {canCancelBooking(booking) && (
+                          <button
+                            onClick={() => {
+                              setBookingToCancel(booking);
+                              setShowCancelDialog(true);
+                            }}
+                            className="rounded-full border-2 border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 transition hover:-translate-y-0.5 hover:border-rose-300 hover:bg-rose-50 inline-flex items-center gap-2"
+                          >
+                            <X className="h-4 w-4" />
+                            Hủy đơn
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -1050,16 +1072,17 @@ const OrdersPage: React.FC = () => {
       {renderDetailSheet()}
       
       {/* Cancel Booking Dialog */}
-      {showCancelDialog && selectedBooking && ReactDOM.createPortal(
+      {showCancelDialog && bookingToCancel && ReactDOM.createPortal(
         <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 px-4 py-8 backdrop-blur-sm" onClick={() => setShowCancelDialog(false)}>
           <div className="relative w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <SectionCard
               title="Xác nhận hủy đơn"
-              description={`Đơn ${selectedBooking.bookingCode || selectedBooking.bookingId}`}
+              description={`Đơn ${bookingToCancel.bookingCode || bookingToCancel.bookingId}`}
               actions={
                 <button
                   onClick={() => {
                     setShowCancelDialog(false);
+                    setBookingToCancel(null);
                     setCancelReason('');
                   }}
                   className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200"
