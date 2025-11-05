@@ -359,8 +359,16 @@ export interface BookingAssignmentRequest {
 }
 
 export interface CreateBookingRequest {
-  addressId: string | null; // Can be null when using fullAddress
-  fullAddress?: string | null; // Optional alternative for new address
+  addressId: string | null; // Can be null when using newAddress
+  newAddress?: {
+    customerId: string;
+    fullAddress: string;
+    ward: string;
+    district?: string;
+    city: string;
+    latitude?: number | null;
+    longitude?: number | null;
+  } | null; // New address object when creating booking with new address
   bookingTime: string;
   note?: string | null;
   promoCode?: string | null;

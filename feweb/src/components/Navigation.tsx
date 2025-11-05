@@ -99,6 +99,12 @@ const navigationConfig: Record<UserRole, NavItemConfig[]> = {
       icon: CalendarClock
     },
     {
+      to: '/employee/booking-posts',
+      label: 'Bài đăng',
+      description: 'Nhận việc từ bài đăng',
+      icon: Megaphone
+    },
+    {
       to: '/employee/available',
       label: 'Công việc',
       description: 'Nhận thêm ca phù hợp',
@@ -109,6 +115,12 @@ const navigationConfig: Record<UserRole, NavItemConfig[]> = {
       label: 'Yêu cầu',
       description: 'Theo dõi hỗ trợ',
       icon: Sparkles
+    },
+    {
+      to: '/employee/chat',
+      label: 'Trao đổi',
+      description: 'Chat với khách hàng',
+      icon: MessageCircle
     },
     {
       to: '/employee/profile',

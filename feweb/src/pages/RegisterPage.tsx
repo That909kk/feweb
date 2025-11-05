@@ -165,18 +165,26 @@ const RegisterPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-green-50 to-blue-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
-        <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-teal to-brand-navy flex items-center justify-center">
+            <svg className="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-brand-teal to-brand-navy bg-clip-text text-transparent">Home Mate</h1>
+        </div>
+        <h2 className="text-center text-3xl font-extrabold text-brand-navy">
           {data.title}
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
+        <p className="mt-2 text-center text-sm text-brand-text/70">
           {data.subtitle}
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-lg sm:px-10">
+        <div className="bg-white/95 backdrop-blur-sm py-8 px-4 shadow-elevation-sm border border-brand-outline/40 sm:rounded-3xl sm:px-10">
           {/* Success Message */}
           {successMessage && (
             <div className="mb-4">
@@ -199,11 +207,11 @@ const RegisterPage = () => {
             </div>
           )}
 
-          <form className="space-y-6" onSubmit={handleSubmit}>
+          <form className="space-y-5" onSubmit={handleSubmit}>
             {/* Username */}
             <div>
-              <label htmlFor="username" className="block text-sm font-medium text-gray-700">
-                {data.form.username.label} <span className="text-red-500">*</span>
+              <label htmlFor="username" className="block text-sm font-medium text-brand-navy mb-2">
+                {data.form.username.label} <span className="text-status-danger">*</span>
               </label>
               <input
                 id="username"
@@ -214,19 +222,24 @@ const RegisterPage = () => {
                 onChange={handleInputChange}
                 onBlur={handleBlur}
                 placeholder={data.form.username.placeholder}
-                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
-                  errors.username ? 'border-red-300' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
+                className={`appearance-none relative block w-full px-3 py-2.5 border ${
+                  errors.username ? 'border-status-danger/50' : 'border-brand-outline/40'
+                } placeholder-brand-text/40 text-brand-navy rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm`}
               />
               {errors.username && (
-                <p className="mt-1 text-sm text-red-600">{errors.username}</p>
+                <p className="mt-1.5 text-sm text-status-danger flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {errors.username}
+                </p>
               )}
             </div>
 
             {/* Password */}
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
-                {data.form.password.label} <span className="text-red-500">*</span>
+              <label htmlFor="password" className="block text-sm font-medium text-brand-navy mb-2">
+                {data.form.password.label} <span className="text-status-danger">*</span>
               </label>
               <input
                 id="password"
@@ -237,19 +250,24 @@ const RegisterPage = () => {
                 onChange={handleInputChange}
                 onBlur={handleBlur}
                 placeholder={data.form.password.placeholder}
-                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
-                  errors.password ? 'border-red-300' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
+                className={`appearance-none relative block w-full px-3 py-2.5 border ${
+                  errors.password ? 'border-status-danger/50' : 'border-brand-outline/40'
+                } placeholder-brand-text/40 text-brand-navy rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm`}
               />
               {errors.password && (
-                <p className="mt-1 text-sm text-red-600">{errors.password}</p>
+                <p className="mt-1.5 text-sm text-status-danger flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {errors.password}
+                </p>
               )}
             </div>
 
             {/* Confirm Password */}
             <div>
-              <label htmlFor="confirmPassword" className="block text-sm font-medium text-gray-700">
-                {data.form.confirmPassword.label} <span className="text-red-500">*</span>
+              <label htmlFor="confirmPassword" className="block text-sm font-medium text-brand-navy mb-2">
+                {data.form.confirmPassword.label} <span className="text-status-danger">*</span>
               </label>
               <input
                 id="confirmPassword"
@@ -260,19 +278,24 @@ const RegisterPage = () => {
                 onChange={handleInputChange}
                 onBlur={handleBlur}
                 placeholder={data.form.confirmPassword.placeholder}
-                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
-                  errors.confirmPassword ? 'border-red-300' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
+                className={`appearance-none relative block w-full px-3 py-2.5 border ${
+                  errors.confirmPassword ? 'border-status-danger/50' : 'border-brand-outline/40'
+                } placeholder-brand-text/40 text-brand-navy rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm`}
               />
               {errors.confirmPassword && (
-                <p className="mt-1 text-sm text-red-600">{errors.confirmPassword}</p>
+                <p className="mt-1.5 text-sm text-status-danger flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {errors.confirmPassword}
+                </p>
               )}
             </div>
 
             {/* Full Name */}
             <div>
-              <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
-                {data.form.fullName.label} <span className="text-red-500">*</span>
+              <label htmlFor="fullName" className="block text-sm font-medium text-brand-navy mb-2">
+                {data.form.fullName.label} <span className="text-status-danger">*</span>
               </label>
               <input
                 id="fullName"
@@ -283,19 +306,24 @@ const RegisterPage = () => {
                 onChange={handleInputChange}
                 onBlur={handleBlur}
                 placeholder={data.form.fullName.placeholder}
-                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
-                  errors.fullName ? 'border-red-300' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
+                className={`appearance-none relative block w-full px-3 py-2.5 border ${
+                  errors.fullName ? 'border-status-danger/50' : 'border-brand-outline/40'
+                } placeholder-brand-text/40 text-brand-navy rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm`}
               />
               {errors.fullName && (
-                <p className="mt-1 text-sm text-red-600">{errors.fullName}</p>
+                <p className="mt-1.5 text-sm text-status-danger flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {errors.fullName}
+                </p>
               )}
             </div>
 
             {/* Email */}
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
-                {data.form.email.label} <span className="text-red-500">*</span>
+              <label htmlFor="email" className="block text-sm font-medium text-brand-navy mb-2">
+                {data.form.email.label} <span className="text-status-danger">*</span>
               </label>
               <input
                 id="email"
@@ -306,19 +334,24 @@ const RegisterPage = () => {
                 onChange={handleInputChange}
                 onBlur={handleBlur}
                 placeholder={data.form.email.placeholder}
-                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
-                  errors.email ? 'border-red-300' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
+                className={`appearance-none relative block w-full px-3 py-2.5 border ${
+                  errors.email ? 'border-status-danger/50' : 'border-brand-outline/40'
+                } placeholder-brand-text/40 text-brand-navy rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm`}
               />
               {errors.email && (
-                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                <p className="mt-1.5 text-sm text-status-danger flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {errors.email}
+                </p>
               )}
             </div>
 
             {/* Phone Number */}
             <div>
-              <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
-                {data.form.phoneNumber.label} <span className="text-red-500">*</span>
+              <label htmlFor="phoneNumber" className="block text-sm font-medium text-brand-navy mb-2">
+                {data.form.phoneNumber.label} <span className="text-status-danger">*</span>
               </label>
               <input
                 id="phoneNumber"
@@ -329,19 +362,24 @@ const RegisterPage = () => {
                 onChange={handleInputChange}
                 onBlur={handleBlur}
                 placeholder={data.form.phoneNumber.placeholder}
-                className={`mt-1 appearance-none relative block w-full px-3 py-2 border ${
-                  errors.phoneNumber ? 'border-red-300' : 'border-gray-300'
-                } placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm`}
+                className={`appearance-none relative block w-full px-3 py-2.5 border ${
+                  errors.phoneNumber ? 'border-status-danger/50' : 'border-brand-outline/40'
+                } placeholder-brand-text/40 text-brand-navy rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm`}
               />
               {errors.phoneNumber && (
-                <p className="mt-1 text-sm text-red-600">{errors.phoneNumber}</p>
+                <p className="mt-1.5 text-sm text-status-danger flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {errors.phoneNumber}
+                </p>
               )}
             </div>
 
             {/* Role */}
             <div>
-              <label htmlFor="role" className="block text-sm font-medium text-gray-700">
-                {data.form.role.label} <span className="text-red-500">*</span>
+              <label htmlFor="role" className="block text-sm font-medium text-brand-navy mb-2">
+                {data.form.role.label} <span className="text-status-danger">*</span>
               </label>
               <select
                 id="role"
@@ -350,30 +388,41 @@ const RegisterPage = () => {
                 value={formData.role}
                 onChange={handleInputChange}
                 onBlur={handleBlur}
-                className={`mt-1 block w-full px-3 py-2 border ${
-                  errors.role ? 'border-red-300' : 'border-gray-300'
-                } bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm`}
+                className={`block w-full px-3 py-2.5 border ${
+                  errors.role ? 'border-status-danger/50' : 'border-brand-outline/40'
+                } bg-white text-brand-navy rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm`}
               >
                 <option value="">-- Chọn loại tài khoản --</option>
                 <option value="CUSTOMER">{data.form.role.options.CUSTOMER}</option>
                 <option value="EMPLOYEE">{data.form.role.options.EMPLOYEE}</option>
               </select>
               {errors.role && (
-                <p className="mt-1 text-sm text-red-600">{errors.role}</p>
+                <p className="mt-1.5 text-sm text-status-danger flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {errors.role}
+                </p>
               )}
             </div>
 
             {/* Buttons */}
-            <div className="flex flex-col space-y-4">
+            <div className="flex flex-col space-y-3 pt-2">
               <button
                 type="submit"
                 disabled={loading}
-                className={`group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white ${
+                className={`group relative w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent text-sm font-semibold rounded-xl text-white transition-all duration-300 ${
                   loading 
-                    ? 'bg-gray-400 cursor-not-allowed' 
-                    : 'bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500'
+                    ? 'bg-brand-text/40 cursor-not-allowed' 
+                    : 'bg-gradient-to-r from-brand-teal to-brand-navy hover:-translate-y-0.5 hover:shadow-lg'
                 }`}
               >
+                {loading && (
+                  <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                )}
                 {loading ? data.messages.registering : data.actions.register}
               </button>
 
@@ -381,18 +430,18 @@ const RegisterPage = () => {
                 type="button"
                 onClick={handleCancel}
                 disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                className="w-full flex justify-center py-3 px-4 border-2 border-brand-outline/40 text-sm font-semibold rounded-xl text-brand-navy bg-white hover:bg-brand-background hover:border-brand-teal transition-all duration-300 disabled:opacity-50"
               >
                 {data.actions.cancel}
               </button>
             </div>
 
             {/* Login Link */}
-            <div className="text-center">
+            <div className="text-center pt-4 border-t border-brand-outline/40">
               <button
                 type="button"
                 onClick={handleLoginRedirect}
-                className="text-sm text-indigo-600 hover:text-indigo-500"
+                className="text-sm text-brand-teal hover:text-brand-tealHover font-medium transition-colors"
               >
                 {data.actions.login}
               </button>

@@ -93,10 +93,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ role, isOpen, o
         }
 
         if (role === 'EMPLOYEE' && user) {
-          const employeeId =
-            (user.profileData && 'employeeId' in user.profileData && user.profileData.employeeId) ||
-            user.employeeId ||
-            user.id;
+          // Lấy employeeId từ customerId hoặc id
+          const employeeId = user.customerId || user.id;
 
           if (!employeeId) {
             setItems([]);

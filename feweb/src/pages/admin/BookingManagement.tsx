@@ -9,9 +9,12 @@ import {
   User,
   CreditCard,
   XCircle,
-  Clock
+  Clock,
+  List,
+  ClipboardList
 } from 'lucide-react';
 import { useBooking } from '../../hooks/useBooking';
+import { getAllBookingsApi } from '../../api/admin';
 import { DashboardLayout } from '../../layouts';
 import { MetricCard, SectionCard } from '../../shared/components';
 
@@ -44,7 +47,9 @@ type BookingPost = {
 
 const AdminBookingManagement: React.FC = () => {
   const { getUnverifiedBookings, verifyBooking } = useBooking();
+  const [activeTab, setActiveTab] = useState<'all' | 'unverified'>('unverified');
   const [bookings, setBookings] = useState<BookingPost[]>([]);
+  const [allBookings, setAllBookings] = useState<BookingPost[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<BookingPost | null>(null);
   const [showVerifyDialog, setShowVerifyDialog] = useState(false);
@@ -68,9 +73,41 @@ const AdminBookingManagement: React.FC = () => {
     }
   };
 
+  const loadAllBookings = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await getAllBookingsApi({ page: 0, size: 100 });
+      // Response trực tiếp là pagination object
+      if (response && response.content) {
+        // Flatten data structure nếu cần
+        const flattenedBookings = response.content.map((item: any) => {
+          // Nếu có nested data object, lấy ra
+          if (item.data) {
+            return item.data;
+          }
+          return item;
+        });
+        setAllBookings(flattenedBookings);
+      } else {
+        setAllBookings([]);
+      }
+    } catch (err: any) {
+      console.error('Failed to load all bookings:', err);
+      setError('Không thể tải danh sách tất cả booking');
+      setAllBookings([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   useEffect(() => {
-    loadUnverifiedBookings();
-  }, []);
+    if (activeTab === 'all') {
+      loadAllBookings();
+    } else {
+      loadUnverifiedBookings();
+    }
+  }, [activeTab]);
 
   const handleVerify = async () => {
     if (!selectedBooking?.bookingId) return;
@@ -98,24 +135,33 @@ const AdminBookingManagement: React.FC = () => {
     }
   };
 
+  const currentBookings = activeTab === 'all' ? allBookings : bookings;
   const metrics = {
-    total: bookings.length,
-    pending: bookings.filter(b => !b.isVerified).length
+    total: currentBookings.length,
+    pending: bookings.filter(b => !b.isVerified).length,
+    all: allBookings.length
   };
 
   return (
     <DashboardLayout
       role="ADMIN"
-      title="Quản lý Booking Posts"
-      description="Xác minh và quản lý các booking chờ phân công nhân viên"
+      title="Quản lý Bookings"
+      description="Xem tất cả bookings và xác minh các booking chờ phân công"
     >
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-6 lg:grid-cols-3">
         <MetricCard
-          icon={CalendarClock}
-          label="Tổng booking chờ xác minh"
-          value={`${metrics.total}`}
+          icon={List}
+          label="Tổng tất cả booking"
+          value={`${metrics.all}`}
           accent="navy"
-          trendLabel="Các booking chưa có nhân viên được phân công"
+          trendLabel="Tất cả booking trong hệ thống"
+        />
+        <MetricCard
+          icon={ClipboardList}
+          label="Booking chờ xác minh"
+          value={`${bookings.length}`}
+          accent="teal"
+          trendLabel="Các booking chưa có nhân viên"
         />
         <MetricCard
           icon={AlertCircle}
@@ -127,9 +173,35 @@ const AdminBookingManagement: React.FC = () => {
       </div>
 
       <SectionCard
-        title="Danh sách Booking Posts"
-        description="Xem và xác minh các booking post từ khách hàng"
+        title="Danh sách Bookings"
+        description="Xem tất cả booking và xác minh các booking post"
       >
+          {/* Tabs */}
+          <div className="mb-6 flex gap-2 border-b border-slate-200">
+            <button
+              onClick={() => setActiveTab('unverified')}
+              className={`flex items-center gap-2 px-4 py-3 font-medium transition ${
+                activeTab === 'unverified'
+                  ? 'border-b-2 border-brand-navy text-brand-navy'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <AlertCircle className="h-4 w-4" />
+              Chờ xác minh ({bookings.length})
+            </button>
+            <button
+              onClick={() => setActiveTab('all')}
+              className={`flex items-center gap-2 px-4 py-3 font-medium transition ${
+                activeTab === 'all'
+                  ? 'border-b-2 border-brand-navy text-brand-navy'
+                  : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              <List className="h-4 w-4" />
+              Tất cả booking ({allBookings.length})
+            </button>
+          </div>
+
           {error && (
             <div className="mb-6 flex items-center gap-3 rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
               <AlertCircle className="h-5 w-5" />
@@ -142,17 +214,19 @@ const AdminBookingManagement: React.FC = () => {
               <Loader2 className="mr-3 h-5 w-5 animate-spin" />
               Đang tải dữ liệu...
             </div>
-          ) : bookings.length === 0 ? (
+          ) : currentBookings.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-3xl border border-slate-100 bg-slate-50 py-16 text-center">
               <CheckCircle2 className="mb-4 h-10 w-10 text-emerald-500" />
-              <h3 className="text-lg font-semibold text-slate-900">Không có booking nào chờ xác minh</h3>
+              <h3 className="text-lg font-semibold text-slate-900">
+                {activeTab === 'all' ? 'Chưa có booking nào' : 'Không có booking nào chờ xác minh'}
+              </h3>
               <p className="mt-2 max-w-sm text-sm text-slate-500">
-                Tất cả booking posts đã được xử lý
+                {activeTab === 'all' ? 'Hệ thống chưa có booking nào' : 'Tất cả booking posts đã được xử lý'}
               </p>
             </div>
           ) : (
             <div className="space-y-4">
-              {bookings.map(booking => (
+              {currentBookings.map(booking => (
                 <div
                   key={booking.bookingId}
                   className="flex flex-col justify-between rounded-2xl border border-brand-outline/40 bg-gradient-to-r from-white via-white to-sky-50/60 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:flex-row sm:items-center"
@@ -224,30 +298,33 @@ const AdminBookingManagement: React.FC = () => {
                       </span>
                     )}
                     
-                    <div className="flex flex-wrap gap-2">
-                      <button
-                        onClick={() => {
-                          setSelectedBooking(booking);
-                          setIsApproving(true);
-                          setShowVerifyDialog(true);
-                        }}
-                        className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-500"
-                      >
-                        <CheckCircle2 className="h-4 w-4" />
-                        Duyệt
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedBooking(booking);
-                          setIsApproving(false);
-                          setShowVerifyDialog(true);
-                        }}
-                        className="inline-flex items-center gap-2 rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-rose-500"
-                      >
-                        <XCircle className="h-4 w-4" />
-                        Từ chối
-                      </button>
-                    </div>
+                    {/* Chỉ hiển thị nút Duyệt/Từ chối khi ở tab Unverified */}
+                    {activeTab === 'unverified' && (
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          onClick={() => {
+                            setSelectedBooking(booking);
+                            setIsApproving(true);
+                            setShowVerifyDialog(true);
+                          }}
+                          className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-500"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Duyệt
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedBooking(booking);
+                            setIsApproving(false);
+                            setShowVerifyDialog(true);
+                          }}
+                          className="inline-flex items-center gap-2 rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-rose-500"
+                        >
+                          <XCircle className="h-4 w-4" />
+                          Từ chối
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

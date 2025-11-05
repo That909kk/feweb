@@ -18,15 +18,9 @@ export interface Commune {
   decree: string;
 }
 
-export interface ProvincesResponse {
-  requestId: string;
-  provinces: Province[];
-}
-
-export interface CommunesResponse {
-  requestId: string;
-  communes: Commune[];
-}
+// API trả về array trực tiếp, không wrap trong object
+export type ProvincesResponse = Province[];
+export type CommunesResponse = Commune[];
 
 export interface AddressFormData {
   provinceCode: string;

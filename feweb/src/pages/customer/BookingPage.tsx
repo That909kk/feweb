@@ -17,6 +17,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useCategories } from '../../hooks/useCategories';
 import { useAddress } from '../../hooks/useAddress';
 import DashboardLayout from '../../layouts/DashboardLayout';
+import ImageUpload from '../../components/ImageUpload';
 import type { 
   CreateBookingRequest,
   SuitableEmployee,
@@ -140,8 +141,7 @@ const BookingPage: React.FC = () => {
   
   // State for booking post (when no employee selected)
   const [postTitle, setPostTitle] = useState<string>('');
-  const [postImageUrl, setPostImageUrl] = useState<string>('');
-  const [showPostFields, setShowPostFields] = useState<boolean>(false);
+  const [postImageFile, setPostImageFile] = useState<File | null>(null); // Lưu File object, không lưu base64
   
   // State cho địa chỉ 2 cấp mới
   const [selectedProvinceCode, setSelectedProvinceCode] = useState<string>('');
@@ -1033,12 +1033,25 @@ const BookingPage: React.FC = () => {
         }
 
         // Create newAddress object for API
+        // Parse address components from finalAddress if needed
+        let ward = '';
+        let city = '';
+        
+        if (addressSource === 'custom' && !isManualAddress) {
+          // Using auto-formatted address from location picker
+          ward = selectedCommuneName || '';
+          city = selectedProvinceName || '';
+        } else {
+          // Manual address or current location - try to extract city from address
+          // Default to TP. Hồ Chí Minh if not specified
+          city = 'Thành phố Hồ Chí Minh';
+        }
+        
         newAddress = {
           customerId: user.customerId,
           fullAddress: finalAddress,
-          ward: addressSource === 'custom' && !isManualAddress ? selectedCommuneName : '',
-          district: '',
-          city: addressSource === 'custom' && !isManualAddress ? selectedProvinceName : '',
+          ward: ward,
+          city: city,
           latitude: finalCoordinates?.lat || null,
           longitude: finalCoordinates?.lng || null
         };
@@ -1052,13 +1065,16 @@ const BookingPage: React.FC = () => {
       // Convert data to match API request format based on API docs
       const bookingRequest: CreateBookingRequest = {
         addressId: addressId || null, // Use existing address ID or null for new address
-        fullAddress: newAddress ? newAddress.fullAddress : undefined,
+        // Gửi newAddress object thay vì fullAddress trực tiếp
+        newAddress: newAddress || undefined,
         bookingTime: bookingDateTime,
         note: bookingData.notes || null,
         promoCode: bookingData.promoCode || null,
-        // Thêm title và imageUrl nếu không chọn nhân viên (booking post)
-        title: selectedEmployees.length === 0 && postTitle ? postTitle : undefined,
-        imageUrl: selectedEmployees.length === 0 && postImageUrl ? postImageUrl : undefined,
+        // Thêm title CHỈ KHI không chọn nhân viên (booking post)
+        // KHÔNG GỬI imageUrl trong JSON, sẽ gửi File riêng
+        ...(selectedEmployees.length === 0 && {
+          title: postTitle.trim() || null,
+        }),
         bookingDetails: [
           {
             serviceId: serviceId,
@@ -1080,14 +1096,16 @@ const BookingPage: React.FC = () => {
       console.log('📋 [REQUEST] Sending booking request:', JSON.stringify(bookingRequest, null, 2));
       
       // Additional validation before sending
-      if (!bookingRequest.addressId && !bookingRequest.fullAddress) {
-        console.error('❌ [VALIDATION] Neither addressId nor fullAddress is provided!');
+      if (!bookingRequest.addressId && !bookingRequest.newAddress) {
+        console.error('❌ [VALIDATION] Neither addressId nor newAddress is provided!');
         setErrorMessages(['Lỗi: Thiếu thông tin địa chỉ. Vui lòng kiểm tra lại.']);
         return;
       }
       
       // Call API to create booking
-      const result = await createBooking(bookingRequest);
+      // Gửi File object nếu có (chỉ khi là booking post)
+      const imageFile = selectedEmployees.length === 0 && postImageFile ? postImageFile : undefined;
+      const result = await createBooking(bookingRequest, imageFile as File | undefined);
       
       if (result) {
         // Navigate tới trang booking success với dữ liệu
@@ -2109,23 +2127,80 @@ const BookingPage: React.FC = () => {
 
               {/* Employee Selection Section */}
               <div className="bg-gradient-to-r from-cyan-50 to-blue-50 rounded-xl p-6 border border-cyan-200">
-                <div className="flex items-center justify-between mb-6">
-                  <h4 className="text-lg font-semibold text-gray-900 flex items-center">
-                    <svg className="w-5 h-5 mr-2 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
-                    </svg>
-                    Chọn nhân viên (Tùy chọn)
-                  </h4>
+                <h4 className="text-lg font-semibold text-gray-900 flex items-center mb-6">
+                  <svg className="w-5 h-5 mr-2 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                  </svg>
+                  Phương thức đặt lịch
+                </h4>
+
+                {/* Option Selection: Choose between Employee or Post */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                  {/* Option 1: Chọn nhân viên */}
                   <button
                     type="button"
-                    onClick={() => setShowEmployeeSelection(!showEmployeeSelection)}
-                    className="px-4 py-2 bg-cyan-600 text-white rounded-lg hover:bg-cyan-700 transition-colors font-medium shadow-sm"
+                    onClick={() => {
+                      setShowEmployeeSelection(true);
+                      setPostTitle('');
+                      setPostImageFile(null); // Reset file object
+                    }}
+                    className={`p-5 rounded-xl border-2 transition-all duration-200 ${
+                      showEmployeeSelection
+                        ? 'border-cyan-500 bg-cyan-50 shadow-lg'
+                        : 'border-gray-200 bg-white hover:border-cyan-300 hover:shadow-md'
+                    }`}
                   >
-                    {showEmployeeSelection ? 'Ẩn lựa chọn' : 'Hiển thị lựa chọn'}
+                    <div className="flex items-center mb-3">
+                      <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
+                        showEmployeeSelection ? 'border-cyan-500' : 'border-gray-300'
+                      }`}>
+                        {showEmployeeSelection && (
+                          <div className="w-3 h-3 rounded-full bg-cyan-500"></div>
+                        )}
+                      </div>
+                      <svg className="w-6 h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                      </svg>
+                      <h5 className="ml-2 font-semibold text-gray-900">Chọn nhân viên</h5>
+                    </div>
+                    <p className="text-sm text-gray-600 text-left">
+                      Đặt lịch trực tiếp với nhân viên phù hợp
+                    </p>
+                  </button>
+
+                  {/* Option 2: Tạo bài đăng */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEmployeeSelection(false);
+                      setSelectedEmployees([]);
+                    }}
+                    className={`p-5 rounded-xl border-2 transition-all duration-200 ${
+                      !showEmployeeSelection
+                        ? 'border-indigo-500 bg-indigo-50 shadow-lg'
+                        : 'border-gray-200 bg-white hover:border-indigo-300 hover:shadow-md'
+                    }`}
+                  >
+                    <div className="flex items-center mb-3">
+                      <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
+                        !showEmployeeSelection ? 'border-indigo-500' : 'border-gray-300'
+                      }`}>
+                        {!showEmployeeSelection && (
+                          <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
+                        )}
+                      </div>
+                      <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      <h5 className="ml-2 font-semibold text-gray-900">Tạo bài đăng</h5>
+                    </div>
+                    <p className="text-sm text-gray-600 text-left">
+                      Đăng tìm nhân viên (cần admin xác minh)
+                    </p>
                   </button>
                 </div>
 
-                {/* Thông báo về booking post khi không chọn nhân viên */}
+                {/* Hiển thị form tạo bài đăng */}
                 {!showEmployeeSelection && (
                   <div className="space-y-4">
                     <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-4 shadow-sm">
@@ -2136,81 +2211,57 @@ const BookingPage: React.FC = () => {
                           </svg>
                         </div>
                         <div className="ml-3 flex-1">
-                          <h4 className="text-indigo-800 font-medium text-sm mb-1">Đặt lịch không chọn nhân viên</h4>
+                          <h4 className="text-indigo-800 font-medium text-sm mb-1">Thông tin bài đăng</h4>
                           <p className="text-indigo-700 text-sm">
-                            Nếu không chọn nhân viên, đơn của bạn sẽ trở thành <strong>bài đăng tìm nhân viên</strong> và cần được admin xác minh trước khi hiển thị công khai.
+                            Bài đăng của bạn sẽ cần được admin xác minh trước khi hiển thị công khai để nhân viên có thể nhận việc.
                           </p>
                         </div>
                       </div>
                     </div>
 
-                    {/* Nút hiển thị form nhập title và image cho bài post */}
-                    <button
-                      type="button"
-                      onClick={() => setShowPostFields(!showPostFields)}
-                      className="w-full px-4 py-3 bg-white border-2 border-indigo-200 rounded-lg hover:border-indigo-300 transition-colors font-medium text-indigo-700 hover:bg-indigo-50"
-                    >
-                      {showPostFields ? '▼ Ẩn thông tin bài đăng' : '▶ Thêm tiêu đề và hình ảnh cho bài đăng (Tùy chọn)'}
-                    </button>
-
-                    {/* Form nhập title và imageUrl cho booking post */}
-                    {showPostFields && (
-                      <div className="bg-white border border-indigo-200 rounded-lg p-5 space-y-4">
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Tiêu đề bài đăng
-                            <span className="text-gray-400 font-normal ml-1">(Tùy chọn, tối đa 255 ký tự)</span>
-                          </label>
-                          <input
-                            type="text"
-                            value={postTitle}
-                            onChange={(e) => setPostTitle(e.target.value.slice(0, 255))}
-                            maxLength={255}
-                            placeholder="VD: Cần nhân viên dọn dẹp nhà cấp tốc"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                          />
-                          <p className="mt-1 text-xs text-gray-500">
-                            {postTitle.length}/255 ký tự
-                          </p>
-                        </div>
-
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">
-                            Đường dẫn hình ảnh
-                            <span className="text-gray-400 font-normal ml-1">(Tùy chọn, URL hình ảnh)</span>
-                          </label>
-                          <input
-                            type="url"
-                            value={postImageUrl}
-                            onChange={(e) => setPostImageUrl(e.target.value)}
-                            placeholder="https://example.com/image.jpg"
-                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                          />
-                          {postImageUrl && (
-                            <div className="mt-3">
-                              <p className="text-xs text-gray-500 mb-2">Xem trước:</p>
-                              <img 
-                                src={postImageUrl} 
-                                alt="Preview" 
-                                className="w-full max-w-xs rounded-lg shadow-md"
-                                onError={(e) => {
-                                  (e.target as HTMLImageElement).src = 'https://via.placeholder.com/300x200?text=Invalid+Image+URL';
-                                }}
-                              />
-                            </div>
-                          )}
-                        </div>
-
-                        <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
-                          <p className="text-xs text-indigo-700">
-                            💡 <strong>Mẹo:</strong> Thêm tiêu đề và hình ảnh sẽ giúp bài đăng của bạn thu hút nhân viên phù hợp hơn!
-                          </p>
-                        </div>
+                    {/* Form nhập title và imageUrl cho booking post - LUÔN HIỂN THỊ */}
+                    <div className="bg-white border border-indigo-200 rounded-lg p-5 space-y-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Tiêu đề bài đăng
+                          <span className="text-gray-400 font-normal ml-1">(Tùy chọn, tối đa 255 ký tự)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={postTitle}
+                          onChange={(e) => setPostTitle(e.target.value.slice(0, 255))}
+                          maxLength={255}
+                          placeholder="VD: Cần nhân viên dọn dẹp nhà cấp tốc"
+                          className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                        />
+                        <p className="mt-1 text-xs text-gray-500">
+                          {postTitle.length}/255 ký tự
+                        </p>
                       </div>
-                    )}
+
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">
+                          Hình ảnh bài đăng
+                          <span className="text-gray-400 font-normal ml-1">(Tùy chọn)</span>
+                        </label>
+                        <ImageUpload
+                          onImageUploaded={(_imageUrl, file) => setPostImageFile(file || null)}
+                          currentImageUrl={postImageFile ? URL.createObjectURL(postImageFile) : ''}
+                          onRemoveImage={() => setPostImageFile(null)}
+                          className="w-full"
+                        />
+                      </div>
+
+                      <div className="bg-indigo-50 border border-indigo-200 rounded-lg p-3">
+                        <p className="text-xs text-indigo-700">
+                          💡 <strong>Mẹo:</strong> Thêm tiêu đề và hình ảnh sẽ giúp bài đăng của bạn thu hút nhân viên phù hợp hơn!
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
+                {/* Hiển thị form chọn nhân viên */}
                 {showEmployeeSelection && (
                   <div className="space-y-6">
                     <div className="bg-white rounded-lg p-4 border border-cyan-200">
@@ -2423,6 +2474,36 @@ const BookingPage: React.FC = () => {
                         </p>
                       </div>
                     </div>
+                    
+                    {/* Show booking post title if no employee selected */}
+                    {selectedEmployees.length === 0 && postTitle && (
+                      <div className="flex items-start">
+                        <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-500">Tiêu đề bài đăng</p>
+                          <p className="text-gray-900 font-semibold text-sm mt-1 p-3 bg-purple-50 rounded-lg border border-purple-200">
+                            {postTitle}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Show booking post image if no employee selected and image exists */}
+                    {selectedEmployees.length === 0 && postImageFile && (
+                      <div className="flex items-start">
+                        <div className="w-2 h-2 bg-indigo-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-500 mb-2">Hình ảnh tham khảo</p>
+                          <div className="rounded-lg overflow-hidden border border-indigo-200 shadow-sm">
+                            <img 
+                              src={URL.createObjectURL(postImageFile)} 
+                              alt="Booking reference" 
+                              className="w-full h-auto object-cover max-h-64"
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
                     
                     {bookingData.notes && (
                       <div className="flex items-start">

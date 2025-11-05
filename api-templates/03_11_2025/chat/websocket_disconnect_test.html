@@ -1,0 +1,560 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Disconnect Test</title>
+    
+    <!-- SockJS and STOMP libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+        }
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .section h2 {
+            color: #dc3545;
+            margin-bottom: 15px;
+            font-size: 20px;
+            border-bottom: 2px solid #dc3545;
+            padding-bottom: 10px;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .control-group input {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        
+        button {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        
+        .btn-connect {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-disconnect {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-send {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-clear {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .log-container {
+            height: 500px;
+            overflow-y: auto;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            padding: 15px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        
+        .log-entry {
+            margin-bottom: 8px;
+            padding: 5px;
+            border-left: 3px solid transparent;
+        }
+        
+        .log-entry.info {
+            border-left-color: #17a2b8;
+            color: #17a2b8;
+        }
+        
+        .log-entry.success {
+            border-left-color: #28a745;
+            color: #28a745;
+        }
+        
+        .log-entry.warning {
+            border-left-color: #ffc107;
+            color: #ffc107;
+        }
+        
+        .log-entry.error {
+            border-left-color: #dc3545;
+            color: #dc3545;
+        }
+        
+        .timestamp {
+            color: #999;
+            font-size: 11px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-box {
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+        
+        .stat-label {
+            font-size: 12px;
+            color: #666;
+            text-transform: uppercase;
+        }
+        
+        .alert {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .alert strong {
+            display: block;
+            margin-bottom: 10px;
+            color: #856404;
+        }
+        
+        .alert ul {
+            margin-left: 20px;
+            color: #856404;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 WebSocket Disconnect Test Tool</h1>
+            <p>Kiểm tra tự động disconnect sau khi gửi tin nhắn hoặc sau một khoảng thời gian</p>
+        </div>
+        
+        <div class="content">
+            <div class="alert">
+                <strong>🎯 Mục đích test:</strong>
+                <ul>
+                    <li>Kiểm tra WebSocket có tự disconnect sau khi gửi tin nhắn không</li>
+                    <li>Kiểm tra WebSocket có tự disconnect sau một khoảng thời gian idle không</li>
+                    <li>Monitor heartbeat và connection state liên tục</li>
+                    <li>Đo thời gian connection uptime</li>
+                </ul>
+            </div>
+            
+            <div class="section">
+                <h2>⚙️ Cấu hình Test</h2>
+                
+                <div id="connectionStatus" class="status disconnected">
+                    ⭕ Chưa kết nối
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-box">
+                        <div class="stat-value" id="uptime">0s</div>
+                        <div class="stat-label">Connection Uptime</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="messageCount">0</div>
+                        <div class="stat-label">Messages Sent</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="disconnectCount">0</div>
+                        <div class="stat-label">Disconnects</div>
+                    </div>
+                </div>
+                
+                <div class="control-group">
+                    <label>🆔 Conversation ID:</label>
+                    <input type="text" id="conversationId" value="" placeholder="Nhập UUID conversation">
+                </div>
+                
+                <div>
+                    <button class="btn-connect" onclick="connectWebSocket()">✅ Connect & Monitor</button>
+                    <button class="btn-disconnect" onclick="disconnectWebSocket()">❌ Disconnect</button>
+                    <button class="btn-send" onclick="sendTestMessage()">📤 Send Test Message</button>
+                    <button class="btn-clear" onclick="clearLog()">🗑️ Clear Log</button>
+                </div>
+            </div>
+            
+            <div class="section">
+                <h2>📊 Connection Log & Events</h2>
+                <div id="logContainer" class="log-container">
+                    <div class="log-entry info">
+                        <span class="timestamp">[Waiting]</span> Chờ kết nối WebSocket...
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stompClient = null;
+        let connectionStartTime = null;
+        let uptimeInterval = null;
+        let heartbeatCheckInterval = null;
+        let messageCount = 0;
+        let disconnectCount = 0;
+        let isManualDisconnect = false;
+        
+        function log(message, type = 'info') {
+            const container = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            entry.className = `log-entry ${type}`;
+            
+            const timestamp = new Date().toLocaleTimeString('vi-VN', {
+                hour12: false,
+                hour: '2-digit',
+                minute: '2-digit', 
+                second: '2-digit',
+                fractionalSecondDigits: 3
+            });
+            
+            entry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+            container.appendChild(entry);
+            
+            // Auto scroll
+            container.scrollTop = container.scrollHeight;
+        }
+        
+        function updateStatus(status, message) {
+            const statusDiv = document.getElementById('connectionStatus');
+            
+            switch(status) {
+                case 'connected':
+                    statusDiv.className = 'status connected';
+                    statusDiv.innerHTML = `✅ ${message}`;
+                    break;
+                case 'disconnected':
+                    statusDiv.className = 'status disconnected';
+                    statusDiv.innerHTML = `⭕ ${message}`;
+                    break;
+            }
+        }
+        
+        function updateUptime() {
+            if (!connectionStartTime) return;
+            
+            const now = Date.now();
+            const elapsed = Math.floor((now - connectionStartTime) / 1000);
+            
+            const hours = Math.floor(elapsed / 3600);
+            const minutes = Math.floor((elapsed % 3600) / 60);
+            const seconds = elapsed % 60;
+            
+            let uptimeStr = '';
+            if (hours > 0) uptimeStr += `${hours}h `;
+            if (minutes > 0) uptimeStr += `${minutes}m `;
+            uptimeStr += `${seconds}s`;
+            
+            document.getElementById('uptime').textContent = uptimeStr;
+        }
+        
+        function startUptimeCounter() {
+            connectionStartTime = Date.now();
+            uptimeInterval = setInterval(updateUptime, 1000);
+        }
+        
+        function stopUptimeCounter() {
+            if (uptimeInterval) {
+                clearInterval(uptimeInterval);
+                uptimeInterval = null;
+            }
+            connectionStartTime = null;
+        }
+        
+        function checkHeartbeat() {
+            if (stompClient && stompClient.ws) {
+                const readyState = stompClient.ws.readyState;
+                const states = {
+                    0: 'CONNECTING',
+                    1: 'OPEN',
+                    2: 'CLOSING',
+                    3: 'CLOSED'
+                };
+                
+                log(`💓 Heartbeat check - WebSocket State: ${states[readyState]} (${readyState})`, 'info');
+                
+                if (readyState === 3 && !isManualDisconnect) {
+                    log('❌ PHÁT HIỆN: WebSocket đã bị disconnect tự động!', 'error');
+                    handleUnexpectedDisconnect();
+                }
+            }
+        }
+        
+        function startHeartbeatMonitor() {
+            // Check heartbeat every 5 seconds
+            heartbeatCheckInterval = setInterval(checkHeartbeat, 5000);
+            log('💓 Bắt đầu monitor heartbeat (mỗi 5 giây)', 'info');
+        }
+        
+        function stopHeartbeatMonitor() {
+            if (heartbeatCheckInterval) {
+                clearInterval(heartbeatCheckInterval);
+                heartbeatCheckInterval = null;
+            }
+        }
+        
+        function handleUnexpectedDisconnect() {
+            disconnectCount++;
+            document.getElementById('disconnectCount').textContent = disconnectCount;
+            stopUptimeCounter();
+            stopHeartbeatMonitor();
+            updateStatus('disconnected', 'Đã bị disconnect tự động');
+        }
+        
+        function connectWebSocket() {
+            const conversationId = document.getElementById('conversationId').value;
+            
+            if (!conversationId) {
+                alert('⚠️ Vui lòng nhập Conversation ID');
+                return;
+            }
+            
+            log('🔌 Đang khởi tạo kết nối WebSocket...', 'info');
+            
+            const socket = new SockJS('http://localhost:8080/ws/chat');
+            stompClient = Stomp.over(socket);
+            
+            // Enable debug để xem chi tiết
+            stompClient.debug = function(str) {
+                log(`🐛 STOMP Debug: ${str}`, 'info');
+            };
+            
+            isManualDisconnect = false;
+            
+            stompClient.connect({}, 
+                function(frame) {
+                    log('✅ WebSocket CONNECTED thành công!', 'success');
+                    log(`📡 Frame details: ${JSON.stringify(frame)}`, 'info');
+                    
+                    // Subscribe to conversation
+                    stompClient.subscribe(`/topic/conversation/${conversationId}`, function(message) {
+                        const chatMessage = JSON.parse(message.body);
+                        log(`📨 Nhận tin nhắn real-time: ${JSON.stringify(chatMessage)}`, 'success');
+                        
+                        // Kiểm tra connection state sau khi nhận tin nhắn
+                        setTimeout(() => {
+                            checkConnectionAfterMessage();
+                        }, 1000);
+                    });
+                    
+                    log(`✅ Đã subscribe: /topic/conversation/${conversationId}`, 'success');
+                    
+                    updateStatus('connected', `Đã kết nối - Subscribe: ${conversationId}`);
+                    startUptimeCounter();
+                    startHeartbeatMonitor();
+                    
+                    // Log connection info
+                    if (stompClient.ws) {
+                        log(`📊 WebSocket ReadyState: ${stompClient.ws.readyState} (1=OPEN)`, 'info');
+                        log(`📊 WebSocket URL: ${stompClient.ws.url}`, 'info');
+                    }
+                },
+                function(error) {
+                    log(`❌ Lỗi kết nối: ${JSON.stringify(error)}`, 'error');
+                    updateStatus('disconnected', 'Lỗi kết nối');
+                    
+                    if (!isManualDisconnect) {
+                        handleUnexpectedDisconnect();
+                    }
+                }
+            );
+            
+            // Monitor socket close event
+            socket.onclose = function(event) {
+                log(`⚠️ Socket onclose event triggered - Code: ${event.code}, Reason: ${event.reason}, Clean: ${event.wasClean}`, 'warning');
+                
+                if (!isManualDisconnect) {
+                    log('❌ PHÁT HIỆN: Socket bị close tự động (không phải manual disconnect)!', 'error');
+                    handleUnexpectedDisconnect();
+                }
+            };
+        }
+        
+        function checkConnectionAfterMessage() {
+            if (stompClient && stompClient.ws) {
+                const readyState = stompClient.ws.readyState;
+                
+                if (readyState === 1) {
+                    log('✅ KIỂM TRA: WebSocket vẫn OPEN sau khi nhận tin nhắn', 'success');
+                } else {
+                    log(`❌ PHÁT HIỆN: WebSocket bị disconnect sau khi nhận tin nhắn! State: ${readyState}`, 'error');
+                    handleUnexpectedDisconnect();
+                }
+            }
+        }
+        
+        function disconnectWebSocket() {
+            if (stompClient !== null && stompClient.connected) {
+                isManualDisconnect = true;
+                
+                stompClient.disconnect(function() {
+                    log('👋 Đã disconnect thủ công (manual)', 'warning');
+                    updateStatus('disconnected', 'Đã disconnect thủ công');
+                    stopUptimeCounter();
+                    stopHeartbeatMonitor();
+                });
+            } else {
+                log('⚠️ Không có kết nối để disconnect', 'warning');
+            }
+        }
+        
+        function sendTestMessage() {
+            if (!stompClient || !stompClient.connected) {
+                alert('⚠️ Chưa kết nối WebSocket!');
+                return;
+            }
+            
+            const conversationId = document.getElementById('conversationId').value;
+            messageCount++;
+            document.getElementById('messageCount').textContent = messageCount;
+            
+            const testMessage = {
+                conversationId: conversationId,
+                senderId: 'test-sender-001',
+                senderName: 'Test User',
+                messageType: 'TEXT',
+                content: `Test message #${messageCount} - ${new Date().toLocaleTimeString()}`,
+                timestamp: new Date().toISOString()
+            };
+            
+            log(`📤 Gửi test message #${messageCount}...`, 'info');
+            
+            stompClient.send('/app/chat.send', {}, JSON.stringify(testMessage));
+            
+            log(`✅ Đã gửi tin nhắn`, 'success');
+            
+            // Check connection sau 2 giây
+            setTimeout(() => {
+                checkConnectionAfterSend();
+            }, 2000);
+        }
+        
+        function checkConnectionAfterSend() {
+            if (stompClient && stompClient.ws) {
+                const readyState = stompClient.ws.readyState;
+                
+                if (readyState === 1) {
+                    log('✅ KIỂM TRA: WebSocket vẫn OPEN sau khi gửi tin nhắn', 'success');
+                } else {
+                    log(`❌ PHÁT HIỆN: WebSocket bị disconnect sau khi gửi tin nhắn! State: ${readyState}`, 'error');
+                    handleUnexpectedDisconnect();
+                }
+            }
+        }
+        
+        function clearLog() {
+            document.getElementById('logContainer').innerHTML = '';
+            log('🗑️ Đã xóa log', 'info');
+        }
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', function() {
+            if (stompClient !== null && stompClient.connected) {
+                isManualDisconnect = true;
+                stompClient.disconnect();
+            }
+            stopUptimeCounter();
+            stopHeartbeatMonitor();
+        });
+        
+        // Initial log
+        log('🚀 WebSocket Disconnect Test Tool đã sẵn sàng', 'success');
+        log('💡 Nhập Conversation ID và nhấn "Connect & Monitor" để bắt đầu', 'info');
+    </script>
+</body>
+</html>

@@ -532,6 +532,36 @@ export const checkOutAssignmentApi = async (
   }
 };
 
+// Get verified bookings awaiting employee
+// Endpoint: GET /api/v1/employee/bookings/verified-awaiting-employee
+// Theo API-Booking-Verified-Awaiting-Employee.md
+export const getVerifiedAwaitingEmployeeBookingsApi = async (
+  page: number = 0,
+  size: number = 10
+): Promise<{
+  data: any[];
+  currentPage: number;
+  totalItems: number;
+  totalPages: number;
+}> => {
+  try {
+    console.log('[API] Fetching verified awaiting employee bookings:', { page, size });
+    const response = await api.get<{
+      data: any[];
+      currentPage: number;
+      totalItems: number;
+      totalPages: number;
+    }>('/employee/bookings/verified-awaiting-employee', {
+      params: { page, size }
+    });
+    console.log('[API] Verified awaiting employee bookings fetched:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('[API] Error fetching verified awaiting employee bookings:', error);
+    throw error;
+  }
+};
+
 export default {
   getAllEmployeesApi,
   getEmployeeAssignmentsApi,
@@ -543,5 +573,6 @@ export default {
   getEmployeeProfileApi,
   updateEmployeeProfileApi,
   checkInAssignmentApi,
-  checkOutAssignmentApi
+  checkOutAssignmentApi,
+  getVerifiedAwaitingEmployeeBookingsApi
 };

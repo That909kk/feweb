@@ -1,7 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  Bell,
   ChevronDown,
   Crown,
   LogOut,
@@ -11,7 +10,7 @@ import {
   PanelLeftOpen
 } from 'lucide-react';
 import Navigation from '../components/Navigation';
-import NotificationCenter from '../components/NotificationCenter';
+import NotificationBell from '../components/NotificationBell';
 import { useAuth } from '../contexts/AuthContext';
 import type { UserRole } from '../types/api';
 
@@ -49,7 +48,6 @@ const AppShell: React.FC<AppShellProps> = ({
   const { user, availableRoles, selectedRole, selectRole, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
-  const [notifyOpen, setNotifyOpen] = useState(false);
 
   const badge = roleBadges[role];
 
@@ -135,12 +133,14 @@ const AppShell: React.FC<AppShellProps> = ({
             </button>
 
             <Link to="/" className="flex items-center gap-2">
-              <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-brand-navy text-sm font-semibold text-white shadow-elevation-sm">
-                360
-              </span>
+              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-teal to-brand-navy shadow-elevation-sm">
+                <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+              </div>
               <div className="hidden flex-col sm:flex">
-                <span className="text-sm font-semibold text-brand-navy">Gia Dung 360</span>
-                <span className="text-xs text-brand-text/60">Home service booking</span>
+                <span className="text-sm font-semibold text-brand-navy">Home Mate</span>
+                <span className="text-xs text-brand-text/60">Dịch vụ Giúp việc Gia đình</span>
               </div>
             </Link>
 
@@ -168,14 +168,7 @@ const AppShell: React.FC<AppShellProps> = ({
               </label>
             )}
 
-            <button
-              type="button"
-              className="relative inline-flex items-center justify-center rounded-full border border-brand-outline/60 bg-white p-2 text-brand-navy shadow-sm transition hover:border-brand-navy hover:text-brand-navy"
-              aria-label="Mở thông báo"
-              onClick={() => setNotifyOpen(true)}
-            >
-              <Bell className="h-5 w-5" />
-            </button>
+            <NotificationBell />
 
             <div className="group flex items-center gap-3 rounded-full border border-brand-outline/60 bg-white/90 px-3 py-1.5 text-sm shadow-sm">
               <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-teal/10 font-semibold text-brand-teal">
@@ -225,15 +218,16 @@ const AppShell: React.FC<AppShellProps> = ({
         </div>
 
         <footer className="mt-auto border-t border-brand-outline/40 bg-brand-surface/90 px-4 py-4 text-xs text-brand-text/60 sm:px-6 lg:px-10">
-          Gia Dụng 360 © {new Date().getFullYear()} · Kiến tạo trải nghiệm giúp việc gia đình hiện đại.
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+            <div>
+              Home Mate © {new Date().getFullYear()} · Công ty TNHH Thành Thật
+            </div>
+            <div className="text-brand-text/50">
+              Phát triển bởi Lê Minh Thật (That909kk)
+            </div>
+          </div>
         </footer>
       </div>
-
-      <NotificationCenter
-        role={role}
-        isOpen={notifyOpen}
-        onClose={() => setNotifyOpen(false)}
-      />
     </div>
   );
 };

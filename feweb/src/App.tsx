@@ -20,8 +20,10 @@ import {
   EmployeeDashboard,
   EmployeeSchedule,
   EmployeeRequests,
-  EmployeeProfile 
+  EmployeeProfile,
+  EmployeeChatPage
 } from './pages/employee';
+import { BookingPosts } from './pages/employee/BookingPosts';
 
 // Admin pages  
 import { 
@@ -90,6 +92,11 @@ function App() {
                 <EmployeeSchedule />
               </ProtectedRoute>
             } />
+            <Route path="/employee/booking-posts" element={
+              <ProtectedRoute requiredRole="EMPLOYEE">
+                <BookingPosts />
+              </ProtectedRoute>
+            } />
             <Route path="/employee/requests" element={
               <ProtectedRoute requiredRole="EMPLOYEE">
                 <EmployeeRequests />
@@ -98,6 +105,11 @@ function App() {
             <Route path="/employee/profile" element={
               <ProtectedRoute requiredRole="EMPLOYEE">
                 <EmployeeProfile />
+              </ProtectedRoute>
+            } />
+            <Route path="/employee/chat" element={
+              <ProtectedRoute requiredRole="EMPLOYEE">
+                <EmployeeChatPage />
               </ProtectedRoute>
             } />
             

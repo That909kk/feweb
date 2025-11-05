@@ -1,0 +1,1182 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebSocket Chat Real-Time Test</title>
+    
+    <!-- SockJS and STOMP libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            padding: 30px;
+        }
+        
+        .section {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .control-group {
+            margin-bottom: 15px;
+        }
+        
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .control-group input,
+        .control-group textarea {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .control-group input:focus,
+        .control-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .control-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        
+        button {
+            flex: 1;
+            min-width: 120px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .btn-connect {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-connect:hover {
+            background: #218838;
+        }
+        
+        .btn-disconnect {
+            background: #dc3545;
+            color: white;
+        }
+        
+        .btn-disconnect:hover {
+            background: #c82333;
+        }
+        
+        .btn-send {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-send:hover {
+            background: #5568d3;
+        }
+        
+        .btn-clear {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .btn-clear:hover {
+            background: #e0a800;
+        }
+        
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-weight: 600;
+            text-align: center;
+        }
+        
+        .status.disconnected {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .messages-container {
+            height: 400px;
+            overflow-y: auto;
+            border: 2px solid #e0e0e0;
+            border-radius: 5px;
+            padding: 15px;
+            background: white;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 8px;
+            animation: slideIn 0.3s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .message.text-message {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+        
+        .message.image-message {
+            background: #f3e5f5;
+            border-left: 4px solid #9c27b0;
+        }
+        
+        .message-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .message-sender {
+            font-weight: 700;
+            color: #667eea;
+        }
+        
+        .message-time {
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .message-content {
+            color: #333;
+            word-wrap: break-word;
+        }
+        
+        .message-image {
+            max-width: 100%;
+            max-height: 300px;
+            border-radius: 5px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        
+        .message-type-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 11px;
+            font-weight: 600;
+            margin-left: 8px;
+        }
+        
+        .badge-text {
+            background: #2196f3;
+            color: white;
+        }
+        
+        .badge-image {
+            background: #9c27b0;
+            color: white;
+        }
+        
+        .info-box {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 15px;
+            font-size: 13px;
+            color: #856404;
+        }
+        
+        .info-box strong {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        /* Custom scrollbar */
+        .messages-container::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        .messages-container::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 10px;
+        }
+        
+        .messages-container::-webkit-scrollbar-thumb {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 10px;
+        }
+        
+        .messages-container::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(135deg, #5568d3 0%, #6a4190 100%);
+        }
+        
+        @media (max-width: 768px) {
+            .content {
+                grid-template-columns: 1fr;
+            }
+            
+            .button-group {
+                flex-direction: column;
+            }
+            
+            button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔌 WebSocket Chat Real-Time Test</h1>
+            <p>Test nhận tin nhắn real-time khi có người gửi qua REST API - Dựa trên Backend Spring Boot</p>
+            <p style="margin-top: 10px; padding: 8px; background: rgba(255,255,255,0.2); border-radius: 5px; font-size: 13px;">
+                ✅ <strong>Updated:</strong> Login Function Based on API-TestCases-Login.md + Full Error Handling + Session Management | 
+                📅 04/11/2025
+            </p>
+        </div>
+        
+        <div style="background: #fff3cd; border-left: 5px solid #ffc107; padding: 15px; margin: 20px 30px;">
+            <strong style="color: #856404;">📋 Thông tin Backend & Test Data:</strong>
+            <ul style="margin: 10px 0 0 20px; color: #856404;">
+                <li><strong>WebSocket Endpoint:</strong> /ws/chat (SockJS enabled)</li>
+                <li><strong>STOMP Topic:</strong> /topic/conversation/{conversationId}</li>
+                <li><strong>Message Broker:</strong> In-memory Simple Broker với Heartbeat</li>
+                <li><strong>Heartbeat:</strong> 10s (Simple Broker) + 25s (SockJS) - <span style="color: #28a745; font-weight: bold;">✅ Đã fix disconnect issue</span></li>
+                <li><strong>Authentication:</strong> JWT Bearer Token (required cho REST API)</li>
+                <li><strong>Message Types:</strong> TEXT, IMAGE</li>
+                <li><strong>Image Storage:</strong> Cloudinary (max 5MB)</li>
+                <li><strong>Max Message Size:</strong> 128 KB | Buffer: 512 KB</li>
+            </ul>
+            <div style="margin-top: 15px; padding-top: 10px; border-top: 1px solid #ffc107;">
+                <strong style="color: #856404;">👥 Test Accounts (Password: 123456 - From API-TestCases-Login.md):</strong>
+                <ul style="margin: 5px 0 0 20px; color: #856404; font-size: 13px;">
+                    <li><strong>john_doe</strong> (CUSTOMER) - TC_LOGIN_001, TC_LOGIN_014 ✅</li>
+                    <li><strong>jane_smith</strong> (EMPLOYEE) - TC_LOGIN_002 ✅</li>
+                    <li><strong>admin_1</strong> (ADMIN) - TC_LOGIN_003 ✅</li>
+                    <li><strong>mary_jones</strong> (CUSTOMER - INACTIVE) - TC_LOGIN_013 ⚠️</li>
+                    <li><strong>nguyenvana</strong> (CUSTOMER) - Conversation Test</li>
+                    <li><strong>tranvanl</strong> (EMPLOYEE) - Conversation Test</li>
+                </ul>
+                <p style="margin: 10px 0 0 20px; color: #856404; font-size: 12px;">
+                    <strong>📱 DeviceType:</strong> WEB | <strong>🔧 Test Cases:</strong> TC_LOGIN_001-022
+                </p>
+            </div>
+            <div style="margin-top: 15px; padding: 10px; background: #d4edda; border-radius: 5px;">
+                <strong style="color: #155724;">🔧 Login Function - Based on Test Cases:</strong>
+                <ul style="margin: 5px 0 0 20px; color: #155724; font-size: 12px;">
+                    <li>✅ TC_LOGIN_001-003: Successful login (CUSTOMER/EMPLOYEE/ADMIN)</li>
+                    <li>✅ TC_LOGIN_004: Invalid credentials handling</li>
+                    <li>✅ TC_LOGIN_005-006: Missing username/password validation</li>
+                    <li>✅ TC_LOGIN_013: Account inactive detection</li>
+                    <li>✅ TC_LOGIN_015: Account locking notification</li>
+                    <li>✅ Complete error handling & session management</li>
+                    <li>📄 Docs: <code>docs/Authentication/API-TestCases-Login.md</code></li>
+                </ul>
+            </div>
+            <div style="margin-top: 15px; padding: 10px; background: #e7f3ff; border-radius: 5px;">
+                <strong style="color: #004085;">👥 Test Chat 2 Người:</strong>
+                <ol style="margin: 5px 0 0 20px; color: #004085; font-size: 12px;">
+                    <li>Mở tab 1: Login <strong>john_doe</strong> → Connect WebSocket</li>
+                    <li>Mở tab 2 (Ctrl+Shift+N hoặc duplicate tab): Login <strong>jane_smith</strong> → Connect</li>
+                    <li>Dùng cùng Conversation ID cho 2 tab</li>
+                    <li>Gửi tin nhắn từ tab 1 → Thấy real-time ở tab 2!</li>
+                    <li>Gửi tin nhắn từ tab 2 → Thấy real-time ở tab 1!</li>
+                </ol>
+            </div>
+        </div>
+        
+        <div class="content">
+            <!-- LEFT SECTION: Login & WebSocket Connection -->
+            <div class="section">
+                <h2>� Login & WebSocket Receiver</h2>
+                
+                <div class="info-box">
+                    <strong>💡 Quick Login:</strong>
+                    Chọn user và login để tự động điền token!
+                </div>
+                
+                <div class="control-group">
+                    <label>👤 Chọn User (Password: 123456):</label>
+                    <select id="userSelect" style="width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 5px; font-size: 14px;">
+                        <option value="">-- Chọn user để test --</option>
+                        <optgroup label="✅ CUSTOMER (Test Cases TC_LOGIN_001, TC_LOGIN_014)">
+                            <option value="john_doe">👨 John Doe (john_doe) - CUSTOMER</option>
+                            <option value="nguyenvana">👨 Nguyễn Văn An (nguyenvana) - CUSTOMER</option>
+                        </optgroup>
+                        <optgroup label="✅ EMPLOYEE (Test Case TC_LOGIN_002)">
+                            <option value="jane_smith">👩 Jane Smith (jane_smith) - EMPLOYEE</option>
+                            <option value="tranvanl">👨 Trần Văn Long (tranvanl) - EMPLOYEE</option>
+                        </optgroup>
+                        <optgroup label="✅ ADMIN (Test Case TC_LOGIN_003)">
+                            <option value="admin_1">� Admin One (admin_1) - ADMIN</option>
+                        </optgroup>
+                        <optgroup label="⚠️ INACTIVE (Test Case TC_LOGIN_013)">
+                            <option value="mary_jones">� Mary Jones (mary_jones) - CUSTOMER (INACTIVE)</option>
+                        </optgroup>
+                    </select>
+                    <small style="color: #666; display: block; margin-top: 5px;">
+                        💡 Chọn user để test các test cases khác nhau từ API-TestCases-Login.md
+                    </small>
+                </div>
+                
+                <div class="button-group">
+                    <button type="button" id="btnLogin" class="btn-send" style="width: 100%;">
+                        🔑 Login (Password: 123456789 + Role + DeviceType: WEB)
+                    </button>
+                </div>
+                
+                <div id="loginStatus" style="padding: 8px; border-radius: 5px; margin-bottom: 15px; font-size: 13px; display: none;"></div>
+                
+                <hr style="margin: 20px 0; border: none; border-top: 2px solid #e0e0e0;">
+                
+                <div class="info-box">
+                    <strong>💡 Hướng dẫn:</strong>
+                    1. Nhập Conversation ID<br>
+                    2. Nhấn "Connect WebSocket"<br>
+                    3. Gửi tin nhắn từ phần bên phải<br>
+                    4. Xem tin nhắn hiển thị real-time
+                </div>
+                
+                <div id="connectionStatus" class="status disconnected">
+                    ⭕ Chưa kết nối
+                </div>
+                
+                <div class="control-group">
+                    <label>🆔 Conversation ID:</label>
+                    <input type="text" id="conversationId" placeholder="Nhập UUID conversation">
+                </div>
+                
+                <div class="button-group">
+                    <button type="button" id="btnConnect" class="btn-connect">
+                        ✅ Connect
+                    </button>
+                    <button type="button" id="btnDisconnect" class="btn-disconnect" disabled>
+                        ❌ Disconnect
+                    </button>
+                </div>
+                
+                <div class="control-group">
+                    <label>📨 Tin nhắn nhận được:</label>
+                    <button type="button" id="btnClearMessages" class="btn-clear" style="width: 100%; margin-bottom: 10px;">
+                        🗑️ Xóa tất cả
+                    </button>
+                    <div id="messagesContainer" class="messages-container">
+                        <p style="text-align: center; color: #999;">Chưa có tin nhắn</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- RIGHT SECTION: Send Message via API -->
+            <div class="section">
+                <h2>📤 Gửi Tin Nhắn qua API</h2>
+                
+                <div class="info-box">
+                    <strong>💡 Cách test:</strong>
+                    1. Connect WebSocket bên trái<br>
+                    2. Điền thông tin tin nhắn<br>
+                    3. Nhập JWT Token<br>
+                    4. Nhấn "Gửi" (hoặc Enter)<br>
+                    5. Tin nhắn hiện bên trái real-time!
+                </div>
+                
+                <div class="control-group">
+                    <label>🆔 Conversation ID:</label>
+                    <input type="text" id="apiConversationId" placeholder="UUID conversation">
+                </div>
+                
+                <div class="control-group">
+                    <label>👤 Sender ID:</label>
+                    <input type="text" id="apiSenderId" value="a1000001-0000-0000-0000-000000000001">
+                </div>
+                
+                <div class="control-group">
+                    <label>📝 Nội dung (Enter để gửi, Shift+Enter xuống dòng):</label>
+                    <textarea id="apiContent" placeholder="Nhập tin nhắn..."></textarea>
+                </div>
+                
+                <div class="control-group">
+                    <label>🔑 JWT Token:</label>
+                    <input type="text" id="jwtToken" placeholder="Paste JWT token">
+                </div>
+                
+                <div class="button-group">
+                    <button type="button" id="btnSendText" class="btn-send">
+                        📝 Gửi Text
+                    </button>
+                    <button type="button" id="btnLoadHistory" class="btn-send" style="background: #17a2b8;">
+                        📥 Load lịch sử
+                    </button>
+                </div>
+                
+                <div class="control-group">
+                    <label>🖼️ Chọn ảnh (max 5MB):</label>
+                    <input type="file" id="imageFile" accept="image/*">
+                </div>
+                
+                <div class="control-group">
+                    <label>📝 Caption:</label>
+                    <input type="text" id="imageCaption" placeholder="Mô tả ảnh (optional)">
+                </div>
+                
+                <div class="button-group">
+                    <button type="button" id="btnSendImage" class="btn-send">
+                        🖼️ Gửi Image
+                    </button>
+                </div>
+                
+                <div class="control-group">
+                    <label>📊 Response Log:</label>
+                    <div id="responseLog" class="messages-container" style="height: 200px; font-family: monospace; font-size: 12px;">
+                        <p style="color: #999;">Chưa có response</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let stompClient = null;
+        let messageCount = 0;
+        let currentUser = null; // Store logged in user info
+        
+        // ========== Initialize Event Listeners ==========
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('✅ Event listeners initialized - No more page reload!');
+            
+            // Login button
+            document.getElementById('btnLogin').addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                performLogin();
+            });
+            
+            // User select change - auto update sender ID
+            document.getElementById('userSelect').addEventListener('change', function() {
+                const username = this.value;
+                // Account IDs from seed data (99_seed_datas.sql)
+                const accountIdMap = {
+                    'john_doe': 'a1000001-0000-0000-0000-000000000001',
+                    'jane_smith': 'a1000001-0000-0000-0000-000000000002',
+                    'admin_1': 'a1000001-0000-0000-0000-000000000003',
+                    'mary_jones': 'a1000001-0000-0000-0000-000000000004',
+                    'nguyenvana': 'a1000001-0000-0000-0000-000000000006',
+                    'tranvanl': 'a1000001-0000-0000-0000-000000000016'
+                };
+                if (username && accountIdMap[username]) {
+                    document.getElementById('apiSenderId').value = accountIdMap[username];
+                }
+            });
+            
+            // WebSocket buttons
+            document.getElementById('btnConnect').addEventListener('click', connectWebSocket);
+            document.getElementById('btnDisconnect').addEventListener('click', disconnectWebSocket);
+            document.getElementById('btnClearMessages').addEventListener('click', clearMessages);
+            
+            // API buttons
+            document.getElementById('btnSendText').addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                sendTextMessage();
+            });
+            
+            document.getElementById('btnLoadHistory').addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                loadConversationMessages();
+            });
+            
+            document.getElementById('btnSendImage').addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                sendImageMessage();
+            });
+            
+            // Textarea: Enter to send, Shift+Enter for new line
+            document.getElementById('apiContent').addEventListener('keydown', function(e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    sendTextMessage();
+                }
+            });
+            
+            // Prevent Enter on all other inputs
+            ['conversationId', 'apiConversationId', 'apiSenderId', 'jwtToken', 'imageCaption'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }
+                    });
+                }
+            });
+        });
+        
+        // ========== Login Function (Based on API-TestCases-Login.md) ==========
+        
+        /**
+         * Perform login based on test cases:
+         * - TC_LOGIN_001-003: Successful login for CUSTOMER, EMPLOYEE, ADMIN
+         * - TC_LOGIN_004: Invalid credentials
+         * - TC_LOGIN_005-006: Missing username/password
+         * - TC_LOGIN_008-009: Missing/invalid role
+         * - TC_LOGIN_010-011: Missing/invalid deviceType
+         * - TC_LOGIN_012: Role mismatch
+         * - TC_LOGIN_013: Account inactive
+         * - TC_LOGIN_014: Mobile device type support
+         * - TC_LOGIN_015: Account locking after failed attempts
+         * - TC_LOGIN_018: User not found
+         */
+        async function performLogin() {
+            const username = document.getElementById('userSelect').value;
+            const password = '123456789'; // Default password from test cases
+            
+            // TC_LOGIN_005: Missing Username
+            if (!username || username.trim() === '') {
+                showLoginStatus('error', '❌ Tên đăng nhập không được để trống');
+                return;
+            }
+            
+            const loginStatus = document.getElementById('loginStatus');
+            loginStatus.style.display = 'block';
+            loginStatus.style.background = '#fff3cd';
+            loginStatus.style.color = '#856404';
+            loginStatus.innerHTML = '⏳ Đang đăng nhập...';
+            
+            try {
+                // Determine role based on username (based on test data)
+                const roleMap = {
+                    'john_doe': 'CUSTOMER',       // TC_LOGIN_001
+                    'jane_smith': 'EMPLOYEE',     // TC_LOGIN_002
+                    'admin_1': 'ADMIN',           // TC_LOGIN_003
+                    'mary_jones': 'CUSTOMER',     // TC_LOGIN_013 (INACTIVE)
+                    'nguyenvana': 'CUSTOMER',
+                    'tranvanl': 'EMPLOYEE'
+                };
+                
+                const role = roleMap[username] || 'CUSTOMER';
+                const deviceType = 'WEB'; // Can be 'WEB' or 'MOBILE' (TC_LOGIN_014)
+                
+                // TC_LOGIN_008: Role validation (already handled by backend)
+                // TC_LOGIN_010: DeviceType validation (already handled by backend)
+                
+                const requestBody = {
+                    username: username,
+                    password: password,
+                    role: role,
+                    deviceType: deviceType
+                };
+                
+                console.log('📤 Login Request:', requestBody);
+                
+                const response = await fetch('http://localhost:8080/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(requestBody)
+                });
+                
+                const result = await response.json();
+                
+                // Handle different response scenarios based on test cases
+                
+                if (response.ok && result.success) {
+                    // TC_LOGIN_001, TC_LOGIN_002, TC_LOGIN_003: Successful Login
+                    handleSuccessfulLogin(result, username, role, deviceType);
+                } else {
+                    // Handle error cases
+                    handleLoginError(response.status, result);
+                }
+                
+            } catch (error) {
+                // TC_LOGIN_007, TC_LOGIN_019: Internal Server Error / Network Error
+                console.error('Login error:', error);
+                showLoginStatus('error', `❌ Đã xảy ra lỗi khi đăng nhập: ${error.message}`);
+            }
+        }
+        
+        /**
+         * Handle successful login response
+         * Covers: TC_LOGIN_001 (Customer), TC_LOGIN_002 (Employee), TC_LOGIN_003 (Admin)
+         */
+        function handleSuccessfulLogin(result, username, role, deviceType) {
+            const data = result.data;
+            
+            // Extract tokens
+            const accessToken = data.accessToken;
+            const refreshToken = data.refreshToken;
+            const expireIn = data.expireIn;
+            
+            // Auto fill access token (use Bearer prefix)
+            document.getElementById('jwtToken').value = `Bearer ${accessToken}`;
+            
+            // Get user info from response data
+            const userData = data.data;
+            let userId, displayName, userAvatar;
+            
+            // Handle different user types (Customer, Employee, Admin)
+            if (role === 'CUSTOMER') {
+                userId = userData.customerId;
+                displayName = userData.fullName;
+                userAvatar = userData.avatar;
+                
+                // Update sender ID for API calls
+                document.getElementById('apiSenderId').value = userData.accountId || userId;
+            } else if (role === 'EMPLOYEE') {
+                userId = userData.employeeId;
+                displayName = userData.fullName;
+                userAvatar = userData.avatar;
+                
+                // Update sender ID for API calls
+                document.getElementById('apiSenderId').value = userData.accountId || userId;
+            } else if (role === 'ADMIN') {
+                userId = userData.adminId;
+                displayName = userData.fullName;
+                userAvatar = null;
+                
+                // Admin may not have chat functionality, but we'll store the data
+                document.getElementById('apiSenderId').value = userId;
+            }
+            
+            // Store current user session (TC_LOGIN_016, TC_LOGIN_017: Session management)
+            currentUser = {
+                username: username,
+                userId: userId,
+                accountId: userData.accountId || userId,
+                fullName: displayName,
+                role: role,
+                deviceType: deviceType,
+                accessToken: accessToken,
+                refreshToken: refreshToken,
+                expireIn: expireIn,
+                avatar: userAvatar,
+                email: userData.email,
+                phoneNumber: userData.phoneNumber,
+                status: userData.status
+            };
+            
+            // Role badge with color coding
+            const roleBadge = getRoleBadge(role);
+            
+            // Display success message
+            const loginStatus = document.getElementById('loginStatus');
+            loginStatus.style.background = '#d4edda';
+            loginStatus.style.color = '#155724';
+            loginStatus.innerHTML = `
+                ✅ Đăng nhập thành công!<br>
+                <strong>${displayName}</strong> ${roleBadge}<br>
+                <small>ID: ${userId}</small><br>
+                <small style="color: #666;">📱 Device: ${deviceType} | Token expires in: ${expireIn}s</small><br>
+                <small style="color: #666;">🔑 Access Token: ${accessToken.substring(0, 20)}...</small>
+            `;
+            
+            console.log('✅ Login Successful!');
+            console.log('👤 User:', displayName);
+            console.log('🆔 User ID:', userId);
+            console.log('🎭 Role:', role);
+            console.log('📱 Device Type:', deviceType);
+            console.log('🔑 Access Token:', accessToken);
+            console.log('� Refresh Token:', refreshToken);
+            console.log('⏰ Expires In:', expireIn, 'seconds');
+        }
+        
+        /**
+         * Handle login error responses
+         * Covers multiple test cases for different error scenarios
+         */
+        function handleLoginError(statusCode, result) {
+            const message = result.message || 'Đã xảy ra lỗi không xác định';
+            
+            console.error(`❌ Login Failed (${statusCode}):`, message);
+            
+            switch (statusCode) {
+                case 400:
+                    // TC_LOGIN_005: Missing username
+                    // TC_LOGIN_006: Missing password
+                    // TC_LOGIN_008: Missing role
+                    // TC_LOGIN_009: Invalid role
+                    // TC_LOGIN_010: Missing deviceType
+                    // TC_LOGIN_011: Invalid deviceType
+                    // TC_LOGIN_018: User not found
+                    showLoginStatus('error', `❌ Yêu cầu không hợp lệ: ${message}`);
+                    break;
+                    
+                case 401:
+                    // TC_LOGIN_004: Invalid credentials
+                    // TC_LOGIN_012: Role mismatch
+                    // TC_LOGIN_013: Account inactive
+                    // TC_LOGIN_015: Account locked
+                    if (message.includes('khóa') || message.includes('locked')) {
+                        // Account locked due to multiple failed attempts
+                        showLoginStatus('error', `🔒 ${message}<br><small>Tài khoản sẽ tự động mở khóa sau 10 phút</small>`);
+                    } else if (message.includes('kích hoạt') || message.includes('inactive')) {
+                        // Account not activated
+                        showLoginStatus('error', `⚠️ ${message}`);
+                    } else {
+                        // Invalid credentials or role mismatch
+                        showLoginStatus('error', `❌ ${message}`);
+                    }
+                    break;
+                    
+                case 403:
+                    // Forbidden access
+                    showLoginStatus('error', `🚫 Không có quyền truy cập: ${message}`);
+                    break;
+                    
+                case 500:
+                    // TC_LOGIN_007: Internal server error
+                    // TC_LOGIN_019: Redis connection failure
+                    showLoginStatus('error', `⚠️ Lỗi server: ${message}`);
+                    break;
+                    
+                default:
+                    showLoginStatus('error', `❌ Lỗi không xác định (${statusCode}): ${message}`);
+            }
+        }
+        
+        /**
+         * Display login status with different styles
+         */
+        function showLoginStatus(type, message) {
+            const loginStatus = document.getElementById('loginStatus');
+            loginStatus.style.display = 'block';
+            
+            if (type === 'success') {
+                loginStatus.style.background = '#d4edda';
+                loginStatus.style.color = '#155724';
+            } else if (type === 'error') {
+                loginStatus.style.background = '#f8d7da';
+                loginStatus.style.color = '#721c24';
+            } else if (type === 'warning') {
+                loginStatus.style.background = '#fff3cd';
+                loginStatus.style.color = '#856404';
+            } else {
+                loginStatus.style.background = '#d1ecf1';
+                loginStatus.style.color = '#0c5460';
+            }
+            
+            loginStatus.innerHTML = message;
+        }
+        
+        /**
+         * Get role badge HTML with color coding
+         */
+        function getRoleBadge(role) {
+            switch (role) {
+                case 'CUSTOMER':
+                    return '<span style="background: #28a745; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px; margin-left: 5px;">👤 CUSTOMER</span>';
+                case 'EMPLOYEE':
+                    return '<span style="background: #007bff; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px; margin-left: 5px;">👔 EMPLOYEE</span>';
+                case 'ADMIN':
+                    return '<span style="background: #dc3545; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px; margin-left: 5px;">👑 ADMIN</span>';
+                default:
+                    return '<span style="background: #6c757d; color: white; padding: 2px 8px; border-radius: 3px; font-size: 11px; margin-left: 5px;">❓ ' + role + '</span>';
+            }
+        }
+        
+        // ========== WebSocket Functions ==========
+        
+        function connectWebSocket() {
+            const conversationId = document.getElementById('conversationId').value;
+            
+            if (!conversationId) {
+                alert('⚠️ Vui lòng nhập Conversation ID');
+                return;
+            }
+            
+            const socket = new SockJS('http://localhost:8080/ws/chat');
+            stompClient = Stomp.over(socket);
+            stompClient.debug = null;
+            
+            updateConnectionStatus('connecting');
+            
+            stompClient.connect({}, 
+                function(frame) {
+                    console.log('✅ WebSocket Connected:', frame);
+                    
+                    stompClient.subscribe(`/topic/conversation/${conversationId}`, function(message) {
+                        const chatMessage = JSON.parse(message.body);
+                        console.log('📨 Received:', chatMessage);
+                        displayReceivedMessage(chatMessage);
+                    });
+                    
+                    updateConnectionStatus('connected', conversationId);
+                    document.getElementById('btnConnect').disabled = true;
+                    document.getElementById('btnDisconnect').disabled = false;
+                },
+                function(error) {
+                    console.error('❌ Error:', error);
+                    updateConnectionStatus('error');
+                    alert('❌ Không thể kết nối WebSocket');
+                }
+            );
+        }
+        
+        function disconnectWebSocket() {
+            if (stompClient && stompClient.connected) {
+                stompClient.disconnect(function() {
+                    console.log('Disconnected');
+                    updateConnectionStatus('disconnected');
+                    document.getElementById('btnConnect').disabled = false;
+                    document.getElementById('btnDisconnect').disabled = true;
+                });
+            }
+        }
+        
+        function updateConnectionStatus(status, conversationId = null) {
+            const statusDiv = document.getElementById('connectionStatus');
+            
+            switch(status) {
+                case 'connecting':
+                    statusDiv.className = 'status';
+                    statusDiv.style.background = '#fff3cd';
+                    statusDiv.style.color = '#856404';
+                    statusDiv.innerHTML = '⏳ Đang kết nối...';
+                    break;
+                case 'connected':
+                    statusDiv.className = 'status connected';
+                    const userInfo = currentUser ? `<br><small>${currentUser.displayName} (${currentUser.role})</small>` : '';
+                    statusDiv.innerHTML = `✅ Đã kết nối - ${conversationId}${userInfo}`;
+                    break;
+                case 'disconnected':
+                    statusDiv.className = 'status disconnected';
+                    statusDiv.innerHTML = '⭕ Chưa kết nối';
+                    break;
+                case 'error':
+                    statusDiv.className = 'status';
+                    statusDiv.style.background = '#f8d7da';
+                    statusDiv.style.color = '#721c24';
+                    statusDiv.innerHTML = '❌ Lỗi kết nối';
+                    break;
+            }
+        }
+        
+        function displayReceivedMessage(message) {
+            const container = document.getElementById('messagesContainer');
+            
+            if (messageCount === 0) {
+                container.innerHTML = '';
+            }
+            messageCount++;
+            
+            const messageDiv = document.createElement('div');
+            const isTextMessage = message.messageType === 'TEXT';
+            messageDiv.className = `message ${isTextMessage ? 'text-message' : 'image-message'}`;
+            
+            const timestamp = new Date(message.timestamp || message.createdAt).toLocaleString('vi-VN');
+            const senderName = message.senderName || `User #${message.senderId}`;
+            
+            // Check if this message is from current user
+            const isCurrentUser = currentUser && message.senderId === currentUser.userId;
+            const userBadge = isCurrentUser ? '<span style="background: #ffc107; color: #333; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 5px;">YOU</span>' : '';
+            
+            let contentHTML = '';
+            
+            if (isTextMessage) {
+                contentHTML = `
+                    <div class="message-header">
+                        <span class="message-sender">${senderName}${userBadge}<span class="message-type-badge badge-text">TEXT</span></span>
+                        <span class="message-time">${timestamp}</span>
+                    </div>
+                    <div class="message-content">${escapeHtml(message.content)}</div>
+                `;
+            } else {
+                contentHTML = `
+                    <div class="message-header">
+                        <span class="message-sender">${senderName}${userBadge}<span class="message-type-badge badge-image">IMAGE</span></span>
+                        <span class="message-time">${timestamp}</span>
+                    </div>
+                    ${message.content ? `<div class="message-content">${escapeHtml(message.content)}</div>` : ''}
+                    <img src="${message.imageUrl}" class="message-image" alt="Image" onclick="window.open('${message.imageUrl}', '_blank')">
+                `;
+            }
+            
+            messageDiv.innerHTML = contentHTML;
+            container.appendChild(messageDiv);
+            container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+        }
+        
+        function clearMessages() {
+            document.getElementById('messagesContainer').innerHTML = '<p style="text-align: center; color: #999;">Chưa có tin nhắn</p>';
+            messageCount = 0;
+        }
+        
+        // ========== API Functions ==========
+        
+        async function loadConversationMessages() {
+            const conversationId = document.getElementById('apiConversationId').value;
+            const jwtToken = document.getElementById('jwtToken').value;
+            
+            if (!conversationId || !jwtToken) {
+                alert('⚠️ Vui lòng nhập Conversation ID và JWT Token');
+                return;
+            }
+            
+            try {
+                logResponse(`📥 Loading messages...`);
+                
+                const response = await fetch(`http://localhost:8080/api/v1/messages/conversation/${conversationId}/all`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': jwtToken.startsWith('Bearer ') ? jwtToken : `Bearer ${jwtToken}`
+                    }
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok && result.success) {
+                    const messages = result.data;
+                    logResponse(`✅ Loaded ${messages.length} messages`);
+                    
+                    const container = document.getElementById('messagesContainer');
+                    container.innerHTML = '';
+                    messageCount = 0;
+                    
+                    messages.forEach(msg => {
+                        displayReceivedMessage({
+                            messageId: msg.messageId,
+                            conversationId: msg.conversationId,
+                            senderId: msg.senderId,
+                            senderName: msg.senderName,
+                            messageType: msg.messageType,
+                            content: msg.content,
+                            imageUrl: msg.imageUrl,
+                            timestamp: msg.createdAt
+                        });
+                    });
+                } else {
+                    logResponse(`❌ Error: ${result.message}`);
+                    alert(`❌ Không thể load: ${result.message}`);
+                }
+            } catch (error) {
+                logResponse(`❌ Exception: ${error.message}`);
+                alert('❌ Không thể kết nối server');
+            }
+        }
+        
+        async function sendTextMessage() {
+            const conversationId = document.getElementById('apiConversationId').value;
+            const senderId = document.getElementById('apiSenderId').value;
+            const content = document.getElementById('apiContent').value;
+            const jwtToken = document.getElementById('jwtToken').value;
+            
+            if (!conversationId || !senderId || !content || !jwtToken) {
+                alert('⚠️ Vui lòng điền đầy đủ thông tin');
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('conversationId', conversationId);
+            formData.append('senderId', senderId);
+            formData.append('content', content);
+            
+            try {
+                logResponse('📤 Sending...');
+                
+                const response = await fetch('http://localhost:8080/api/v1/messages/send/text', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': jwtToken.startsWith('Bearer ') ? jwtToken : `Bearer ${jwtToken}`
+                    },
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    logResponse(`✅ Sent successfully!`);
+                    document.getElementById('apiContent').value = '';
+                } else {
+                    logResponse(`❌ Error: ${result.message}`);
+                    if (response.status === 401 || response.status === 403) {
+                        alert('❌ Token không hợp lệ!');
+                    }
+                }
+            } catch (error) {
+                logResponse(`❌ Exception: ${error.message}`);
+                alert('❌ Không thể kết nối server');
+            }
+        }
+        
+        async function sendImageMessage() {
+            const conversationId = document.getElementById('apiConversationId').value;
+            const senderId = document.getElementById('apiSenderId').value;
+            const caption = document.getElementById('imageCaption').value;
+            const jwtToken = document.getElementById('jwtToken').value;
+            const imageFile = document.getElementById('imageFile').files[0];
+            
+            if (!conversationId || !senderId || !imageFile || !jwtToken) {
+                alert('⚠️ Vui lòng điền đầy đủ thông tin và chọn ảnh');
+                return;
+            }
+            
+            const maxSize = 5 * 1024 * 1024;
+            if (imageFile.size > maxSize) {
+                alert(`⚠️ File quá lớn! Max 5MB`);
+                return;
+            }
+            
+            const formData = new FormData();
+            formData.append('conversationId', conversationId);
+            formData.append('senderId', senderId);
+            formData.append('imageFile', imageFile);
+            if (caption) formData.append('caption', caption);
+            
+            try {
+                logResponse(`📤 Uploading image...`);
+                
+                const response = await fetch('http://localhost:8080/api/v1/messages/send/image', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': jwtToken.startsWith('Bearer ') ? jwtToken : `Bearer ${jwtToken}`
+                    },
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    logResponse(`✅ Image sent!`);
+                    document.getElementById('imageCaption').value = '';
+                    document.getElementById('imageFile').value = '';
+                } else {
+                    logResponse(`❌ Error: ${result.message}`);
+                }
+            } catch (error) {
+                logResponse(`❌ Exception: ${error.message}`);
+                alert('❌ Không thể upload');
+            }
+        }
+        
+        function logResponse(message) {
+            const logDiv = document.getElementById('responseLog');
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = document.createElement('div');
+            logEntry.style.marginBottom = '10px';
+            logEntry.style.paddingBottom = '10px';
+            logEntry.style.borderBottom = '1px solid #e0e0e0';
+            logEntry.innerHTML = `<strong>[${timestamp}]</strong> ${escapeHtml(message)}`;
+            
+            if (logDiv.querySelector('p')) {
+                logDiv.innerHTML = '';
+            }
+            
+            logDiv.appendChild(logEntry);
+            logDiv.scrollTop = logDiv.scrollHeight;
+        }
+        
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+        
+        window.addEventListener('beforeunload', function() {
+            if (stompClient && stompClient.connected) {
+                stompClient.disconnect();
+            }
+        });
+        
+        console.log('🚀 WebSocket Chat Test Tool Ready');
+        console.log('💓 Heartbeat: 10s (prevents disconnect)');
+        console.log('✅ Event listeners active - No page reload!');
+    </script>
+</body>
+</html>

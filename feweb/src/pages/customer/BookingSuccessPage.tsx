@@ -100,9 +100,9 @@ const BookingSuccessPage: React.FC = () => {
         <MetricCard
           icon={CreditCard}
           label="Thanh toán"
-          value={bookingData.paymentInfo.paymentStatus === 'PENDING' ? 'Chờ thanh toán' : 'Đã thanh toán'}
-          accent={bookingData.paymentInfo.paymentStatus === 'PENDING' ? 'amber' : 'teal'}
-          trendLabel={bookingData.paymentInfo.paymentMethod}
+          value={bookingData.paymentInfo?.paymentStatus === 'PENDING' ? 'Chờ thanh toán' : 'Đã thanh toán'}
+          accent={bookingData.paymentInfo?.paymentStatus === 'PENDING' ? 'amber' : 'teal'}
+          trendLabel={bookingData.paymentInfo?.paymentMethod || bookingData.paymentInfo?.methodName || 'N/A'}
         />
       </div>
 
@@ -223,6 +223,24 @@ const BookingSuccessPage: React.FC = () => {
               </div>
             </div>
 
+            {/* Customer Note - Only show if note exists */}
+            {bookingData.note && (
+              <div className="rounded-2xl border border-brand-outline/20 bg-gradient-to-br from-yellow-50 to-amber-50 p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-yellow-100">
+                    <MessageCircle className="h-5 w-5 text-yellow-600" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-brand-navy">Ghi chú của khách hàng</h3>
+                    <p className="text-sm text-brand-text/70">Thông tin bổ sung</p>
+                  </div>
+                </div>
+                <div className="rounded-xl bg-white p-4 shadow-sm">
+                  <p className="text-brand-navy leading-relaxed">{bookingData.note}</p>
+                </div>
+              </div>
+            )}
+
             {/* Address Info */}
             <div className="rounded-2xl border border-brand-outline/20 bg-gradient-to-br from-emerald-50 to-teal-50 p-5">
               <div className="flex items-center gap-3 mb-4">
@@ -286,18 +304,60 @@ const BookingSuccessPage: React.FC = () => {
             description={bookingData.status === 'AWAITING_EMPLOYEE' && bookingData.isVerified === false ? 'Đơn của bạn đang chờ admin xác minh.' : 'Chúng tôi đang tìm nhân viên phù hợp nhất cho bạn.'}
           >
             {bookingData.status === 'AWAITING_EMPLOYEE' && bookingData.isVerified === false ? (
-              <div className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-6 text-center">
-                <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-indigo-100">
-                  <User className="h-8 w-8 text-indigo-600" />
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-indigo-200 bg-gradient-to-br from-indigo-50 to-purple-50 p-6 text-center">
+                  <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-indigo-100">
+                    <User className="h-8 w-8 text-indigo-600" />
+                  </div>
+                  <h3 className="mb-2 font-semibold text-indigo-900">Bài đăng đang chờ xác minh</h3>
+                  <p className="text-sm text-indigo-700 mb-4">
+                    Đơn của bạn đã được tạo thành <strong>bài đăng tìm nhân viên</strong> và đang chờ admin xác minh. Sau khi được duyệt, bài đăng sẽ hiển thị công khai để nhân viên có thể đăng ký.
+                  </p>
+                  <div className="inline-flex items-center gap-2 rounded-full bg-indigo-100 px-4 py-2 text-sm font-medium text-indigo-700">
+                    <Clock className="h-4 w-4" />
+                    Thời gian xử lý: 1-24 giờ
+                  </div>
                 </div>
-                <h3 className="mb-2 font-semibold text-indigo-900">Bài đăng đang chờ xác minh</h3>
-                <p className="text-sm text-indigo-700 mb-4">
-                  Đơn của bạn đã được tạo thành <strong>bài đăng tìm nhân viên</strong> và đang chờ admin xác minh. Sau khi được duyệt, bài đăng sẽ hiển thị công khai để nhân viên có thể đăng ký.
-                </p>
-                <div className="inline-flex items-center gap-2 rounded-full bg-indigo-100 px-4 py-2 text-sm font-medium text-indigo-700">
-                  <Clock className="h-4 w-4" />
-                  Thời gian xử lý: 1-24 giờ
-                </div>
+
+                {/* Booking Post Title - Only show if it's a booking post */}
+                {bookingData.title && (
+                  <div className="rounded-2xl border border-brand-outline/20 bg-gradient-to-br from-purple-50 to-pink-50 p-5">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-purple-100">
+                        <MessageCircle className="h-5 w-5 text-purple-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-brand-navy">Tiêu đề bài đăng</h3>
+                        <p className="text-sm text-brand-text/70">Mô tả ngắn gọn về công việc</p>
+                      </div>
+                    </div>
+                    <div className="rounded-xl bg-white p-4 shadow-sm">
+                      <p className="text-lg font-medium text-brand-navy">{bookingData.title}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Booking Post Image - Only show if image exists */}
+                {bookingData.imageUrl && (
+                  <div className="rounded-2xl border border-brand-outline/20 bg-gradient-to-br from-cyan-50 to-blue-50 p-5">
+                    <div className="flex items-center gap-3 mb-4">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-100">
+                        <Sparkles className="h-5 w-5 text-cyan-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-brand-navy">Hình ảnh tham khảo</h3>
+                        <p className="text-sm text-brand-text/70">Ảnh khu vực cần dọn dẹp</p>
+                      </div>
+                    </div>
+                    <div className="rounded-xl overflow-hidden shadow-md">
+                      <img 
+                        src={bookingData.imageUrl} 
+                        alt="Booking reference" 
+                        className="w-full h-auto object-cover"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             ) : (
               <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-6 text-center">
@@ -355,21 +415,21 @@ const BookingSuccessPage: React.FC = () => {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="rounded-xl border border-brand-outline/20 bg-white p-4">
               <div className="text-sm font-medium text-brand-text/70">Phương thức thanh toán</div>
-              <div className="mt-1 font-semibold text-brand-navy">{bookingData.paymentInfo.paymentMethod}</div>
+              <div className="mt-1 font-semibold text-brand-navy">{bookingData.paymentInfo?.paymentMethod || bookingData.paymentInfo?.methodName || 'N/A'}</div>
             </div>
             <div className="rounded-xl border border-brand-outline/20 bg-white p-4">
               <div className="text-sm font-medium text-brand-text/70">Mã giao dịch</div>
-              <div className="mt-1 font-mono text-sm text-brand-navy">{bookingData.paymentInfo.transactionCode}</div>
+              <div className="mt-1 font-mono text-sm text-brand-navy">{bookingData.paymentInfo?.transactionCode || 'N/A'}</div>
             </div>
             <div className="rounded-xl border border-brand-outline/20 bg-white p-4">
               <div className="text-sm font-medium text-brand-text/70">Trạng thái thanh toán</div>
               <div className="mt-1">
                 <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                  bookingData.paymentInfo.paymentStatus === 'PENDING' 
+                  bookingData.paymentInfo?.paymentStatus === 'PENDING' 
                     ? 'border border-amber-200 bg-amber-50 text-amber-700' 
                     : 'border border-emerald-200 bg-emerald-50 text-emerald-700'
                 }`}>
-                  {bookingData.paymentInfo.paymentStatus === 'PENDING' ? 'Chờ thanh toán' : 'Đã thanh toán'}
+                  {bookingData.paymentInfo?.paymentStatus === 'PENDING' ? 'Chờ thanh toán' : 'Đã thanh toán'}
                 </span>
               </div>
             </div>

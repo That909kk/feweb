@@ -24,7 +24,7 @@ export const useAddress = () => {
     
     try {
       const data = await fetchProvinces();
-      setProvinces(data.provinces);
+      setProvinces(data); // API trả về array trực tiếp
     } catch (err) {
       setError('Không thể tải danh sách tỉnh/thành phố');
       console.error('Error loading provinces:', err);
@@ -44,7 +44,7 @@ export const useAddress = () => {
     
     try {
       const data = await fetchCommunes(provinceCode);
-      setCommunes(data.communes);
+      setCommunes(data); // API trả về array trực tiếp
     } catch (err) {
       setError('Không thể tải danh sách phường/xã');
       console.error('Error loading communes:', err);

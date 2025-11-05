@@ -1,50 +1,66 @@
 /**
  * Address API for Vietnam 2-level administrative division
- * Using the new 2025 address system
+ * Sử dụng Backend API thay vì VITE_ADDRESS_KIT_API
+ * Dựa theo API-TestCases-VietnamAddress.md
  */
 
-import type { ProvincesResponse, CommunesResponse } from '../types/address';
+import { api } from './client';
+import type { Province, Commune } from '../types/address';
 
-// Use proxy in development, direct URL in production
-const ADDRESS_API_BASE_URL = import.meta.env.DEV 
-  ? '/address-kit/2025-07-01'
-  : import.meta.env.VITE_ADDRESS_KIT_API;
+/**
+ * Get all Vietnam communes/wards (latest data)
+ * Endpoint: GET /api/v1/addresses/vietnam
+ * Returns array directly
+ */
+export const fetchAllCommunes = async (): Promise<Commune[]> => {
+  try {
+    console.log('[Address API] Fetching all communes from backend');
+    const response = await api.get<Commune[]>('/addresses/vietnam');
+    console.log('[Address API] All communes fetched');
+    return response.data;
+  } catch (error) {
+    console.error('[Address API] Error fetching all communes:', error);
+    throw error;
+  }
+};
 
 /**
  * Fetch all provinces in Vietnam
+ * Endpoint: GET /api/v1/addresses/{effectiveDate}/provinces
+ * Returns array directly
  */
-export const fetchProvinces = async (): Promise<ProvincesResponse> => {
+export const fetchProvinces = async (effectiveDate: string = '2025-07-01'): Promise<Province[]> => {
   try {
-    const response = await fetch(`${ADDRESS_API_BASE_URL}/provinces`);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch provinces: ${response.statusText}`);
-    }
-    
-    const data: ProvincesResponse = await response.json();
-    return data;
+    console.log(`[Address API] Fetching provinces for date ${effectiveDate}`);
+    const response = await api.get<Province[]>(`/addresses/${effectiveDate}/provinces`);
+    console.log('[Address API] Provinces fetched');
+    return response.data;
   } catch (error) {
-    console.error('Error fetching provinces:', error);
+    console.error('[Address API] Error fetching provinces:', error);
     throw error;
   }
 };
 
 /**
  * Fetch all communes for a specific province
+ * Endpoint: GET /api/v1/addresses/{effectiveDate}/provinces/{provinceId}/communes
+ * Returns array directly
  * @param provinceCode - The province code (e.g., "01" for Hanoi, "79" for Ho Chi Minh City)
+ * @param effectiveDate - Effective date (default: 2025-07-01)
  */
-export const fetchCommunes = async (provinceCode: string): Promise<CommunesResponse> => {
+export const fetchCommunes = async (
+  provinceCode: string, 
+  effectiveDate: string = '2025-07-01'
+): Promise<Commune[]> => {
   try {
-    const response = await fetch(`${ADDRESS_API_BASE_URL}/provinces/${provinceCode}/communes`);
-    
-    if (!response.ok) {
-      throw new Error(`Failed to fetch communes: ${response.statusText}`);
-    }
-    
-    const data: CommunesResponse = await response.json();
-    return data;
+    console.log(`[Address API] Fetching communes for province ${provinceCode}, date ${effectiveDate}`);
+    const response = await api.get<Commune[]>(
+      `/addresses/${effectiveDate}/provinces/${provinceCode}/communes`
+    );
+    console.log('[Address API] Communes fetched');
+    return response.data;
   } catch (error) {
-    console.error('Error fetching communes:', error);
+    console.error('[Address API] Error fetching communes:', error);
     throw error;
   }
 };

@@ -860,24 +860,24 @@ Based on housekeeping_service_v8.sql:
     "success": true,
     "message": "Đặt lịch thành công",
     "data": {
-        "bookingId": "book0004-0000-0000-0000-000000000001",
-        "bookingCode": "HKS000004",
+        "bookingId": "45738ad5-65e9-438d-a56f-8c6f26648ee4",
+        "bookingCode": "BK42168339",
         "customerId": "c1000001-0000-0000-0000-000000000001",
-        "customerName": "Lê Minh Thật",
+        "customerName": "John Doe",
         "address": {
-            "addressId": "adrs0001-0000-0000-0000-000000000004",
-            "fullAddress": "789 Nguyễn Văn Cừ, Phường Chợ Quán, TP. Hồ Chí Minh",
-            "ward": "Phường Chợ Quán",
-            "city": "TP. Hồ Chí Minh",
-            "latitude": 10.7594,
-            "longitude": 106.6822,
+            "addressId": "3b77c406-00a2-43ee-be5d-3ae8124cf3ae",
+            "fullAddress": "123 Lê Trọng Tấn, Phường Tây Thạnh, Thành phố Hồ Chí Minh",
+            "ward": "Phường Tây Thạnh",
+            "city": "Thành phố Hồ Chí Minh",
+            "latitude": 10.7943,
+            "longitude": 106.6256,
             "isDefault": false
         },
-        "bookingTime": "2025-10-05T08:00:00",
-        "note": "Cần dọn dẹp tổng quát, chú ý khu vực bếp",
-        "totalAmount": 450000.00,
-        "formattedTotalAmount": "450,000đ",
-        "status": "AWAITING_EMPLOYEE",
+        "bookingTime": "2025-11-03T10:00:00",
+        "note": null,
+        "totalAmount": 40000.00,
+        "formattedTotalAmount": "40,000đ",
+        "status": "PENDING",
         "title": null,
         "imageUrl": null,
         "isVerified": true,
@@ -885,31 +885,62 @@ Based on housekeeping_service_v8.sql:
         "promotion": null,
         "bookingDetails": [
             {
-                "bookingDetailId": "bd000004-0000-0000-0000-000000000001",
+                "bookingDetailId": "189d6632-cb2a-40fc-b11e-09083fae8db5",
                 "service": {
-                    "serviceId": 1,
-                    "name": "Dọn dẹp theo giờ",
-                    "description": "Lau dọn, hút bụi, làm sạch các bề mặt cơ bản trong nhà. Phù hợp cho nhu cầu duy trì vệ sinh hàng tuần.",
-                    "basePrice": 60000.00,
-                    "unit": "Giờ",
-                    "estimatedDurationHours": 2.0,
-                    "iconUrl": "https://res.cloudinary.com/dkzemgit8/image/upload/v1757599899/Cleaning_Clock_z29juh.png",
-                    "categoryName": "Dọn dẹp nhà",
+                    "serviceId": 8,
+                    "name": "Đi chợ hộ",
+                    "description": "Mua sắm và giao hàng tận nơi theo danh sách của bạn.",
+                    "basePrice": 40000.00,
+                    "unit": "Lần",
+                    "estimatedDurationHours": 1.0,
+                    "iconUrl": "https://res.cloudinary.com/dkzemgit8/image/upload/v1757601712/shopping_etf5iz.png",
+                    "categoryName": "Việc nhà khác",
                     "isActive": true
                 },
                 "quantity": 1,
-                "pricePerUnit": 450000.00,
-                "formattedPricePerUnit": "450,000đ",
-                "subTotal": 450000.00,
-                "formattedSubTotal": "450,000đ",
+                "pricePerUnit": 40000.00,
+                "formattedPricePerUnit": "40,000đ",
+                "subTotal": 40000.00,
+                "formattedSubTotal": "40,000đ",
                 "selectedChoices": [],
-                "assignments": [],
-                "duration": "2 giờ",
-                "formattedDuration": "2 giờ"
+                "assignments": [
+                    {
+                        "assignmentId": "dc747708-4991-431b-8b77-fc8b4050adce",
+                        "employee": {
+                            "employeeId": "e1000001-0000-0000-0000-000000000001",
+                            "fullName": "Jane Smith",
+                            "email": "jane.smith@example.com",
+                            "phoneNumber": "0912345678",
+                            "avatar": "https://picsum.photos/200",
+                            "rating": null,
+                            "employeeStatus": "AVAILABLE",
+                            "skills": [
+                                "Cleaning",
+                                "Organizing"
+                            ],
+                            "bio": "Có kinh nghiệm dọn dẹp nhà cửa và sắp xếp đồ đạc."
+                        },
+                        "status": "ASSIGNED",
+                        "checkInTime": null,
+                        "checkOutTime": null,
+                        "createdAt": null,
+                        "updatedAt": null
+                    }
+                ],
+                "duration": "1 giờ",
+                "formattedDuration": "1 giờ"
             }
         ],
-        "payment": null,
-        "createdAt": "2025-10-27T09:24:56"
+        "payment": {
+            "paymentId": "a9ae98a7-db7b-4bf8-8377-99e8fa36247c",
+            "amount": 40000.00,
+            "paymentMethod": "Thanh toán tiền mặt",
+            "paymentStatus": "PENDING",
+            "transactionCode": "TXN_1761922342163",
+            "createdAt": "2025-10-31 21:52:22",
+            "paidAt": null
+        },
+        "createdAt": "2025-10-31T21:52:22"
     }
   }
   ```
