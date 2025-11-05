@@ -7,7 +7,7 @@
 import React, { useEffect, useState } from 'react';
 import { 
   Briefcase, Calendar, Clock, MapPin, AlertCircle, Loader2, 
-  Tag, CheckCircle, User
+  Tag, CheckCircle, User, Sparkles
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getVerifiedAwaitingEmployeeBookingsApi, acceptBookingDetailApi } from '../../api/employee';
@@ -198,10 +198,19 @@ export const BookingPosts: React.FC = () => {
                   {/* Header */}
                   <div className="mb-4 flex items-start justify-between">
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="text-lg font-semibold text-slate-900">
                           {bookingPost.data.bookingCode}
                         </h3>
+                        
+                        {/* Tag bài đăng nếu có title hoặc imageUrl */}
+                        {(bookingPost.data.title || bookingPost.data.imageUrl) && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-purple-50 to-pink-50 border border-purple-200 px-3 py-1 text-xs font-semibold text-purple-700">
+                            <Sparkles className="h-3 w-3" />
+                            Bài đăng
+                          </span>
+                        )}
+                        
                         {bookingPost.data.isVerified && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700">
                             <CheckCircle className="h-3 w-3" />
@@ -209,7 +218,7 @@ export const BookingPosts: React.FC = () => {
                           </span>
                         )}
                         {bookingPost.data.imageUrl && (
-                          <span className="inline-flex items-center gap-1 rounded-full bg-purple-50 px-2 py-1 text-xs font-medium text-purple-700">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
                             <Tag className="h-3 w-3" />
                             Có hình ảnh
                           </span>

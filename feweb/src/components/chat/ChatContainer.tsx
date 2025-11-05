@@ -1,32 +1,22 @@
-import React, { useEffect, useState } from 'react';
-import { Conversation } from '../../types/chat';
+import React, { useEffect, useState, useCallback } from 'react';
+import type { Conversation } from '../../types/chat';
 import { ConversationList } from './ConversationList';
 import { ChatWindow } from './ChatWindow';
 import { webSocketService } from '../../services/websocket';
 import { MessageCircle } from 'lucide-react';
 
 interface ChatContainerProps {
-  accountId: string;
-  initialConversationId?: string;
+  senderId: string; // customerId or employeeId
 }
 
 export const ChatContainer: React.FC<ChatContainerProps> = ({
-  accountId,
-  initialConversationId
+  senderId
 }) => {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
   const [wsError, setWsError] = useState<string | null>(null);
 
-  useEffect(() => {
-    connectWebSocket();
-
-    return () => {
-      webSocketService.disconnect();
-    };
-  }, []);
-
-  const connectWebSocket = async () => {
+  const connectWebSocket = useCallback(async () => {
     try {
       setWsError(null);
       
@@ -53,7 +43,15 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
       console.error('[Chat] Failed to connect WebSocket:', error);
       setWsError('Không thể kết nối chat real-time');
     }
-  };
+  }, []); // Empty deps - handlers use setState which are stable
+
+  useEffect(() => {
+    connectWebSocket();
+
+    return () => {
+      webSocketService.disconnect();
+    };
+  }, [connectWebSocket]);
 
   const handleConversationSelect = (conversation: Conversation) => {
     setSelectedConversation(conversation);
@@ -90,7 +88,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
           </div>
           <div className="flex-1 overflow-y-auto">
             <ConversationList
-              accountId={accountId}
+              senderId={senderId}
               selectedConversationId={selectedConversation?.conversationId}
               onConversationSelect={handleConversationSelect}
             />
@@ -104,7 +102,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
           {selectedConversation ? (
             <ChatWindow
               conversation={selectedConversation}
-              currentAccountId={accountId}
+              currentAccountId={senderId}
               onBack={handleBack}
             />
           ) : (

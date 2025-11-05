@@ -15,25 +15,6 @@ interface AvailableBooking {
   requiredEmployees: number;       // Changed from quantity
 }
 
-interface Assignment {
-  assignmentId: string;
-  bookingCode: string;
-  serviceName: string;
-  customerName: string;
-  customerPhone: string;
-  serviceAddress: string;
-  bookingTime: string;
-  estimatedDurationHours: number;
-  pricePerUnit: number;
-  quantity: number;
-  totalAmount: number;
-  status: string;
-  assignedAt: string;
-  checkInTime: string | null;
-  checkOutTime: string | null;
-  note: string | null;
-}
-
 interface CancelAssignmentRequest {
   reason: string;
   employeeId: string;

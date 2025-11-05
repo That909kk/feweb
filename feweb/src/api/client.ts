@@ -1,12 +1,26 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from 'axios';
 
-// Always use real API - Mock data removed
-export const USE_REAL_API = true;
-console.log(`[API Config] Always using real API`);
+// API Base Configuration - Load from .env
+console.log('[DEBUG] import.meta.env:', import.meta.env);
+console.log('[DEBUG] VITE_API_BASE_URL value:', import.meta.env.VITE_API_BASE_URL);
+console.log('[DEBUG] VITE_API_BASE_URL type:', typeof import.meta.env.VITE_API_BASE_URL);
 
-// API Base Configuration
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://192.168.80.113:8080/api/v1';
+const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'http://192.168.80.113:8080/ws';
+
+if (!import.meta.env.VITE_API_BASE_URL) {
+  console.warn('[API Config] ⚠️ VITE_API_BASE_URL not found in .env, using fallback:', API_BASE_URL);
+  console.warn('[API Config] ℹ️ Make sure .env file exists at:', window.location.origin);
+}
+
+console.log(`[API Config] ✅ Using API URL: ${API_BASE_URL}`);
+console.log(`[API Config] ✅ Using WS URL: ${WS_BASE_URL}`);
+
+// Export base URLs for use in other modules
+export { API_BASE_URL, WS_BASE_URL };
+
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1',
+  baseURL: API_BASE_URL,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

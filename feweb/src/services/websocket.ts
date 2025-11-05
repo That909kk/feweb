@@ -8,8 +8,13 @@ import SockJS from 'sockjs-client';
 import { Client, type IFrame, type IMessage } from '@stomp/stompjs';
 import type { WebSocketMessage } from '../types/chat';
 
-const WS_URL = import.meta.env.VITE_API_BASE_URL?.replace('/api/v1', '') || 'http://localhost:8080';
-const WS_ENDPOINT = '/ws/chat';
+const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'http://localhost:8080/ws';
+const WS_ENDPOINT = '/chat';
+
+// Log WebSocket configuration
+console.log('[WebSocket Config] WS_BASE_URL from env:', import.meta.env.VITE_WS_BASE_URL);
+console.log('[WebSocket Config] Final WS_BASE_URL:', WS_BASE_URL);
+console.log('[WebSocket Config] Full WebSocket URL:', `${WS_BASE_URL}${WS_ENDPOINT}`);
 
 type MessageHandler = (message: WebSocketMessage) => void;
 type ConnectionHandler = () => void;
@@ -44,11 +49,11 @@ class WebSocketService {
       }
 
       this.isConnecting = true;
-      console.log('[WebSocket] Connecting to:', `${WS_URL}${WS_ENDPOINT}`);
+      console.log('[WebSocket] Connecting to:', `${WS_BASE_URL}${WS_ENDPOINT}`);
 
       try {
         // Tạo SockJS socket
-        const socket = new SockJS(`${WS_URL}${WS_ENDPOINT}`);
+        const socket = new SockJS(`${WS_BASE_URL}${WS_ENDPOINT}`);
 
         // Tạo STOMP client
         this.client = new Client({

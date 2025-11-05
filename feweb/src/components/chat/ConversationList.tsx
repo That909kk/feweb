@@ -1,18 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { Conversation } from '../../types/chat';
-import { getConversationsByAccountApi } from '../../api/chat';
+import type { Conversation } from '../../types/chat';
+import { getConversationsBySenderApi } from '../../api/chat';
 import { formatDistanceToNow } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { MessageCircle } from 'lucide-react';
 
 interface ConversationListProps {
-  accountId: string;
+  senderId: string; // customerId or employeeId
   selectedConversationId?: string;
   onConversationSelect: (conversation: Conversation) => void;
 }
 
 export const ConversationList: React.FC<ConversationListProps> = ({
-  accountId,
+  senderId,
   selectedConversationId,
   onConversationSelect,
 }) => {
@@ -22,17 +22,30 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
   useEffect(() => {
     loadConversations();
-  }, [accountId]);
+  }, [senderId]);
 
   const loadConversations = async () => {
     try {
       setLoading(true);
       setError(null);
-      const response = await getConversationsByAccountApi(accountId, {
+      console.log('[ConversationList] Loading conversations for senderId:', senderId);
+      const response = await getConversationsBySenderApi(senderId, {
         page: 0,
         size: 50,
       });
-      setConversations(response.data || []);
+      console.log('[ConversationList] API response:', response);
+      console.log('[ConversationList] Conversations data:', response.data);
+      console.log('[ConversationList] Number of conversations:', response.data?.length || 0);
+      
+      // Sort conversations: active ones (canChat = true) first, locked ones (canChat = false) at bottom
+      const sortedConversations = (response.data || []).sort((a, b) => {
+        // If both have same canChat status, keep original order (by lastMessageTime from API)
+        if (a.canChat === b.canChat) return 0;
+        // Put active conversations (canChat = true) first
+        return a.canChat ? -1 : 1;
+      });
+      
+      setConversations(sortedConversations);
     } catch (err: any) {
       console.error('Error loading conversations:', err);
       setError('Không thể tải danh sách cuộc trò chuyện');
@@ -100,11 +113,11 @@ export const ConversationList: React.FC<ConversationListProps> = ({
               isSelected
                 ? 'bg-blue-50 border-l-4 border-blue-600'
                 : 'hover:bg-gray-50 border-l-4 border-transparent'
-            }`}
+            } ${!conversation.canChat ? 'opacity-60' : ''}`}
           >
             <div className="flex items-start space-x-3">
               {/* Avatar */}
-              <div className="flex-shrink-0">
+              <div className="flex-shrink-0 relative">
                 {otherPersonAvatar ? (
                   <img
                     src={otherPersonAvatar}
@@ -116,6 +129,13 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                     <span className="text-white font-semibold text-lg">
                       {otherPersonName?.charAt(0).toUpperCase()}
                     </span>
+                  </div>
+                )}
+                {!conversation.canChat && (
+                  <div className="absolute -bottom-1 -right-1 bg-gray-400 rounded-full p-1" title="Không thể trò chuyện">
+                    <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                    </svg>
                   </div>
                 )}
               </div>
@@ -137,11 +157,18 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                     {conversation.lastMessage}
                   </p>
                 )}
-                {conversation.bookingId && (
-                  <span className="inline-block mt-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
-                    Booking
-                  </span>
-                )}
+                <div className="flex items-center gap-2 mt-1">
+                  {conversation.bookingId && (
+                    <span className="inline-block px-2 py-0.5 text-xs bg-blue-100 text-blue-700 rounded">
+                      Booking
+                    </span>
+                  )}
+                  {!conversation.canChat && (
+                    <span className="inline-block px-2 py-0.5 text-xs bg-gray-200 text-gray-600 rounded">
+                      Đã khóa
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>

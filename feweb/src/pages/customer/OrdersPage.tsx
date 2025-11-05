@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import ReactDOM from 'react-dom';
 import { Link } from 'react-router-dom';
 import {
   AlertCircle,
@@ -16,7 +17,6 @@ import {
 import { DashboardLayout } from '../../layouts';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBooking } from '../../hooks/useBooking';
-import { useServices } from '../../hooks/useServices';
 import { MetricCard, SectionCard } from '../../shared/components';
 import { 
   getReviewCriteriaApi, 
@@ -28,8 +28,9 @@ import {
 type BookingItem = {
   bookingId: string;
   bookingCode?: string;
+  customerId?: string;
+  customerName?: string;
   status: string;
-  serviceId?: number;
   bookingTime?: string;
   scheduledDate?: string;
   scheduledTime?: string;
@@ -38,27 +39,59 @@ type BookingItem = {
   createdAt?: string;
   updatedAt?: string;
   note?: string;
-  address?: string | { fullAddress?: string };
+  address?: {
+    addressId?: string;
+    fullAddress?: string;
+    ward?: string;
+    city?: string;
+    latitude?: number;
+    longitude?: number;
+    isDefault?: boolean;
+  };
   // Booking Post Feature fields
   title?: string;
   imageUrl?: string;
   isVerified?: boolean;
   adminComment?: string;
-  customerInfo?: {
-    fullAddress: string;
-  };
-  serviceDetails?: Array<{
-    service: {
-      name: string;
-      description?: string;
-      iconUrl?: string;
-    };
-  }>;
+  promotion?: {
+    promotionId: number;
+    promoCode: string;
+    description: string;
+    discountType: string;
+    discountValue: number;
+    maxDiscountAmount?: number;
+  } | null;
   payment?: {
-    paymentStatus?: string;
-    paymentMethod?: string;
+    paymentId?: string;
     amount?: number;
-  };
+    paymentMethod?: string;
+    paymentStatus?: string;
+    transactionCode?: string;
+    createdAt?: string;
+    paidAt?: string | null;
+  } | null;
+  assignedEmployees?: Array<{
+    employeeId: string;
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+    avatar?: string;
+    rating?: number | null;
+    employeeStatus: string;
+    skills?: string[];
+    bio?: string;
+  }>;
+  services?: Array<{
+    serviceId: number;
+    name: string;
+    description?: string;
+    basePrice?: number;
+    unit?: string;
+    estimatedDurationHours?: number;
+    iconUrl?: string;
+    categoryName?: string;
+    isActive?: boolean;
+  }>;
   [key: string]: any;
 };
 
@@ -97,7 +130,6 @@ const normalizeStatus = (status?: string): StatusKey => {
 const OrdersPage: React.FC = () => {
   const { user } = useAuth();
   const { getCustomerBookings, cancelBooking, convertBookingToPost } = useBooking();
-  const { services, isLoading: isLoadingServices } = useServices();
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<StatusKey>('ALL');
@@ -132,11 +164,22 @@ const OrdersPage: React.FC = () => {
     try {
       const response = await getCustomerBookings(user.id);
       console.log('[OrdersPage] Got bookings response:', response);
-      if (Array.isArray(response)) {
-        console.log('[OrdersPage] Setting bookings, count:', response.length);
+      
+      // Handle paginated response with content array
+      if (response && typeof response === 'object' && 'content' in response) {
+        const content = (response as any).content;
+        if (Array.isArray(content)) {
+          console.log('[OrdersPage] Setting bookings from content, count:', content.length);
+          setBookings(content as BookingItem[]);
+        } else {
+          console.log('[OrdersPage] Content is not array, setting empty');
+          setBookings([]);
+        }
+      } else if (Array.isArray(response)) {
+        console.log('[OrdersPage] Setting bookings from array response, count:', response.length);
         setBookings(response as BookingItem[]);
       } else {
-        console.log('[OrdersPage] Response is not array, setting empty');
+        console.log('[OrdersPage] Response format unknown, setting empty');
         setBookings([]);
       }
     } catch (err: any) {
@@ -153,6 +196,38 @@ const OrdersPage: React.FC = () => {
     loadReviewCriteria();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user?.id]);
+
+  // Prevent body scroll when any modal is open
+  useEffect(() => {
+    const isAnyModalOpen = selectedBooking !== null || showCancelDialog || showConvertDialog || showReviewDialog;
+    
+    if (isAnyModalOpen) {
+      // Save current scroll position
+      const scrollY = window.scrollY;
+      document.body.style.overflow = 'hidden';
+      document.body.style.position = 'fixed';
+      document.body.style.top = `-${scrollY}px`;
+      document.body.style.width = '100%';
+    } else {
+      // Restore scroll position
+      const scrollY = document.body.style.top;
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+      if (scrollY) {
+        window.scrollTo(0, parseInt(scrollY || '0') * -1);
+      }
+    }
+
+    return () => {
+      // Cleanup on unmount
+      document.body.style.overflow = '';
+      document.body.style.position = '';
+      document.body.style.top = '';
+      document.body.style.width = '';
+    };
+  }, [selectedBooking, showCancelDialog, showConvertDialog, showReviewDialog]);
 
   const loadReviewCriteria = async () => {
     try {
@@ -182,20 +257,21 @@ const OrdersPage: React.FC = () => {
   }, [bookings, selectedFilter]);
 
   const resolveServiceName = (booking: BookingItem) => {
-    const detailedName = booking.serviceDetails?.[0]?.service.name;
-    if (detailedName) return detailedName;
-    if (typeof booking.serviceId === 'number') {
-      const svc = services.find(service => service.serviceId === booking.serviceId);
-      if (svc) return svc.name;
+    // Try to get service name from services array (new API format)
+    if (booking.services && booking.services.length > 0) {
+      // If multiple services, join their names
+      if (booking.services.length === 1) {
+        return booking.services[0].name;
+      } else {
+        return booking.services.map(s => s.name).join(', ');
+      }
     }
     return 'Dịch vụ gia đình';
   };
 
   const resolveAddress = (booking: BookingItem) => {
-    if (booking.customerInfo?.fullAddress) return booking.customerInfo.fullAddress;
-    if (typeof booking.address === 'string') return booking.address;
-    if (booking.address && 'fullAddress' in booking.address) {
-      return booking.address.fullAddress || 'Chưa cập nhật địa chỉ';
+    if (booking.address?.fullAddress) {
+      return booking.address.fullAddress;
     }
     return 'Chưa cập nhật địa chỉ';
   };
@@ -261,9 +337,8 @@ const OrdersPage: React.FC = () => {
   };
 
   const handleOpenReviewDialog = (booking: BookingItem) => {
-    // Get first employee from assignments if available
-    const employeeId = booking.assignments?.[0]?.employee?.employeeId || 
-                      booking.assignments?.[0]?.employeeId;
+    // Get first employee from assignedEmployees array
+    const employeeId = booking.assignedEmployees?.[0]?.employeeId;
     
     if (!employeeId) {
       setError('Không tìm thấy thông tin nhân viên để đánh giá');
@@ -323,9 +398,9 @@ const OrdersPage: React.FC = () => {
     const badgePalette = statusConfig[statusKey] || statusConfig.ALL;
     const isPost = statusKey === 'AWAITING_EMPLOYEE' && selectedBooking.title;
 
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-8 backdrop-blur-sm">
-        <div className="relative w-full max-w-2xl">
+    const modalContent = (
+      <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 px-4 py-8 backdrop-blur-sm" onClick={() => setSelectedBooking(null)}>
+        <div className="relative w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
           <SectionCard
             title={`Đơn ${selectedBooking.bookingCode || selectedBooking.bookingId}`}
             description={isPost ? 'Chi tiết bài đăng tìm nhân viên' : 'Chi tiết lịch đặt của bạn'}
@@ -339,137 +414,353 @@ const OrdersPage: React.FC = () => {
               </button>
             }
           >
-            <div className="space-y-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${badgePalette.badge}`}>
-                    {statusConfig[statusKey]?.label}
-                  </span>
-                  {isPost && selectedBooking.isVerified === false && (
-                    <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
-                      Chờ admin duyệt
+            <div className="overflow-y-auto max-h-[calc(90vh-120px)] pr-2 -mr-2">
+              <div className="space-y-4">{/* Giảm spacing từ 5 xuống 4 */}
+                {/* Status badges */}
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${badgePalette.badge}`}>
+                      {statusConfig[statusKey]?.label}
                     </span>
-                  )}
-                  {isPost && selectedBooking.isVerified === true && (
-                    <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-                      Đã duyệt
-                    </span>
-                  )}
+                    {isPost && selectedBooking.isVerified === false && (
+                      <span className="inline-flex items-center rounded-full bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-700">
+                        Chờ admin duyệt
+                      </span>
+                    )}
+                    {isPost && selectedBooking.isVerified === true && (
+                      <span className="inline-flex items-center rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                        Đã duyệt
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    {selectedBooking.createdAt ? new Date(selectedBooking.createdAt).toLocaleString('vi-VN') : '—'}
+                  </p>
                 </div>
-                <p className="text-sm text-slate-500">
-                  Tạo lúc {selectedBooking.createdAt ? new Date(selectedBooking.createdAt).toLocaleString('vi-VN') : '—'}
-                </p>
-              </div>
 
-              {/* Hiển thị title và image cho booking post */}
+                {/* Hiển thị title và image cho booking post */}
               {isPost && selectedBooking.title && (
-                <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4">
-                  <h3 className="text-lg font-semibold text-indigo-900">{selectedBooking.title}</h3>
+                <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-indigo-100/50 p-5 shadow-sm">
                   {selectedBooking.imageUrl && (
                     <img 
                       src={selectedBooking.imageUrl} 
                       alt={selectedBooking.title}
-                      className="mt-3 w-full rounded-xl object-cover max-h-64"
+                      className="w-full rounded-xl object-cover mb-4 max-h-80 shadow-md"
                       onError={(e) => {
                         (e.target as HTMLImageElement).style.display = 'none';
                       }}
                     />
                   )}
+                  <div className="flex items-center gap-2 mb-2">
+                    {selectedBooking.services && selectedBooking.services.length > 0 && selectedBooking.services[0].iconUrl && (
+                      <img 
+                        src={selectedBooking.services[0].iconUrl} 
+                        alt={selectedBooking.services[0].name}
+                        className="h-6 w-6 object-contain"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    )}
+                    <span className="text-sm font-medium text-indigo-600">
+                      {selectedBooking.services && selectedBooking.services.length > 0 
+                        ? selectedBooking.services[0].name 
+                        : 'Dịch vụ'}
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-bold text-indigo-900">{selectedBooking.title}</h3>
+                </div>
+              )}                {/* Thông tin cơ bản: Dịch vụ & Chi phí */}
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-xl bg-gradient-to-br from-slate-50 to-slate-100/50 p-4 border border-slate-100">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">Dịch vụ</p>
+                    <div className="flex items-center gap-2">
+                      {selectedBooking.services && selectedBooking.services.length > 0 && selectedBooking.services[0].iconUrl && (
+                        <img 
+                          src={selectedBooking.services[0].iconUrl} 
+                          alt={selectedBooking.services[0].name}
+                          className="h-6 w-6 object-contain flex-shrink-0"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      )}
+                      <p className="text-sm font-bold text-slate-900 line-clamp-2">
+                        {resolveServiceName(selectedBooking)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-4 border border-emerald-100">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600 mb-2">Chi phí</p>
+                    <p className="text-lg font-bold text-emerald-700">
+                      {resolveTotalAmount(selectedBooking)}
+                    </p>
+                  </div>
+                </div>
+
+              {/* Services Details */}
+              {selectedBooking.services && selectedBooking.services.length > 0 && (
+                <div className="rounded-2xl border border-teal-100 bg-teal-50/50 p-4">
+                  <h4 className="mb-3 text-sm font-semibold text-teal-900">
+                    Chi tiết dịch vụ ({selectedBooking.services.length})
+                  </h4>
+                  <div className="space-y-3">
+                    {selectedBooking.services.map((service) => (
+                      <div 
+                        key={service.serviceId}
+                        className="flex items-start gap-3 rounded-xl bg-white p-3"
+                      >
+                        {service.iconUrl && (
+                          <img 
+                            src={service.iconUrl} 
+                            alt={service.name}
+                            className="h-12 w-12 rounded-lg object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                            }}
+                          />
+                        )}
+                        <div className="flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="font-semibold text-slate-900">{service.name}</p>
+                              {service.categoryName && (
+                                <p className="text-xs text-slate-500">{service.categoryName}</p>
+                              )}
+                            </div>
+                            {service.basePrice && (
+                              <p className="text-sm font-semibold text-teal-700">
+                                {service.basePrice.toLocaleString('vi-VN')}₫/{service.unit || 'Gói'}
+                              </p>
+                            )}
+                          </div>
+                          {service.description && (
+                            <p className="mt-1 text-xs text-slate-600">{service.description}</p>
+                          )}
+                          {service.estimatedDurationHours && (
+                            <p className="mt-1 text-xs text-slate-500">
+                              Thời gian ước tính: {service.estimatedDurationHours} giờ
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               )}
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="rounded-2xl bg-slate-50/80 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Dịch vụ</p>
-                  <p className="mt-2 text-base font-semibold text-slate-900">
-                    {resolveServiceName(selectedBooking)}
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-slate-50/80 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Chi phí dự kiến</p>
-                  <p className="mt-2 text-base font-semibold text-slate-900">
-                    {resolveTotalAmount(selectedBooking)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-100 bg-white/80 p-4 shadow-sm">
-                <div className="flex items-center gap-3 text-sm text-slate-600">
-                  <CalendarClock className="h-5 w-5 text-sky-500" />
-                  <span>
-                    {selectedBooking.bookingTime
-                      ? new Date(selectedBooking.bookingTime).toLocaleString('vi-VN')
-                      : selectedBooking.scheduledDate
-                      ? `${new Date(selectedBooking.scheduledDate).toLocaleDateString('vi-VN')} ${selectedBooking.scheduledTime || ''}`
-                      : 'Chưa cập nhật thời gian'}
-                  </span>
-                </div>
-                <div className="mt-3 flex items-center gap-3 text-sm text-slate-600">
-                  <MapPin className="h-5 w-5 text-sky-500" />
-                  <span>{resolveAddress(selectedBooking)}</span>
-                </div>
-              </div>
-
-              {selectedBooking.note && (
-                <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-700">
-                  <NotebookText className="mr-2 inline h-4 w-4 align-text-top" />
-                  Ghi chú: {selectedBooking.note}
-                </div>
-              )}
-              
-              {selectedBooking.adminComment && (
-                <div className="rounded-2xl border border-sky-100 bg-sky-50 p-4 text-sm text-sky-700">
-                  <AlertCircle className="mr-2 inline h-4 w-4 align-text-top" />
-                  Admin: {selectedBooking.adminComment}
+              {/* Payment Information */}
+              {selectedBooking.payment && (
+                <div className="rounded-2xl border border-blue-100 bg-blue-50/50 p-4">
+                  <h4 className="mb-3 text-sm font-semibold text-blue-900">Thông tin thanh toán</h4>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-slate-600">Trạng thái:</span>
+                      <span className={`font-semibold ${
+                        selectedBooking.payment.paymentStatus === 'PAID' 
+                          ? 'text-emerald-700' 
+                          : 'text-amber-700'
+                      }`}>
+                        {selectedBooking.payment.paymentStatus === 'PAID' ? 'Đã thanh toán' : 'Chờ thanh toán'}
+                      </span>
+                    </div>
+                    {selectedBooking.payment.paymentMethod && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Phương thức:</span>
+                        <span className="font-semibold text-slate-900">{selectedBooking.payment.paymentMethod}</span>
+                      </div>
+                    )}
+                    {selectedBooking.payment.transactionCode && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Mã giao dịch:</span>
+                        <span className="font-mono text-xs text-slate-900">{selectedBooking.payment.transactionCode}</span>
+                      </div>
+                    )}
+                    {selectedBooking.payment.paidAt && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Thanh toán lúc:</span>
+                        <span className="text-slate-900">{new Date(selectedBooking.payment.paidAt).toLocaleString('vi-VN')}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
-              <div className="flex flex-wrap gap-3">
-                {(statusKey === 'CONFIRMED' || statusKey === 'IN_PROGRESS') && (
-                  <Link
-                    to={`/customer/chat?booking=${selectedBooking.bookingId}`}
-                    className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-200 transition hover:-translate-y-0.5 hover:bg-sky-500"
-                  >
-                    <MessageCircle className="h-4 w-4" />
-                    Trao đổi với nhân viên
-                  </Link>
+              {/* Promotion Information */}
+              {selectedBooking.promotion && (
+                <div className="rounded-2xl border border-purple-100 bg-purple-50/50 p-4">
+                  <h4 className="mb-2 text-sm font-semibold text-purple-900">Khuyến mãi áp dụng</h4>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex items-center gap-2">
+                      <span className="rounded bg-purple-200 px-2 py-0.5 font-mono text-xs font-semibold text-purple-900">
+                        {selectedBooking.promotion.promoCode}
+                      </span>
+                      <span className="text-slate-600">{selectedBooking.promotion.description}</span>
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Giảm: {selectedBooking.promotion.discountType === 'FIXED_AMOUNT' 
+                        ? `${selectedBooking.promotion.discountValue.toLocaleString('vi-VN')}₫`
+                        : `${selectedBooking.promotion.discountValue}%`
+                      }
+                      {selectedBooking.promotion.maxDiscountAmount && 
+                        ` (tối đa ${selectedBooking.promotion.maxDiscountAmount.toLocaleString('vi-VN')}₫)`
+                      }
+                    </p>
+                  </div>
+                </div>
+              )}
+
+                {/* Thời gian & Địa chỉ */}
+                <div className="rounded-xl border border-sky-100 bg-gradient-to-br from-sky-50 to-blue-50/50 p-4">
+                  <div className="flex items-start gap-3 mb-3">
+                    <CalendarClock className="h-5 w-5 text-sky-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-semibold text-sky-600 mb-1">Thời gian</p>
+                      <p className="text-sm font-semibold text-slate-900">
+                        {selectedBooking.bookingTime
+                          ? new Date(selectedBooking.bookingTime).toLocaleString('vi-VN')
+                          : selectedBooking.scheduledDate
+                          ? `${new Date(selectedBooking.scheduledDate).toLocaleDateString('vi-VN')} ${selectedBooking.scheduledTime || ''}`
+                          : 'Chưa cập nhật thời gian'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <MapPin className="h-5 w-5 text-sky-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-xs font-semibold text-sky-600 mb-1">Địa chỉ</p>
+                      <p className="text-sm font-semibold text-slate-900">{resolveAddress(selectedBooking)}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Ghi chú */}
+                {selectedBooking.note && (
+                  <div className="rounded-xl border border-amber-100 bg-amber-50/80 p-4">
+                    <div className="flex items-start gap-2">
+                      <NotebookText className="h-4 w-4 text-amber-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-semibold text-amber-600 mb-1">Ghi chú từ khách hàng</p>
+                        <p className="text-sm text-amber-900">{selectedBooking.note}</p>
+                      </div>
+                    </div>
+                  </div>
                 )}
-                {/* Nút đánh giá cho booking COMPLETED */}
-                {statusKey === 'COMPLETED' && (
-                  <button
-                    type="button"
-                    onClick={() => handleOpenReviewDialog(selectedBooking)}
-                    className="flex-1 rounded-full bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-amber-200 transition hover:-translate-y-0.5 hover:bg-amber-500 inline-flex items-center justify-center gap-2"
-                  >
-                    <Star className="h-4 w-4" />
-                    Đánh giá dịch vụ
-                  </button>
+                
+                {selectedBooking.adminComment && (
+                  <div className="rounded-xl border border-sky-100 bg-sky-50/80 p-4">
+                    <div className="flex items-start gap-2">
+                      <AlertCircle className="h-4 w-4 text-sky-600 flex-shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-xs font-semibold text-sky-600 mb-1">Phản hồi từ Admin</p>
+                        <p className="text-sm text-sky-900">{selectedBooking.adminComment}</p>
+                      </div>
+                    </div>
+                  </div>
                 )}
-                {/* Nút chuyển thành bài post - chỉ hiển thị với AWAITING_EMPLOYEE chưa có title */}
-                {statusKey === 'AWAITING_EMPLOYEE' && !selectedBooking.title && (
-                  <button
-                    type="button"
-                    onClick={() => setShowConvertDialog(true)}
-                    className="flex-1 rounded-full border border-indigo-200 bg-white px-4 py-2 text-sm font-semibold text-indigo-600 transition hover:border-indigo-300 hover:-translate-y-0.5 hover:bg-indigo-50"
-                  >
-                    Chuyển thành bài post
-                  </button>
-                )}
-                {canCancelBooking(selectedBooking) && (
-                  <button
-                    type="button"
-                    onClick={() => setShowCancelDialog(true)}
-                    className="flex-1 rounded-full border border-rose-200 bg-white px-4 py-2 text-sm font-semibold text-rose-600 transition hover:border-rose-300 hover:-translate-y-0.5 hover:bg-rose-50"
-                  >
-                    Hủy đơn
-                  </button>
-                )}
-              </div>
+
+              {/* Hiển thị danh sách nhân viên được phân công */}
+              {selectedBooking.assignedEmployees && selectedBooking.assignedEmployees.length > 0 && (
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4">
+                  <h4 className="mb-3 text-sm font-semibold text-emerald-900">
+                    Nhân viên được phân công ({selectedBooking.assignedEmployees.length})
+                  </h4>
+                  <div className="space-y-3">
+                    {selectedBooking.assignedEmployees.map((employee) => (
+                      <div 
+                        key={employee.employeeId}
+                        className="flex items-center gap-3 rounded-xl bg-white p-3"
+                      >
+                        {employee.avatar && (
+                          <img 
+                            src={employee.avatar} 
+                            alt={employee.fullName}
+                            className="h-12 w-12 rounded-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(employee.fullName);
+                            }}
+                          />
+                        )}
+                        <div className="flex-1">
+                          <p className="font-semibold text-slate-900">{employee.fullName}</p>
+                          <p className="text-xs text-slate-500">{employee.email}</p>
+                          {employee.phoneNumber && (
+                            <p className="text-xs text-slate-500">{employee.phoneNumber}</p>
+                          )}
+                          {employee.skills && employee.skills.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {employee.skills.map((skill, idx) => (
+                                <span 
+                                  key={idx}
+                                  className="inline-flex rounded-full bg-emerald-100 px-2 py-0.5 text-xs text-emerald-700"
+                                >
+                                  {skill}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        {employee.rating !== null && employee.rating !== undefined && (
+                          <div className="flex items-center gap-1">
+                            <Star className="h-4 w-4 fill-amber-400 text-amber-400" />
+                            <span className="text-sm font-semibold text-slate-700">{employee.rating}</span>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              </div>{/* Close space-y-4 div */}
+            </div>{/* Close overflow-y-auto div */}
+            
+            {/* Action buttons - sticky at bottom */}
+            <div className="mt-4 pt-4 border-t border-slate-200 flex flex-wrap gap-2">
+              {(statusKey === 'CONFIRMED' || statusKey === 'IN_PROGRESS') && (
+                <Link
+                  to={`/customer/chat?booking=${selectedBooking.bookingId}`}
+                  className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-sky-200 transition hover:-translate-y-0.5 hover:bg-sky-500"
+                >
+                  <MessageCircle className="h-4 w-4" />
+                  Trao đổi
+                </Link>
+              )}
+              {statusKey === 'COMPLETED' && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenReviewDialog(selectedBooking)}
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-amber-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-amber-200 transition hover:-translate-y-0.5 hover:bg-amber-500"
+                >
+                  <Star className="h-4 w-4" />
+                  Đánh giá
+                </button>
+              )}
+              {statusKey === 'AWAITING_EMPLOYEE' && !selectedBooking.title && (
+                <button
+                  type="button"
+                  onClick={() => setShowConvertDialog(true)}
+                  className="flex-1 rounded-full border-2 border-indigo-200 bg-white px-4 py-2.5 text-sm font-semibold text-indigo-600 transition hover:border-indigo-300 hover:-translate-y-0.5 hover:bg-indigo-50"
+                >
+                  Chuyển thành post
+                </button>
+              )}
+              {canCancelBooking(selectedBooking) && (
+                <button
+                  type="button"
+                  onClick={() => setShowCancelDialog(true)}
+                  className="flex-1 rounded-full border-2 border-rose-200 bg-white px-4 py-2.5 text-sm font-semibold text-rose-600 transition hover:border-rose-300 hover:-translate-y-0.5 hover:bg-rose-50"
+                >
+                  Hủy đơn
+                </button>
+              )}
             </div>
           </SectionCard>
         </div>
       </div>
     );
+
+    return ReactDOM.createPortal(modalContent, document.body);
   };
 
   return (
@@ -488,13 +779,6 @@ const OrdersPage: React.FC = () => {
         </button>
       }
     >
-      {/* Debug Info */}
-      {import.meta.env.DEV && (
-        <div className="mb-4 rounded-2xl border border-blue-100 bg-blue-50 p-4 text-sm text-blue-700">
-          <strong>Debug:</strong> User ID: {user?.id || 'Not logged in'} | Bookings: {bookings.length}
-        </div>
-      )}
-      
       <div className="grid gap-6 lg:grid-cols-3">
         <MetricCard
           icon={CalendarClock}
@@ -508,7 +792,7 @@ const OrdersPage: React.FC = () => {
           label="Đơn hoàn tất"
           value={`${metrics.completed}`}
           accent="teal"
-          trendLabel="Cảm ơn bạn đã tin dùng HouseCare Hub."
+          trendLabel="Cảm ơn bạn đã tin dùng dịch vụ của Home Mate."
         />
         <MetricCard
           icon={MessageCircle}
@@ -558,7 +842,7 @@ const OrdersPage: React.FC = () => {
           </div>
         )}
 
-        {isLoading || isLoadingServices ? (
+        {isLoading ? (
           <div className="flex items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-white/60 py-16 text-slate-500">
             <Loader2 className="mr-3 h-5 w-5 animate-spin" />
             Đang tải dữ liệu đặt lịch...
@@ -605,10 +889,27 @@ const OrdersPage: React.FC = () => {
                     <div className="rounded-2xl border border-indigo-100 bg-indigo-50/50 p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-2">
+                            {booking.services && booking.services.length > 0 && booking.services[0].iconUrl && (
+                              <img 
+                                src={booking.services[0].iconUrl} 
+                                alt={booking.services[0].name}
+                                className="h-6 w-6 object-contain"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                }}
+                              />
+                            )}
+                            <span className="text-sm font-medium text-indigo-700">
+                              {booking.services && booking.services.length > 0 
+                                ? booking.services[0].name 
+                                : 'Dịch vụ'}
+                            </span>
+                          </div>
                           <h3 className="text-base font-semibold text-indigo-900">{booking.title}</h3>
                           {booking.isVerified === false && (
                             <span className="mt-2 inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
-                              Chờ admin duyệt
+                              Hệ Thống Đang Xử Lý Yêu Cầu Của Bạn
                             </span>
                           )}
                           {booking.isVerified === true && (
@@ -640,9 +941,21 @@ const OrdersPage: React.FC = () => {
                         </span>
                       </div>
                       {!isPost && (
-                        <h3 className="text-lg font-semibold text-slate-900">
-                          {resolveServiceName(booking)}
-                        </h3>
+                        <div className="flex items-center gap-2">
+                          {booking.services && booking.services.length > 0 && booking.services[0].iconUrl && (
+                            <img 
+                              src={booking.services[0].iconUrl} 
+                              alt={booking.services[0].name}
+                              className="h-6 w-6 object-contain"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          )}
+                          <h3 className="text-lg font-semibold text-slate-900">
+                            {resolveServiceName(booking)}
+                          </h3>
+                        </div>
                       )}
                       <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
                         <span className="inline-flex items-center gap-2">
@@ -654,6 +967,43 @@ const OrdersPage: React.FC = () => {
                           {resolveAddress(booking)}
                         </span>
                       </div>
+                      {/* Hiển thị thông tin nhân viên được phân công */}
+                      {booking.assignedEmployees && booking.assignedEmployees.length > 0 && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="text-slate-500">Nhân viên:</span>
+                          <div className="flex items-center gap-2">
+                            {booking.assignedEmployees.slice(0, 2).map((employee, idx) => (
+                              <div key={employee.employeeId} className="flex items-center gap-2">
+                                {employee.avatar && (
+                                  <img 
+                                    src={employee.avatar} 
+                                    alt={employee.fullName}
+                                    className="h-6 w-6 rounded-full object-cover"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).src = 'https://ui-avatars.com/api/?name=' + encodeURIComponent(employee.fullName) + '&size=24';
+                                    }}
+                                  />
+                                )}
+                                <span className="font-medium text-slate-700">{employee.fullName}</span>
+                                {idx < Math.min(booking.assignedEmployees!.length - 1, 1) && (
+                                  <span className="text-slate-400">,</span>
+                                )}
+                              </div>
+                            ))}
+                            {booking.assignedEmployees.length > 2 && (
+                              <span className="text-slate-500">+{booking.assignedEmployees.length - 2} người</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                      {/* Hiển thị số lượng dịch vụ nếu có nhiều dịch vụ */}
+                      {!isPost && booking.services && booking.services.length > 1 && (
+                        <div className="flex items-center gap-2 text-sm">
+                          <span className="inline-flex items-center rounded-full bg-teal-100 px-3 py-1 text-xs font-semibold text-teal-700">
+                            {booking.services.length} dịch vụ
+                          </span>
+                        </div>
+                      )}
                     </div>
                     <div className="flex flex-col items-start gap-3 sm:items-end">
                       <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${badgePalette.badge}`}>
@@ -700,9 +1050,9 @@ const OrdersPage: React.FC = () => {
       {renderDetailSheet()}
       
       {/* Cancel Booking Dialog */}
-      {showCancelDialog && selectedBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-8 backdrop-blur-sm">
-          <div className="relative w-full max-w-md">
+      {showCancelDialog && selectedBooking && ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 px-4 py-8 backdrop-blur-sm" onClick={() => setShowCancelDialog(false)}>
+          <div className="relative w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <SectionCard
               title="Xác nhận hủy đơn"
               description={`Đơn ${selectedBooking.bookingCode || selectedBooking.bookingId}`}
@@ -773,13 +1123,13 @@ const OrdersPage: React.FC = () => {
               </div>
             </SectionCard>
           </div>
-        </div>
+        </div>, document.body
       )}
 
       {/* Convert to Post Dialog */}
-      {showConvertDialog && selectedBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-8 backdrop-blur-sm">
-          <div className="relative w-full max-w-md">
+      {showConvertDialog && selectedBooking && ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 px-4 py-8 backdrop-blur-sm" onClick={() => setShowConvertDialog(false)}>
+          <div className="relative w-full max-w-md" onClick={(e) => e.stopPropagation()}>
             <SectionCard
               title="Chuyển thành bài post tìm nhân viên"
               description={`Đơn ${selectedBooking.bookingCode || selectedBooking.bookingId}`}
@@ -875,13 +1225,13 @@ const OrdersPage: React.FC = () => {
               </div>
             </SectionCard>
           </div>
-        </div>
+        </div>, document.body
       )}
 
       {/* Review Dialog */}
-      {showReviewDialog && selectedBooking && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 py-8 backdrop-blur-sm overflow-y-auto">
-          <div className="relative w-full max-w-lg my-8">
+      {showReviewDialog && selectedBooking && ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 px-4 py-8 backdrop-blur-sm overflow-y-auto" onClick={() => setShowReviewDialog(false)}>
+          <div className="relative w-full max-w-lg my-8" onClick={(e) => e.stopPropagation()}>
             <SectionCard
               title="Đánh giá dịch vụ"
               description={`Đơn ${selectedBooking.bookingCode || selectedBooking.bookingId}`}
@@ -998,7 +1348,7 @@ const OrdersPage: React.FC = () => {
               </div>
             </SectionCard>
           </div>
-        </div>
+        </div>, document.body
       )}
     </DashboardLayout>
   );

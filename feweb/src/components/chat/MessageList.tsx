@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChatMessage } from '../../types/chat';
+import type { ChatMessage } from '../../types/chat';
 import { format, isToday, isYesterday } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { Check, CheckCheck, Image as ImageIcon } from 'lucide-react';
+import { Check, CheckCheck } from 'lucide-react';
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -67,7 +67,8 @@ export const MessageList: React.FC<MessageListProps> = ({
 
   return (
     <>
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      {/* Scrollable messages area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
         {hasMore && (
           <button
             onClick={onLoadMore}
@@ -168,7 +169,7 @@ export const MessageList: React.FC<MessageListProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Image modal */}
+      {/* Image modal - outside scrollable area */}
       {imageModal && (
         <div
           className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center p-4"

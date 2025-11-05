@@ -441,3 +441,55 @@ export const getAllBookingsApi = async (params?: {
   }
 };
 
+/**
+ * Get unverified bookings (booking posts cần duyệt)
+ * Endpoint: GET /api/v1/admin/bookings/unverified
+ * Theo API-Admin-Booking-Verification.md
+ */
+export const getUnverifiedBookingsApi = async (params?: {
+  page?: number;
+  size?: number;
+}): Promise<any> => {
+  try {
+    console.log('[API] Admin fetching unverified bookings:', params);
+    const response = await api.get('/admin/bookings/unverified', {
+      params: {
+        page: params?.page || 0,
+        size: params?.size || 10
+      }
+    });
+    console.log('[API] Got unverified bookings:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('[API] Error fetching unverified bookings:', error);
+    throw error;
+  }
+};
+
+/**
+ * Verify or reject booking post
+ * Endpoint: PUT /api/v1/customer/bookings/admin/{bookingId}/verify
+ * Theo API-Admin-Booking-Verification.md
+ */
+export const verifyBookingApi = async (
+  bookingId: string,
+  data: {
+    approve: boolean;
+    rejectionReason?: string;
+    adminComment?: string;
+  }
+): Promise<ApiResponse<any>> => {
+  try {
+    console.log(`[API] Admin verifying booking ${bookingId}:`, data);
+    const response = await api.put<ApiResponse<any>>(
+      `/customer/bookings/admin/${bookingId}/verify`,
+      data
+    );
+    console.log('[API] Booking verification result:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('[API] Error verifying booking:', error);
+    throw error;
+  }
+};
+

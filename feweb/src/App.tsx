@@ -33,6 +33,7 @@ import {
   AdminContentManagement,
   AdminPermissionManagement
 } from './pages/admin';
+import BookingVerification from './pages/admin/BookingVerification';
 
 import './App.css';
 
@@ -127,6 +128,11 @@ function App() {
             <Route path="/admin/bookings" element={
               <ProtectedRoute requiredRole="ADMIN">
                 <AdminBookingManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/booking-verification" element={
+              <ProtectedRoute requiredRole="ADMIN">
+                <BookingVerification />
               </ProtectedRoute>
             } />
             <Route path="/admin/content" element={

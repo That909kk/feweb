@@ -3,14 +3,9 @@ import type {
   CreateBookingRequest, 
   BookingResponse,
   PaginationParams,
-  PaginatedResponse,
   ApiResponse
 } from '../types/api';
 import type {
-  CheckInRequest,
-  CheckOutRequest,
-  CheckInResponse,
-  CheckOutResponse,
   BookingMediaListResponse
 } from '../types/bookingMedia';
 
@@ -231,58 +226,6 @@ export const convertBookingToPostApi = async (
   }
 };
 
-// Admin: Get unverified bookings
-// Endpoint: GET /api/v1/customer/bookings/admin/unverified
-// Theo API-Booking-Post-Feature.md - Section 3
-// Quyền: ROLE_ADMIN
-export const getUnverifiedBookingsApi = async (
-  params?: PaginationParams
-): Promise<ApiResponse<PaginatedResponse<BookingResponse['data']>['data']>> => {
-  try {
-    console.log(`[API] Admin fetching unverified bookings`);
-    const response = await api.get<ApiResponse<PaginatedResponse<BookingResponse['data']>['data']>>(
-      `/customer/bookings/admin/unverified`,
-      {
-        params: {
-          page: params?.page || 0,
-          size: params?.size || 10
-        }
-      }
-    );
-    console.log(`[API] Got unverified bookings:`, response.data);
-    return response.data;
-  } catch (error: any) {
-    console.error(`[API] Error fetching unverified bookings:`, error);
-    throw error;
-  }
-};
-
-// Admin: Verify or reject booking post
-// Endpoint: PUT /api/v1/customer/bookings/admin/{bookingId}/verify
-// Theo API-Booking-Post-Feature.md - Section 4
-// Quyền: ROLE_ADMIN
-export const verifyBookingApi = async (
-  bookingId: string,
-  data: { 
-    approve: boolean; 
-    adminComment?: string;
-    rejectionReason?: string;
-  }
-): Promise<ApiResponse<BookingResponse['data']>> => {
-  try {
-    console.log(`[API] Admin ${data.approve ? 'approving' : 'rejecting'} booking ${bookingId}`);
-    const response = await api.put<ApiResponse<BookingResponse['data']>>(
-      `/customer/bookings/admin/${bookingId}/verify`, 
-      data
-    );
-    console.log(`[API] Booking verification completed:`, response.data);
-    return response.data;
-  } catch (error: any) {
-    console.error(`[API] Error verifying booking:`, error);
-    throw error;
-  }
-};
-
 // Upload booking image
 // Endpoint: POST /api/v1/customer/bookings/{bookingId}/upload-image
 // Theo API-TestCases-Booking-Image-Upload.md
@@ -323,74 +266,7 @@ export const uploadBookingImageApi = async (
 
 // ============ BOOKING MEDIA API ============
 // Dựa theo API-TestCases-BookingMedia.md
-
-/**
- * Employee check-in with optional image
- * POST /api/v1/employee/assignments/{assignmentId}/check-in
- */
-export const checkInAssignmentApi = async (
-  assignmentId: string,
-  request: CheckInRequest,
-  image?: File
-): Promise<CheckInResponse> => {
-  try {
-    console.log(`[API] Check-in assignment ${assignmentId}`);
-    const formData = new FormData();
-    formData.append('request', JSON.stringify(request));
-    if (image) {
-      formData.append('image', image);
-    }
-    
-    const response = await api.post<CheckInResponse>(
-      `/employee/assignments/${assignmentId}/check-in`,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
-    );
-    console.log(`[API] Check-in successful:`, response.data);
-    return response.data;
-  } catch (error: any) {
-    console.error(`[API] Error check-in assignment:`, error);
-    throw error;
-  }
-};
-
-/**
- * Employee check-out with optional image
- * POST /api/v1/employee/assignments/{assignmentId}/check-out
- */
-export const checkOutAssignmentApi = async (
-  assignmentId: string,
-  request: CheckOutRequest,
-  image?: File
-): Promise<CheckOutResponse> => {
-  try {
-    console.log(`[API] Check-out assignment ${assignmentId}`);
-    const formData = new FormData();
-    formData.append('request', JSON.stringify(request));
-    if (image) {
-      formData.append('image', image);
-    }
-    
-    const response = await api.post<CheckOutResponse>(
-      `/employee/assignments/${assignmentId}/check-out`,
-      formData,
-      {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      }
-    );
-    console.log(`[API] Check-out successful:`, response.data);
-    return response.data;
-  } catch (error: any) {
-    console.error(`[API] Error check-out assignment:`, error);
-    throw error;
-  }
-};
+// Các API này được sử dụng bởi Employee để check-in/check-out
 
 /**
  * Get all media for assignment

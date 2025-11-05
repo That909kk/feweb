@@ -24,17 +24,37 @@ type CustomerBooking = {
   bookingCode?: string;
   status: string;
   bookingTime?: string;
+  scheduledDate?: string;
+  scheduledTime?: string;
   formattedTotalAmount?: string;
   totalPrice?: number;
-  customerInfo?: {
-    fullAddress: string;
+  address?: {
+    addressId?: string;
+    fullAddress?: string;
+    ward?: string;
+    city?: string;
+    latitude?: number;
+    longitude?: number;
+    isDefault?: boolean;
   };
-  serviceDetails?: Array<{
-    service: {
-      name: string;
-      description?: string;
-      iconUrl?: string;
-    };
+  services?: Array<{
+    serviceId: number;
+    name: string;
+    description?: string;
+    basePrice?: number;
+    unit?: string;
+    estimatedDurationHours?: number;
+    iconUrl?: string;
+    categoryName?: string;
+    isActive?: boolean;
+  }>;
+  assignedEmployees?: Array<{
+    employeeId: string;
+    fullName: string;
+    email: string;
+    phoneNumber: string;
+    avatar?: string;
+    rating?: number | null;
   }>;
 };
 
@@ -79,9 +99,19 @@ const CustomerDashboard: React.FC = () => {
 
       setIsLoadingBookings(true);
       try {
-        const bookings = await getCustomerBookings(user.id);
-        if (Array.isArray(bookings)) {
-          setRecentBookings(bookings as CustomerBooking[]);
+        const response = await getCustomerBookings(user.id);
+        // Handle paginated response with content array
+        if (response && typeof response === 'object' && 'content' in response) {
+          const content = (response as any).content;
+          if (Array.isArray(content)) {
+            setRecentBookings(content as CustomerBooking[]);
+          } else {
+            setRecentBookings([]);
+          }
+        } else if (Array.isArray(response)) {
+          setRecentBookings(response as CustomerBooking[]);
+        } else {
+          setRecentBookings([]);
         }
       } catch (error) {
         console.error('Load customer bookings error:', error);
@@ -130,7 +160,7 @@ const CustomerDashboard: React.FC = () => {
     const badgeClass = statusBadgeMap[status] || statusBadgeMap.default;
     const label = statusLabelMap[status] || status;
     return (
-      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${badgeClass}`}>
+      <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold whitespace-nowrap ${badgeClass}`}>
         {label}
       </span>
     );
@@ -194,14 +224,17 @@ const CustomerDashboard: React.FC = () => {
           ) : (
             <div className="space-y-4">
               {upcomingBookings.map((booking) => {
-                const serviceName = booking.serviceDetails?.[0]?.service.name || 'Dịch vụ gia đình';
+                // Get service name from services array
+                const serviceName = booking.services && booking.services.length > 0 
+                  ? booking.services.map(s => s.name).join(', ')
+                  : 'Dịch vụ gia đình';
                 const startTime = booking.bookingTime ? new Date(booking.bookingTime) : null;
                 return (
                   <div
                     key={booking.bookingId}
-                    className="flex flex-col justify-between rounded-2xl border border-brand-outline/40 bg-gradient-to-r from-white via-white to-sky-50/60 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:flex-row sm:items-center"
+                    className="flex flex-col justify-between gap-4 rounded-2xl border border-brand-outline/40 bg-gradient-to-r from-white via-white to-sky-50/60 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:flex-row sm:items-center sm:gap-6"
                   >
-                    <div>
+                    <div className="flex-1 min-w-0">
                       <h3 className="text-lg font-semibold text-brand-navy">{serviceName}</h3>
                       <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-brand-text/70">
                         {startTime && (
@@ -216,18 +249,18 @@ const CustomerDashboard: React.FC = () => {
                             </span>
                           </>
                         )}
-                        {booking.customerInfo?.fullAddress && (
+                        {booking.address?.fullAddress && (
                           <span className="inline-flex items-center gap-2">
                             <MapPin className="h-4 w-4 text-sky-500" />
-                            {booking.customerInfo.fullAddress}
+                            {booking.address.fullAddress}
                           </span>
                         )}
                       </div>
                     </div>
-                    <div className="mt-4 flex flex-col items-end gap-2 sm:mt-0 sm:items-end">
+                    <div className="flex flex-col items-start gap-2 sm:items-end sm:flex-shrink-0">
                       {renderStatusBadge(booking.status)}
                       {booking.formattedTotalAmount && (
-                        <span className="text-sm font-semibold text-slate-700">
+                        <span className="text-sm font-semibold text-slate-700 whitespace-nowrap">
                           {booking.formattedTotalAmount}
                         </span>
                       )}

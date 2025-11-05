@@ -30,6 +30,7 @@ export interface Conversation {
   lastMessage: string | null;
   lastMessageTime: string | null;
   isActive: boolean;
+  canChat: boolean; // false nếu booking COMPLETED/CANCELLED hoặc conversation inactive
   createdAt: string;
   updatedAt: string;
 }

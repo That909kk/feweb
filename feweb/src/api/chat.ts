@@ -58,19 +58,19 @@ export const getConversationByIdApi = async (
 
 /**
  * Get user's conversations with pagination
- * GET /api/v1/conversations/account/{accountId}
+ * GET /api/v1/conversations/sender/{senderId}
  */
-export const getConversationsByAccountApi = async (
-  accountId: string,
+export const getConversationsBySenderApi = async (
+  senderId: string,
   params?: {
     page?: number;
     size?: number;
   }
 ): Promise<ConversationListResponse> => {
   try {
-    console.log(`[Chat API] Fetching conversations for account ${accountId}`, params);
+    console.log(`[Chat API] Fetching conversations for sender ${senderId}`, params);
     const response = await api.get<ConversationListResponse>(
-      `/conversations/account/${accountId}`,
+      `/conversations/sender/${senderId}`,
       { params }
     );
     console.log('[Chat API] Conversations fetched:', response.data);
@@ -273,15 +273,20 @@ export const getUnreadMessageCountApi = async (
 
 /**
  * Mark messages as read
- * PUT /api/v1/messages/conversation/{conversationId}/mark-read
+ * PUT /api/v1/messages/conversation/{conversationId}/mark-read?accountId={accountId}
  */
 export const markMessagesAsReadApi = async (
-  conversationId: string
+  conversationId: string,
+  accountId: string
 ): Promise<ApiResponse<void>> => {
   try {
-    console.log(`[Chat API] Marking messages as read for conversation ${conversationId}`);
+    console.log(`[Chat API] Marking messages as read for conversation ${conversationId}, accountId: ${accountId}`);
     const response = await api.put<ApiResponse<void>>(
-      `/messages/conversation/${conversationId}/mark-read`
+      `/messages/conversation/${conversationId}/mark-read`,
+      null,
+      {
+        params: { accountId }
+      }
     );
     console.log('[Chat API] Messages marked as read');
     return response.data;

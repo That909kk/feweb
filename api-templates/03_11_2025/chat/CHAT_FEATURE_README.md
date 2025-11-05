@@ -201,46 +201,129 @@ Chức năng chat real-time cho phép khách hàng và nhân viên giao tiếp v
 
 ---
 
-#### Test Case 1.4: Get User's Conversations (Paginated)
-- **Test Case ID**: TC_CONVERSATION_LIST_001
-- **Description**: Verify that a user can retrieve all their conversations with pagination.
-- **Preconditions**: 
-  - User is authenticated.
-  - User has existing conversations.
-- **Input**:
-  - **Method**: `GET`
-  - **URL**: `/api/v1/conversations/account/a1000001-0000-0000-0000-000000000001?page=0&size=10`
-  - **Headers**: 
-    ```
-    Authorization: Bearer <valid_customer_token_john_doe>
-    ```
-- **Expected Output**:
-  ```json
-  {
+#### Test Case 1.4.1: Lấy conversations của Customer
+**Customer:** John Doe (customerId: `c1000001-0000-0000-0000-000000000001`)
+
+**Request:**
+```http
+GET /api/v1/conversations/sender/c1000001-0000-0000-0000-000000000001?page=0&size=20
+Authorization: Bearer {customer_token}
+```
+
+**Expected Response:**
+```json
+{
     "success": true,
     "data": [
-      {
-        "conversationId": "conv0001-0000-0000-0000-000000000001",
-        "customerId": "c1000001-0000-0000-0000-000000000001",
-        "customerName": "John Doe",
-        "customerAvatar": "https://picsum.photos/200",
-        "employeeId": "e1000001-0000-0000-0000-000000000001",
-        "employeeName": "Jane Smith",
-        "employeeAvatar": "https://picsum.photos/200",
-        "bookingId": "b0000001-0000-0000-0000-000000000001",
-        "lastMessage": "Cảm ơn chị nhé!",
-        "lastMessageTime": "2025-11-03T10:19:00",
-        "isActive": true,
-        "createdAt": "2025-11-03T10:00:00",
-        "updatedAt": "2025-11-03T10:19:00"
-      }
+        {
+            "conversationId": "conv0002-0000-0000-0000-000000000002",
+            "customerId": "c1000001-0000-0000-0000-000000000001",
+            "customerName": "John Doe",
+            "customerAvatar": "https://picsum.photos/200",
+            "employeeId": "e1000001-0000-0000-0000-000000000002",
+            "employeeName": "Bob Wilson",
+            "employeeAvatar": "https://picsum.photos/200",
+            "bookingId": "b0000001-0000-0000-0000-000000000002",
+            "lastMessage": "Tôi sẽ đến lúc 9h sáng",
+            "lastMessageTime": "2025-11-02T15:30:00",
+            "isActive": true,
+            "canChat": true,
+            "createdAt": "2025-11-02T14:00:00",
+            "updatedAt": "2025-11-02T15:30:00"
+        },
+        {
+            "conversationId": "conv0006-0000-0000-0000-000000000006",
+            "customerId": "c1000001-0000-0000-0000-000000000001",
+            "customerName": "John Doe",
+            "customerAvatar": "https://picsum.photos/200",
+            "employeeId": "e1000001-0000-0000-0000-000000000001",
+            "employeeName": "Jane Smith",
+            "employeeAvatar": "https://picsum.photos/200",
+            "bookingId": "b0000001-0000-0000-0000-000000000007",
+            "lastMessage": "Tôi sẽ hoàn thành công việc đúng hạn",
+            "lastMessageTime": "2025-08-28T16:00:00",
+            "isActive": true,
+            "canChat": true,
+            "createdAt": "2025-08-28T14:30:00",
+            "updatedAt": "2025-08-28T16:00:00"
+        },
+        {
+            "conversationId": "conv0001-0000-0000-0000-000000000001",
+            "customerId": "c1000001-0000-0000-0000-000000000001",
+            "customerName": "John Doe",
+            "customerAvatar": "https://picsum.photos/200",
+            "employeeId": "e1000001-0000-0000-0000-000000000001",
+            "employeeName": "Jane Smith",
+            "employeeAvatar": "https://picsum.photos/200",
+            "bookingId": "b0000001-0000-0000-0000-000000000001",
+            "lastMessage": "Cảm ơn bạn!",
+            "lastMessageTime": "2025-11-03T11:00:00",
+            "isActive": false,
+            "canChat": false,
+            "createdAt": "2025-11-03T10:00:00",
+            "updatedAt": "2025-11-03T11:00:00"
+        }
     ],
     "currentPage": 0,
-    "totalItems": 1,
+    "totalItems": 3,
     "totalPages": 1
-  }
-  ```
-- **Status Code**: `200 OK`
+}
+```
+
+**Note:** Bây giờ conversation conv0001 xuất hiện trong kết quả dù `isActive = false`. Client cần check field `isActive` hoặc `canChat` để xử lý UI.
+
+#### Test Case 1.4.2: Lấy conversations của Employee
+**Employee:** Trần Văn Long (employeeId: `e1000001-0000-0000-0000-000000000003`)
+
+**Request:**
+```http
+GET /api/v1/conversations/sender/e1000001-0000-0000-0000-000000000003?page=0&size=20
+Authorization: Bearer {employee_token}
+```
+
+**Expected Response:**
+```json
+{
+    "success": true,
+    "data": [
+        {
+            "conversationId": "conv0007-0000-0000-0000-000000000007",
+            "customerId": "c1000001-0000-0000-0000-000000000004",
+            "customerName": "Nguyễn Văn An",
+            "customerAvatar": "https://i.pravatar.cc/150?img=11",
+            "employeeId": "e1000001-0000-0000-0000-000000000003",
+            "employeeName": "Trần Văn Long",
+            "employeeAvatar": "https://i.pravatar.cc/150?img=33",
+            "bookingId": "b0000001-0000-0000-0000-000000000010",
+            "lastMessage": "Tôi sẽ đến đúng giờ nhé!",
+            "lastMessageTime": "2025-11-01T07:45:00",
+            "isActive": true,
+            "canChat": true,
+            "createdAt": "2025-11-01T07:30:00",
+            "updatedAt": "2025-11-01T07:45:00"
+        },
+        {
+            "conversationId": "conv0003-0000-0000-0000-000000000003",
+            "customerId": "c1000001-0000-0000-0000-000000000004",
+            "customerName": "Nguyễn Văn An",
+            "customerAvatar": "https://i.pravatar.cc/150?img=11",
+            "employeeId": "e1000001-0000-0000-0000-000000000003",
+            "employeeName": "Trần Văn Long",
+            "employeeAvatar": "https://i.pravatar.cc/150?img=33",
+            "bookingId": "b0000001-0000-0000-0000-000000000003",
+            "lastMessage": "Tôi đã xem ảnh rồi, cảm ơn bạn!",
+            "lastMessageTime": "2025-11-01T10:30:00",
+            "isActive": true,
+            "canChat": true,
+            "createdAt": "2025-11-01T09:00:00",
+            "updatedAt": "2025-11-01T10:30:00"
+        }
+    ],
+    "currentPage": 0,
+    "totalItems": 2,
+    "totalPages": 1
+}
+```
 
 ---
 

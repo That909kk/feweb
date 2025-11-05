@@ -5,10 +5,9 @@ import {
   getCustomerBookingsApi,
   updateBookingApi,
   cancelBookingApi,
-  convertBookingToPostApi,
-  getUnverifiedBookingsApi,
-  verifyBookingApi
+  convertBookingToPostApi
 } from '../api/booking';
+import { getUnverifiedBookingsApi, verifyBookingApi } from '../api/admin';
 import { getPaymentMethodsApi } from '../api/payment';
 import type { 
   CreateBookingRequest, 

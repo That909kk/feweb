@@ -16,6 +16,7 @@ import { useBooking } from '../../hooks/useBooking';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCategories } from '../../hooks/useCategories';
 import { useAddress } from '../../hooks/useAddress';
+import { getOrCreateConversationApi } from '../../api/chat';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import ImageUpload from '../../components/ImageUpload';
 import type { 
@@ -1108,6 +1109,53 @@ const BookingPage: React.FC = () => {
       const result = await createBooking(bookingRequest, imageFile as File | undefined);
       
       if (result) {
+        console.log('✅ [BOOKING] Booking created successfully:', result);
+        
+        // Lấy employeeId từ response hoặc từ request assignments
+        const employeeId = result.employeeId || 
+          (bookingRequest.assignments && bookingRequest.assignments.length > 0 
+            ? bookingRequest.assignments[0].employeeId 
+            : null);
+        
+        console.log('🔍 [BOOKING] Checking conversation creation conditions:', {
+          hasEmployeeIdFromResponse: !!result.employeeId,
+          hasEmployeeIdFromRequest: !!employeeId,
+          employeeId: employeeId,
+          hasCustomerId: !!user?.customerId,
+          customerId: user?.customerId
+        });
+        
+        // Nếu booking có chỉ định nhân viên, tự động tạo conversation
+        if (employeeId && user?.customerId) {
+          try {
+            console.log(`🔄 [BOOKING] Auto-creating conversation for booking ${result.bookingId} between customer ${user.customerId} and employee ${employeeId}`);
+            const convResult = await getOrCreateConversationApi({
+              customerId: user.customerId,
+              employeeId: employeeId
+            });
+            console.log('✅ [BOOKING] Conversation created/found successfully:', convResult);
+          } catch (convErr: any) {
+            console.error('❌ [BOOKING] Failed to create conversation:', convErr);
+            console.error('Error details:', {
+              message: convErr?.message,
+              response: convErr?.response?.data
+            });
+            
+            // Nếu lỗi là "Query did not return a unique result" (đã có nhiều conversations)
+            // thì không cần làm gì, user vẫn có thể chat được
+            if (convErr?.response?.data?.message?.includes('Query did not return a unique result')) {
+              console.log('ℹ️ [BOOKING] Conversation already exists (multiple found), user can still chat');
+            }
+            // Don't block booking success even if conversation creation fails
+          }
+        } else {
+          console.log('⏭️ [BOOKING] Skipping conversation creation:', {
+            reason: !employeeId ? 'No employeeId' : 'No customerId',
+            employeeId,
+            customerId: user?.customerId
+          });
+        }
+        
         // Navigate tới trang booking success với dữ liệu
         navigate('/customer/booking-success', {
           state: {

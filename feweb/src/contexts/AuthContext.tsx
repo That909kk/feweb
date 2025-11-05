@@ -17,8 +17,9 @@ import type {
 } from '../types/api';
 
 interface AuthUser {
-  id: string;
-  customerId?: string; // For CUSTOMER role, extracted from profileData
+  id: string; // Role-specific ID (customerId/employeeId/adminId)
+  customerId?: string; // For CUSTOMER role
+  employeeId?: string; // For EMPLOYEE role
   username: string;
   email: string;
   fullName: string;
@@ -234,6 +235,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const authUser: AuthUser = {
           id: getIdFromProfileData(profileData, userRole),
           customerId: userRole === 'CUSTOMER' ? (profileData as CustomerData).customerId : undefined,
+          employeeId: userRole === 'EMPLOYEE' ? (profileData as EmployeeData).employeeId : undefined,
           username: profileData.username || username,
           email: getEmailFromProfileData(profileData, userRole),
           fullName: profileData.fullName || '',
