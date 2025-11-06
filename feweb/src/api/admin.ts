@@ -36,35 +36,38 @@ export interface Service {
 export interface ServiceOption {
   optionId: number;
   serviceId: number;
-  optionName: string;
-  description: string;
-  isRequired: boolean;
+  serviceName: string;
+  label: string;
+  optionType: 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'NUMERIC_INPUT' | 'TEXT_INPUT' | 'SINGLE_CHOICE_RADIO';
   displayOrder: number;
-  choicesCount: number;
+  isRequired: boolean;
+  isActive: boolean;
+  parentOptionId: number | null;
+  parentChoiceId: number | null;
+  validationRules: any;
+  choices?: ServiceOptionChoice[];
 }
 
 export interface ServiceOptionChoice {
   choiceId: number;
   optionId: number;
-  choiceName: string;
-  description: string;
-  priceAdjustment: number;
+  label: string;
   isDefault: boolean;
-  displayOrder: number;
+  isActive: boolean;
+  displayOrder: number | null;
 }
 
 export interface PricingRule {
   ruleId: number;
   serviceId: number;
+  serviceName: string;
   ruleName: string;
-  description: string;
-  conditionType: 'QUANTITY' | 'AREA' | 'WEIGHT' | 'TIME' | 'DISTANCE';
-  minValue: number | null;
-  maxValue: number | null;
-  adjustmentType: 'PERCENTAGE' | 'FIXED';
-  adjustmentValue: number;
+  conditionLogic: 'AND' | 'OR' | 'ALL';
   priority: number;
   isActive: boolean;
+  priceAdjustment: number;
+  staffAdjustment: number;
+  durationAdjustmentHours: number;
 }
 
 export interface ServiceListParams {
@@ -131,11 +134,30 @@ export const getAdminServiceByIdApi = async (serviceId: number): Promise<ApiResp
 /**
  * Create new service
  * Endpoint: POST /api/v1/admin/services
+ * Content-Type: multipart/form-data
  */
-export const createServiceApi = async (data: Omit<Service, 'serviceId' | 'categoryName' | 'optionsCount' | 'pricingRulesCount'>): Promise<ApiResponse<Service>> => {
+export const createServiceApi = async (data: Partial<Service> & { icon?: File }): Promise<ApiResponse<Service>> => {
   try {
     console.log('[API] Creating service:', data);
-    const response = await api.post<ApiResponse<Service>>('/admin/services', data);
+    
+    const formData = new FormData();
+    
+    // Add all service fields to FormData
+    if (data.name) formData.append('name', data.name);
+    if (data.description) formData.append('description', data.description);
+    if (data.basePrice !== undefined) formData.append('basePrice', data.basePrice.toString());
+    if (data.unit) formData.append('unit', data.unit);
+    if (data.estimatedDurationHours !== undefined) formData.append('estimatedDurationHours', data.estimatedDurationHours.toString());
+    if (data.recommendedStaff !== undefined) formData.append('recommendedStaff', data.recommendedStaff.toString());
+    if (data.categoryId !== undefined) formData.append('categoryId', data.categoryId.toString());
+    if (data.iconUrl) formData.append('iconUrl', data.iconUrl);
+    if (data.icon) formData.append('icon', data.icon);
+    
+    const response = await api.post<ApiResponse<Service>>('/admin/services', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     console.log('[API] Service created:', response.data);
     return response.data;
   } catch (error: any) {
@@ -147,14 +169,34 @@ export const createServiceApi = async (data: Omit<Service, 'serviceId' | 'catego
 /**
  * Update service
  * Endpoint: PUT /api/v1/admin/services/{serviceId}
+ * Content-Type: multipart/form-data
  */
 export const updateServiceApi = async (
   serviceId: number, 
-  data: Partial<Omit<Service, 'serviceId' | 'categoryName' | 'optionsCount' | 'pricingRulesCount'>>
+  data: Partial<Service> & { icon?: File }
 ): Promise<ApiResponse<Service>> => {
   try {
     console.log(`[API] Updating service ${serviceId}:`, data);
-    const response = await api.put<ApiResponse<Service>>(`/admin/services/${serviceId}`, data);
+    
+    const formData = new FormData();
+    
+    // Add all service fields to FormData (only if provided)
+    if (data.name !== undefined) formData.append('name', data.name);
+    if (data.description !== undefined) formData.append('description', data.description);
+    if (data.basePrice !== undefined) formData.append('basePrice', data.basePrice.toString());
+    if (data.unit !== undefined) formData.append('unit', data.unit);
+    if (data.estimatedDurationHours !== undefined) formData.append('estimatedDurationHours', data.estimatedDurationHours.toString());
+    if (data.recommendedStaff !== undefined) formData.append('recommendedStaff', data.recommendedStaff.toString());
+    if (data.categoryId !== undefined) formData.append('categoryId', data.categoryId.toString());
+    if (data.isActive !== undefined) formData.append('isActive', data.isActive.toString());
+    if (data.iconUrl !== undefined) formData.append('iconUrl', data.iconUrl);
+    if (data.icon) formData.append('icon', data.icon);
+    
+    const response = await api.put<ApiResponse<Service>>(`/admin/services/${serviceId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
     console.log('[API] Service updated:', response.data);
     return response.data;
   } catch (error: any) {
@@ -175,6 +217,22 @@ export const deleteServiceApi = async (serviceId: number): Promise<ApiResponse<v
     return response.data;
   } catch (error: any) {
     console.error('[API] Error deleting service:', error);
+    throw error;
+  }
+};
+
+/**
+ * Activate service
+ * Endpoint: PATCH /api/v1/admin/services/{serviceId}/activate
+ */
+export const activateServiceApi = async (serviceId: number): Promise<ApiResponse<Service>> => {
+  try {
+    console.log(`[API] Activating service ${serviceId}`);
+    const response = await api.patch<ApiResponse<Service>>(`/admin/services/${serviceId}/activate`);
+    console.log('[API] Service activated:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('[API] Error activating service:', error);
     throw error;
   }
 };
@@ -202,16 +260,31 @@ export const getAdminServiceOptionsApi = async (serviceId: number): Promise<ApiR
 };
 
 /**
+ * Get option by ID
+ * Endpoint: GET /api/v1/admin/services/options/{optionId}
+ */
+export const getAdminServiceOptionByIdApi = async (optionId: number): Promise<ApiResponse<ServiceOption>> => {
+  try {
+    console.log(`[API] Fetching option ${optionId}`);
+    const response = await api.get<ApiResponse<ServiceOption>>(`/admin/services/options/${optionId}`);
+    console.log('[API] Service option fetched:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('[API] Error fetching service option:', error);
+    throw error;
+  }
+};
+
+/**
  * Create service option
- * Endpoint: POST /api/v1/admin/services/{serviceId}/options
+ * Endpoint: POST /api/v1/admin/services/options
  */
 export const createAdminServiceOptionApi = async (
-  serviceId: number, 
-  data: Omit<ServiceOption, 'optionId' | 'serviceId' | 'choicesCount'>
+  data: Omit<ServiceOption, 'optionId' | 'serviceName' | 'choices'>
 ): Promise<ApiResponse<ServiceOption>> => {
   try {
-    console.log(`[API] Creating option for service ${serviceId}:`, data);
-    const response = await api.post<ApiResponse<ServiceOption>>(`/admin/services/${serviceId}/options`, data);
+    console.log('[API] Creating option:', data);
+    const response = await api.post<ApiResponse<ServiceOption>>('/admin/services/options', data);
     console.log('[API] Service option created:', response.data);
     return response.data;
   } catch (error: any) {
@@ -226,7 +299,7 @@ export const createAdminServiceOptionApi = async (
  */
 export const updateAdminServiceOptionApi = async (
   optionId: number,
-  data: Partial<Omit<ServiceOption, 'optionId' | 'serviceId' | 'choicesCount'>>
+  data: Partial<Omit<ServiceOption, 'optionId' | 'serviceName' | 'choices'>>
 ): Promise<ApiResponse<ServiceOption>> => {
   try {
     console.log(`[API] Updating service option ${optionId}:`, data);
@@ -278,16 +351,31 @@ export const getAdminServiceOptionChoicesApi = async (optionId: number): Promise
 };
 
 /**
+ * Get choice by ID
+ * Endpoint: GET /api/v1/admin/services/choices/{choiceId}
+ */
+export const getAdminServiceChoiceByIdApi = async (choiceId: number): Promise<ApiResponse<ServiceOptionChoice>> => {
+  try {
+    console.log(`[API] Fetching choice ${choiceId}`);
+    const response = await api.get<ApiResponse<ServiceOptionChoice>>(`/admin/services/choices/${choiceId}`);
+    console.log('[API] Service choice fetched:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('[API] Error fetching service choice:', error);
+    throw error;
+  }
+};
+
+/**
  * Create service option choice
- * Endpoint: POST /api/v1/admin/services/options/{optionId}/choices
+ * Endpoint: POST /api/v1/admin/services/choices
  */
 export const createAdminServiceOptionChoiceApi = async (
-  optionId: number,
-  data: Omit<ServiceOptionChoice, 'choiceId' | 'optionId'>
+  data: Omit<ServiceOptionChoice, 'choiceId'>
 ): Promise<ApiResponse<ServiceOptionChoice>> => {
   try {
-    console.log(`[API] Creating choice for option ${optionId}:`, data);
-    const response = await api.post<ApiResponse<ServiceOptionChoice>>(`/admin/services/options/${optionId}/choices`, data);
+    console.log('[API] Creating choice:', data);
+    const response = await api.post<ApiResponse<ServiceOptionChoice>>('/admin/services/choices', data);
     console.log('[API] Service option choice created:', response.data);
     return response.data;
   } catch (error: any) {
@@ -298,7 +386,7 @@ export const createAdminServiceOptionChoiceApi = async (
 
 /**
  * Update service option choice
- * Endpoint: PUT /api/v1/admin/services/options/choices/{choiceId}
+ * Endpoint: PUT /api/v1/admin/services/choices/{choiceId}
  */
 export const updateAdminServiceOptionChoiceApi = async (
   choiceId: number,
@@ -306,7 +394,7 @@ export const updateAdminServiceOptionChoiceApi = async (
 ): Promise<ApiResponse<ServiceOptionChoice>> => {
   try {
     console.log(`[API] Updating service option choice ${choiceId}:`, data);
-    const response = await api.put<ApiResponse<ServiceOptionChoice>>(`/admin/services/options/choices/${choiceId}`, data);
+    const response = await api.put<ApiResponse<ServiceOptionChoice>>(`/admin/services/choices/${choiceId}`, data);
     console.log('[API] Service option choice updated:', response.data);
     return response.data;
   } catch (error: any) {
@@ -317,12 +405,12 @@ export const updateAdminServiceOptionChoiceApi = async (
 
 /**
  * Delete service option choice
- * Endpoint: DELETE /api/v1/admin/services/options/choices/{choiceId}
+ * Endpoint: DELETE /api/v1/admin/services/choices/{choiceId}
  */
 export const deleteAdminServiceOptionChoiceApi = async (choiceId: number): Promise<ApiResponse<void>> => {
   try {
     console.log(`[API] Deleting service option choice ${choiceId}`);
-    const response = await api.delete<ApiResponse<void>>(`/admin/services/options/choices/${choiceId}`);
+    const response = await api.delete<ApiResponse<void>>(`/admin/services/choices/${choiceId}`);
     console.log('[API] Service option choice deleted:', response.data);
     return response.data;
   } catch (error: any) {
@@ -354,16 +442,31 @@ export const getAdminServicePricingRulesApi = async (serviceId: number): Promise
 };
 
 /**
+ * Get pricing rule by ID
+ * Endpoint: GET /api/v1/admin/services/pricing-rules/{ruleId}
+ */
+export const getAdminPricingRuleByIdApi = async (ruleId: number): Promise<ApiResponse<PricingRule>> => {
+  try {
+    console.log(`[API] Fetching pricing rule ${ruleId}`);
+    const response = await api.get<ApiResponse<PricingRule>>(`/admin/services/pricing-rules/${ruleId}`);
+    console.log('[API] Pricing rule fetched:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('[API] Error fetching pricing rule:', error);
+    throw error;
+  }
+};
+
+/**
  * Create pricing rule
- * Endpoint: POST /api/v1/admin/services/{serviceId}/pricing-rules
+ * Endpoint: POST /api/v1/admin/services/pricing-rules
  */
 export const createAdminPricingRuleApi = async (
-  serviceId: number,
-  data: Omit<PricingRule, 'ruleId' | 'serviceId'>
+  data: Omit<PricingRule, 'ruleId' | 'serviceName'>
 ): Promise<ApiResponse<PricingRule>> => {
   try {
-    console.log(`[API] Creating pricing rule for service ${serviceId}:`, data);
-    const response = await api.post<ApiResponse<PricingRule>>(`/admin/services/${serviceId}/pricing-rules`, data);
+    console.log('[API] Creating pricing rule:', data);
+    const response = await api.post<ApiResponse<PricingRule>>('/admin/services/pricing-rules', data);
     console.log('[API] Pricing rule created:', response.data);
     return response.data;
   } catch (error: any) {
@@ -378,7 +481,7 @@ export const createAdminPricingRuleApi = async (
  */
 export const updateAdminPricingRuleApi = async (
   ruleId: number,
-  data: Partial<Omit<PricingRule, 'ruleId' | 'serviceId'>>
+  data: Partial<Omit<PricingRule, 'ruleId' | 'serviceName'>>
 ): Promise<ApiResponse<PricingRule>> => {
   try {
     console.log(`[API] Updating pricing rule ${ruleId}:`, data);

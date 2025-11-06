@@ -10,6 +10,7 @@ import {
   LogOut,
   Megaphone,
   MessageCircle,
+  Settings,
   ShieldCheck,
   Sparkles,
   UserCog,
@@ -143,10 +144,16 @@ const navigationConfig: Record<UserRole, NavItemConfig[]> = {
       icon: Users
     },
     {
+      to: '/admin/services',
+      label: 'Dịch vụ',
+      description: 'Quản lý dịch vụ',
+      icon: Settings
+    },
+    {
       to: '/admin/bookings',
       label: 'Đơn hàng',
       description: 'Giám sát tiến độ',
-      icon: ShieldCheck
+      icon: ClipboardList
     },
     {
       to: '/admin/content',

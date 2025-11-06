@@ -29,6 +29,7 @@ import { BookingPosts } from './pages/employee/BookingPosts';
 import { 
   AdminDashboard,
   AdminUserManagement,
+  AdminServiceManagement,
   AdminBookingManagement,
   AdminContentManagement,
   AdminPermissionManagement
@@ -123,6 +124,11 @@ function App() {
             <Route path="/admin/users" element={
               <ProtectedRoute requiredRole="ADMIN">
                 <AdminUserManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/services" element={
+              <ProtectedRoute requiredRole="ADMIN">
+                <AdminServiceManagement />
               </ProtectedRoute>
             } />
             <Route path="/admin/bookings" element={
