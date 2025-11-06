@@ -284,7 +284,7 @@ const AdminBookingManagement: React.FC = () => {
     }
     // Reset to first page when search or tab changes
     setCurrentPage(0);
-  }, [searchCode, bookings, allBookings, activeTab]);
+  }, [searchCode, bookings, allBookings, activeTab, statusFilter]);
 
   const handleVerify = async () => {
     if (!selectedBooking?.bookingId) return;
@@ -360,7 +360,8 @@ const AdminBookingManagement: React.FC = () => {
   const metrics = {
     total: currentBookings.length,
     pending: bookings.filter(b => !b.isVerified).length,
-    all: allBookings.length
+    all: allBookings.length,
+    awaitingEmployee: allBookings.filter(b => b.status === 'AWAITING_EMPLOYEE').length
   };
 
   return (
@@ -380,8 +381,8 @@ const AdminBookingManagement: React.FC = () => {
         />
         <MetricCard
           icon={ClipboardList}
-          label="Booking chờ xác minh"
-          value={`${bookings.length}`}
+          label="Booking chờ nhận"
+          value={`${metrics.awaitingEmployee}`}
           accent="teal"
           trendLabel="Các booking chưa có nhân viên"
         />
@@ -572,6 +573,18 @@ const AdminBookingManagement: React.FC = () => {
               Đã từ chối ({statusCounts.REJECTED})
             </button>
           </div>
+          )}
+
+          {/* Results summary */}
+          {!isLoading && displayBookings.length > 0 && (
+            <div className="mb-4 text-sm text-slate-600">
+              Hiển thị <span className="font-semibold text-slate-900">{startIndex + 1}-{Math.min(endIndex, displayBookings.length)}</span> trong tổng <span className="font-semibold text-slate-900">{displayBookings.length}</span> kết quả
+              {statusFilter !== 'ALL' && (
+                <span className="ml-2 text-blue-600">
+                  (Đang lọc: {statusFilter === 'AWAITING_EMPLOYEE' ? 'Chờ nhân viên' : translateStatus(statusFilter)})
+                </span>
+              )}
+            </div>
           )}
 
           {isLoading ? (
