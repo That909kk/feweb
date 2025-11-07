@@ -134,17 +134,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const handleSendImage = async (file: File, caption?: string) => {
     try {
-      const response = await sendImageMessageApi({
+      await sendImageMessageApi({
         conversationId: conversation.conversationId,
         senderId: currentAccountId,
         imageFile: file,
         caption
       });
 
-      // Message will be added via WebSocket, but add optimistically for better UX
-      if (response.data) {
-        setMessages(prev => [...prev, response.data!]);
-      }
+      // Message will be added via WebSocket automatically
+      // No need to add optimistically to avoid duplicates
     } catch (err: any) {
       console.error('Error sending image:', err);
       throw err;
