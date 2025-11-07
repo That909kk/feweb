@@ -13,10 +13,11 @@ import {
   List,
   ClipboardList,
   Image as ImageIcon,
-  Search
+  Search,
+  Edit
 } from 'lucide-react';
 import { useBooking } from '../../hooks/useBooking';
-import { getAllBookingsApi } from '../../api/admin';
+import { getAllBookingsApi, updateBookingStatusApi, getBookingByIdApi } from '../../api/admin';
 import { DashboardLayout } from '../../layouts';
 import { MetricCard, SectionCard } from '../../shared/components';
 
@@ -27,6 +28,18 @@ type BookingPost = {
   customerName?: string;
   customerEmail?: string;
   customerPhone?: string;
+  customer?: {
+    customerId?: string;
+    fullName?: string;
+    avatar?: string;
+    email?: string;
+    phoneNumber?: string;
+    isMale?: boolean;
+    birthdate?: string;
+    rating?: number | null;
+    vipLevel?: string | null;
+    [key: string]: any;
+  };
   address?: {
     addressId: string;
     fullAddress: string;
@@ -64,8 +77,9 @@ type BookingPost = {
   } | null;
   createdAt?: string;
   title?: string | null;
-  imageUrl?: string | null;
-  images?: Array<{
+  imageUrl?: string | null; // Deprecated: use imageUrls or images instead
+  imageUrls?: string[] | null; // Array of image URL strings
+  images?: Array<{ // Array of image objects (from media service)
     imageId?: string;
     imageUrl?: string;
     url?: string;
@@ -132,8 +146,7 @@ const translateStatus = (status: string | undefined): string => {
     'AWAITING_EMPLOYEE': 'Chờ nhân viên',
     'PAID': 'Đã thanh toán',
     'FAILED': 'Thất bại',
-    'IN_PROGRESS': 'Đang thực hiện',
-    'REJECTED': 'Đã từ chối'
+    'IN_PROGRESS': 'Đang thực hiện'
   };
   return translations[status] || status;
 };
@@ -143,7 +156,7 @@ const getBookingPriority = (booking: BookingPost) => {
   let priority = 0;
   
   // 1. Ưu tiên có hình ảnh (priority càng cao càng lên đầu)
-  if (booking.imageUrl) {
+  if ((booking.imageUrls && booking.imageUrls.length > 0) || booking.imageUrl || (booking.images && booking.images.length > 0)) {
     priority += 1000;
   }
   
@@ -208,10 +221,18 @@ const AdminBookingManagement: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [detailBooking, setDetailBooking] = useState<BookingPost | null>(null);
+  const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [searchCode, setSearchCode] = useState('');
   const [filteredBookings, setFilteredBookings] = useState<BookingPost[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
   const [itemsPerPage] = useState(10);
+  
+  // Update status modal states
+  const [showUpdateStatusDialog, setShowUpdateStatusDialog] = useState(false);
+  const [updateStatusBooking, setUpdateStatusBooking] = useState<BookingPost | null>(null);
+  const [newStatus, setNewStatus] = useState<string>('');
+  const [statusAdminComment, setStatusAdminComment] = useState('');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
 
   const loadUnverifiedBookings = async () => {
     setIsLoading(true);
@@ -259,6 +280,11 @@ const AdminBookingManagement: React.FC = () => {
     // Load cả hai loại bookings khi component mount
     loadUnverifiedBookings();
     loadAllBookings();
+    
+    // Cleanup: unlock scroll khi component unmount
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
   }, []);
 
   useEffect(() => {
@@ -330,6 +356,89 @@ const AdminBookingManagement: React.FC = () => {
     }
   };
 
+  const handleOpenUpdateStatusDialog = (booking: BookingPost) => {
+    setUpdateStatusBooking(booking);
+    setNewStatus(booking.status);
+    setStatusAdminComment('');
+    setShowUpdateStatusDialog(true);
+    // Lock body scroll
+    document.body.style.overflow = 'hidden';
+  };
+
+  const handleCloseUpdateStatusDialog = () => {
+    setShowUpdateStatusDialog(false);
+    setUpdateStatusBooking(null);
+    setNewStatus('');
+    setStatusAdminComment('');
+    // Unlock body scroll
+    document.body.style.overflow = 'unset';
+  };
+
+  const handleViewDetail = async (bookingId: string) => {
+    setIsLoadingDetail(true);
+    setShowDetailModal(true);
+    setDetailBooking(null);
+    setError(null);
+    
+    // Lock body scroll
+    document.body.style.overflow = 'hidden';
+    
+    try {
+      const bookingDetail = await getBookingByIdApi(bookingId);
+      setDetailBooking(bookingDetail);
+    } catch (err: any) {
+      console.error('Failed to load booking details:', err);
+      setError('Không thể tải chi tiết booking');
+    } finally {
+      setIsLoadingDetail(false);
+    }
+  };
+
+  const handleCloseDetailModal = () => {
+    setShowDetailModal(false);
+    setDetailBooking(null);
+    // Unlock body scroll
+    document.body.style.overflow = 'unset';
+  };
+
+  const handleUpdateStatus = async () => {
+    if (!updateStatusBooking?.bookingId || !newStatus) return;
+
+    setIsProcessing(true);
+    setError(null);
+    try {
+      await updateBookingStatusApi(updateStatusBooking.bookingId, {
+        status: newStatus,
+        adminComment: statusAdminComment.trim() || undefined
+      });
+      
+      // Show success message
+      setSuccessMessage('Cập nhật trạng thái booking thành công!');
+      
+      // Reload bookings
+      await loadAllBookings();
+      
+      // Close dialogs
+      setShowUpdateStatusDialog(false);
+      setShowConfirmDialog(false);
+      setUpdateStatusBooking(null);
+      setNewStatus('');
+      setStatusAdminComment('');
+      setError(null);
+      
+      // Unlock body scroll
+      document.body.style.overflow = 'unset';
+      
+      // Auto hide success message after 3 seconds
+      setTimeout(() => setSuccessMessage(null), 3000);
+    } catch (err: any) {
+      console.error('Failed to update booking status:', err);
+      setError('Không thể cập nhật trạng thái booking. Vui lòng thử lại.');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
   const currentBookings = activeTab === 'all' ? allBookings : bookings;
   let displayBookings = searchCode.trim() ? filteredBookings : currentBookings;
   
@@ -348,7 +457,6 @@ const AdminBookingManagement: React.FC = () => {
     IN_PROGRESS: currentBookings.filter(b => b.status === 'IN_PROGRESS').length,
     COMPLETED: currentBookings.filter(b => b.status === 'COMPLETED').length,
     CANCELLED: currentBookings.filter(b => b.status === 'CANCELLED').length,
-    REJECTED: currentBookings.filter(b => b.status === 'REJECTED').length,
   };
   
   // Pagination logic
@@ -562,16 +670,6 @@ const AdminBookingManagement: React.FC = () => {
             >
               Đã hủy ({statusCounts.CANCELLED})
             </button>
-            <button
-              onClick={() => { setStatusFilter('REJECTED'); setCurrentPage(0); }}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${
-                statusFilter === 'REJECTED'
-                  ? 'bg-red-600 text-white shadow-sm'
-                  : 'bg-red-50 text-red-700 hover:bg-red-100 border border-red-200'
-              }`}
-            >
-              Đã từ chối ({statusCounts.REJECTED})
-            </button>
           </div>
           )}
 
@@ -609,14 +707,28 @@ const AdminBookingManagement: React.FC = () => {
                   key={booking.bookingId}
                   className="flex flex-col rounded-2xl border border-brand-outline/40 bg-gradient-to-r from-white via-white to-sky-50/60 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:flex-row sm:gap-5"
                 >
-                  {/* Image Section */}
-                  {booking.imageUrl && (
-                    <div className="flex-shrink-0 mb-4 sm:mb-0">
+                  {/* Image Section - Show first image or thumbnail */}
+                  {((booking.imageUrls && booking.imageUrls.length > 0) || booking.imageUrl || (booking.images && booking.images.length > 0)) && (
+                    <div className="flex-shrink-0 mb-4 sm:mb-0 relative">
                       <img
-                        src={booking.imageUrl}
+                        src={
+                          booking.imageUrls && booking.imageUrls.length > 0 
+                            ? booking.imageUrls[0] 
+                            : booking.imageUrl 
+                            ? booking.imageUrl 
+                            : booking.images && booking.images.length > 0 
+                            ? (booking.images[0].imageUrl || booking.images[0].url || '')
+                            : ''
+                        }
                         alt={booking.title || 'Booking image'}
                         className="w-full sm:w-32 h-32 rounded-xl object-cover border border-slate-200"
                       />
+                      {/* Badge for multiple images */}
+                      {((booking.imageUrls && booking.imageUrls.length > 1) || (booking.images && booking.images.length > 1)) && (
+                        <div className="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded-full">
+                          +{(booking.imageUrls?.length || booking.images?.length || 1) - 1}
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -637,7 +749,6 @@ const AdminBookingManagement: React.FC = () => {
                         booking.status === 'ASSIGNED' ? 'bg-indigo-100 text-indigo-700 border border-indigo-300' :
                         booking.status === 'IN_PROGRESS' ? 'bg-purple-100 text-purple-700 border border-purple-300' :
                         booking.status === 'COMPLETED' ? 'bg-green-100 text-green-700 border border-green-300' :
-                        booking.status === 'REJECTED' ? 'bg-red-100 text-red-700 border border-red-300' :
                         'bg-slate-100 text-slate-700 border border-slate-300'
                       }`}>
                         {translateStatus(booking.status)}
@@ -672,10 +783,14 @@ const AdminBookingManagement: React.FC = () => {
                         }
                         return null;
                       })()}
-                      {booking.imageUrl && (
+                      {((booking.imageUrls && booking.imageUrls.length > 0) || booking.imageUrl || (booking.images && booking.images.length > 0)) && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700">
                           <ImageIcon className="h-3 w-3" />
-                          Có hình ảnh
+                          {booking.imageUrls && booking.imageUrls.length > 1 
+                            ? `${booking.imageUrls.length} hình ảnh`
+                            : booking.images && booking.images.length > 1
+                            ? `${booking.images.length} hình ảnh`
+                            : 'Có hình ảnh'}
                         </span>
                       )}
                     </div>
@@ -729,10 +844,7 @@ const AdminBookingManagement: React.FC = () => {
                       <div className="flex flex-wrap gap-2">
                         {/* Nút Xem chi tiết */}
                         <button
-                          onClick={() => {
-                            setDetailBooking(booking);
-                            setShowDetailModal(true);
-                          }}
+                          onClick={() => handleViewDetail(booking.bookingId)}
                           className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-500"
                         >
                           <List className="h-4 w-4" />
@@ -769,6 +881,17 @@ const AdminBookingManagement: React.FC = () => {
                             </button>
                           </>
                         )}
+                        
+                        {/* Nút Cập nhật trạng thái khi ở tab All - Mobile */}
+                        {activeTab === 'all' && (
+                          <button
+                            onClick={() => handleOpenUpdateStatusDialog(booking)}
+                            className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-indigo-500"
+                          >
+                            <Edit className="h-4 w-4" />
+                            Cập nhật
+                          </button>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -785,10 +908,7 @@ const AdminBookingManagement: React.FC = () => {
                     <div className="flex flex-wrap gap-2">
                       {/* Nút Xem chi tiết */}
                       <button
-                        onClick={() => {
-                          setDetailBooking(booking);
-                          setShowDetailModal(true);
-                        }}
+                        onClick={() => handleViewDetail(booking.bookingId)}
                         className="inline-flex items-center gap-2 rounded-full bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-500"
                       >
                         <List className="h-4 w-4" />
@@ -824,6 +944,17 @@ const AdminBookingManagement: React.FC = () => {
                             Từ chối
                           </button>
                         </>
+                      )}
+                      
+                      {/* Nút Cập nhật trạng thái khi ở tab All */}
+                      {activeTab === 'all' && (
+                        <button
+                          onClick={() => handleOpenUpdateStatusDialog(booking)}
+                          className="inline-flex items-center gap-2 rounded-full bg-indigo-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-indigo-500"
+                        >
+                          <Edit className="h-4 w-4" />
+                          Cập nhật
+                        </button>
                       )}
                     </div>
                   </div>
@@ -991,27 +1122,36 @@ const AdminBookingManagement: React.FC = () => {
       </DashboardLayout>
 
       {/* Detail Modal - Moved outside DashboardLayout */}
-      {showDetailModal && detailBooking && (() => {
-        const booking = detailBooking; // Local variable to avoid null checks
-        return (
-        <div className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm overflow-y-auto">
+      {showDetailModal && (
+        <div 
+          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm overflow-y-auto"
+          onClick={handleCloseDetailModal}
+        >
           <div className="min-h-screen flex items-start justify-center p-4">
-            <div className="relative w-full max-w-4xl my-8">
+            <div 
+              className="relative w-full max-w-4xl my-8"
+              onClick={(e) => e.stopPropagation()}
+            >
               <SectionCard
                 title="Chi tiết Booking"
-                description={`Mã đơn: ${booking.bookingCode || booking.bookingId}`}
+                description={isLoadingDetail ? "Đang tải..." : (detailBooking?.bookingCode ? `Mã đơn: ${detailBooking.bookingCode}` : '')}
                 actions={
                   <button
-                    onClick={() => {
-                      setShowDetailModal(false);
-                      setDetailBooking(null);
-                    }}
+                    onClick={handleCloseDetailModal}
                     className="rounded-full p-1.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
                   >
                     <X className="h-5 w-5" />
                   </button>
                 }
               >
+                {isLoadingDetail ? (
+                  <div className="flex items-center justify-center py-12">
+                    <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+                    <span className="ml-3 text-slate-600">Đang tải chi tiết booking...</span>
+                  </div>
+                ) : detailBooking ? (() => {
+                  const booking = detailBooking;
+                  return (
                 <div className="space-y-6">
                   {/* Thông tin khách hàng */}
                   <div className="border-b border-slate-200 pb-4">
@@ -1019,25 +1159,83 @@ const AdminBookingManagement: React.FC = () => {
                       <User className="h-5 w-5 text-blue-600" />
                       Thông tin khách hàng
                     </h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-                      <div>
-                        <span className="text-slate-500">Tên:</span>
-                        <span className="ml-2 font-medium text-slate-900">{booking.customerName || 'Chưa có'}</span>
-                      </div>
-                      <div>
-                        <span className="text-slate-500">ID:</span>
-                        <span className="ml-2 font-medium text-slate-700 text-xs">{booking.customerId || 'Chưa có'}</span>
-                      </div>
-                      {booking.customerPhone && (
-                        <div>
-                          <span className="text-slate-500">SĐT:</span>
-                          <span className="ml-2 font-medium text-slate-900">{booking.customerPhone}</span>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                      {/* Avatar và tên */}
+                      {booking.customer?.avatar && (
+                        <div className="md:col-span-2 flex items-center gap-3">
+                          <img 
+                            src={booking.customer.avatar} 
+                            alt={booking.customer.fullName || booking.customerName || 'Customer'}
+                            className="h-16 w-16 rounded-full object-cover border-2 border-blue-200"
+                          />
+                          <div>
+                            <p className="font-semibold text-slate-900 text-base">
+                              {booking.customer.fullName || booking.customerName || 'Chưa có'}
+                            </p>
+                            {booking.customer?.rating && (
+                              <p className="text-sm text-amber-600">
+                                ⭐ {booking.customer.rating.toFixed(1)}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       )}
-                      {booking.customerEmail && (
+                      
+                      <div>
+                        <span className="text-slate-500">Tên:</span>
+                        <span className="ml-2 font-medium text-slate-900">
+                          {booking.customer?.fullName || booking.customerName || 'Chưa có'}
+                        </span>
+                      </div>
+                      
+                      <div>
+                        <span className="text-slate-500">ID:</span>
+                        <span className="ml-2 font-medium text-slate-700 text-xs">
+                          {booking.customer?.customerId || booking.customerId || 'Chưa có'}
+                        </span>
+                      </div>
+                      
+                      {(booking.customer?.phoneNumber || booking.customerPhone) && (
+                        <div>
+                          <span className="text-slate-500">SĐT:</span>
+                          <span className="ml-2 font-medium text-slate-900">
+                            {booking.customer?.phoneNumber || booking.customerPhone}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {(booking.customer?.email || booking.customerEmail) && (
                         <div>
                           <span className="text-slate-500">Email:</span>
-                          <span className="ml-2 font-medium text-slate-900">{booking.customerEmail}</span>
+                          <span className="ml-2 font-medium text-slate-900">
+                            {booking.customer?.email || booking.customerEmail}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {booking.customer?.birthdate && (
+                        <div>
+                          <span className="text-slate-500">Ngày sinh:</span>
+                          <span className="ml-2 font-medium text-slate-900">
+                            {new Date(booking.customer.birthdate).toLocaleDateString('vi-VN')}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {booking.customer?.isMale !== undefined && (
+                        <div>
+                          <span className="text-slate-500">Giới tính:</span>
+                          <span className="ml-2 font-medium text-slate-900">
+                            {booking.customer.isMale ? 'Nam' : 'Nữ'}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {booking.customer?.vipLevel && (
+                        <div className="md:col-span-2">
+                          <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-3 py-1 text-sm font-semibold text-white shadow-lg">
+                            👑 VIP {booking.customer.vipLevel}
+                          </span>
                         </div>
                       )}
                     </div>
@@ -1050,6 +1248,26 @@ const AdminBookingManagement: React.FC = () => {
                       Địa chỉ
                     </h3>
                     <p className="text-sm text-slate-700">{booking.address?.fullAddress || 'Chưa có'}</p>
+                    {booking.address?.ward && (
+                      <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-2 text-xs text-slate-600">
+                        <div>
+                          <span className="text-slate-500">Phường/Xã:</span>
+                          <span className="ml-1 font-medium">{booking.address.ward}</span>
+                        </div>
+                        {booking.address.district && (
+                          <div>
+                            <span className="text-slate-500">Quận/Huyện:</span>
+                            <span className="ml-1 font-medium">{booking.address.district}</span>
+                          </div>
+                        )}
+                        {booking.address.city && (
+                          <div>
+                            <span className="text-slate-500">Tỉnh/TP:</span>
+                            <span className="ml-1 font-medium">{booking.address.city}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Thời gian */}
@@ -1318,11 +1536,11 @@ const AdminBookingManagement: React.FC = () => {
                   </div>
 
                   {/* Hình ảnh */}
-                  {((booking.images && booking.images.length > 0) || booking.imageUrl) && (
+                  {((booking.images && booking.images.length > 0) || (booking.imageUrls && booking.imageUrls.length > 0) || booking.imageUrl) && (
                     <div>
                       <h3 className="text-lg font-semibold text-slate-900 mb-3 flex items-center gap-2">
                         <ImageIcon className="h-5 w-5 text-pink-600" />
-                        Hình ảnh {booking.images ? `(${booking.images.length})` : '(1)'}
+                        Hình ảnh {booking.images ? `(${booking.images.length})` : booking.imageUrls ? `(${booking.imageUrls.length})` : '(1)'}
                       </h3>
                       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
                         {booking.images && booking.images.length > 0 ? (
@@ -1334,6 +1552,20 @@ const AdminBookingManagement: React.FC = () => {
                                 className="h-full w-full object-cover"
                                 loading="lazy"
                               />
+                            </div>
+                          ))
+                        ) : booking.imageUrls && booking.imageUrls.length > 0 ? (
+                          booking.imageUrls.map((url, index) => (
+                            <div key={index} className="relative aspect-square overflow-hidden rounded-lg border-2 border-slate-200 shadow-sm hover:shadow-md hover:scale-105 transition">
+                              <img
+                                src={url}
+                                alt={`Booking image ${index + 1}`}
+                                className="h-full w-full object-cover"
+                                loading="lazy"
+                              />
+                              <div className="absolute bottom-2 left-2 bg-black/60 text-white text-xs px-2 py-1 rounded">
+                                {index + 1}/{booking.imageUrls?.length || 0}
+                              </div>
                             </div>
                           ))
                         ) : booking.imageUrl ? (
@@ -1353,10 +1585,7 @@ const AdminBookingManagement: React.FC = () => {
                   {/* Nút đóng ở cuối */}
                   <div className="flex justify-center pt-6 border-t border-slate-200">
                     <button
-                      onClick={() => {
-                        setShowDetailModal(false);
-                        setDetailBooking(null);
-                      }}
+                      onClick={handleCloseDetailModal}
                       className="inline-flex items-center gap-2 rounded-full bg-slate-600 px-6 py-3 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-slate-500"
                     >
                       <X className="h-4 w-4" />
@@ -1364,12 +1593,187 @@ const AdminBookingManagement: React.FC = () => {
                     </button>
                   </div>
                 </div>
+                );
+                })() : (
+                  <div className="text-center py-8 text-slate-500">
+                    Không có dữ liệu
+                  </div>
+                )}
               </SectionCard>
             </div>
           </div>
         </div>
-        );
-      })()}
+      )}
+      
+      {/* Update Status Dialog */}
+      {showUpdateStatusDialog && updateStatusBooking && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-900/40 px-4 py-8 backdrop-blur-sm">
+          <div className="relative w-full max-w-md">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-xl font-bold text-slate-900">
+                  Cập nhật trạng thái Booking
+                </h3>
+                <button
+                  onClick={handleCloseUpdateStatusDialog}
+                  className="rounded-full p-1 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <div className="mb-4 rounded-lg bg-slate-50 p-3">
+                <p className="text-sm text-slate-600">
+                  <span className="font-semibold">Mã đơn:</span> {updateStatusBooking.bookingCode || updateStatusBooking.bookingId}
+                </p>
+                <p className="text-sm text-slate-600 mt-1">
+                  <span className="font-semibold">Trạng thái hiện tại:</span>{' '}
+                  <span className={`inline-block px-2 py-0.5 rounded text-xs font-semibold ${
+                    updateStatusBooking.status === 'CONFIRMED' ? 'bg-emerald-100 text-emerald-700' :
+                    updateStatusBooking.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
+                    updateStatusBooking.status === 'CANCELLED' ? 'bg-rose-100 text-rose-700' :
+                    updateStatusBooking.status === 'AWAITING_EMPLOYEE' ? 'bg-blue-100 text-blue-700' :
+                    updateStatusBooking.status === 'ASSIGNED' ? 'bg-indigo-100 text-indigo-700' :
+                    updateStatusBooking.status === 'IN_PROGRESS' ? 'bg-purple-100 text-purple-700' :
+                    updateStatusBooking.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                    'bg-slate-100 text-slate-700'
+                  }`}>
+                    {translateStatus(updateStatusBooking.status)}
+                  </span>
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                {/* Status Selection */}
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Trạng thái mới <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={newStatus}
+                    onChange={(e) => setNewStatus(e.target.value)}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20"
+                  >
+                    <option value="">-- Chọn trạng thái --</option>
+                    <option value="PENDING">Chờ xử lý</option>
+                    <option value="CONFIRMED">Đã xác nhận</option>
+                    <option value="AWAITING_EMPLOYEE">Chờ nhân viên</option>
+                    <option value="ASSIGNED">Đã phân công</option>
+                    <option value="IN_PROGRESS">Đang thực hiện</option>
+                    <option value="COMPLETED">Hoàn thành</option>
+                    <option value="CANCELLED">Đã hủy</option>
+                  </select>
+                </div>
+
+                {/* Admin Comment */}
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Ghi chú quản trị viên
+                  </label>
+                  <textarea
+                    value={statusAdminComment}
+                    onChange={(e) => setStatusAdminComment(e.target.value)}
+                    placeholder="Nhập ghi chú về việc thay đổi trạng thái (tùy chọn)"
+                    rows={3}
+                    className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 resize-none"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-6 flex gap-3">
+                <button
+                  onClick={handleCloseUpdateStatusDialog}
+                  className="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  disabled={isProcessing}
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={() => {
+                    if (!newStatus) {
+                      setError('Vui lòng chọn trạng thái mới');
+                      return;
+                    }
+                    setShowConfirmDialog(true);
+                  }}
+                  disabled={isProcessing || !newStatus}
+                  className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isProcessing ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Đang xử lý...
+                    </span>
+                  ) : (
+                    'Xác nhận'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {showConfirmDialog && updateStatusBooking && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-slate-900/60 px-4 backdrop-blur-sm">
+          <div className="relative w-full max-w-md">
+            <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl">
+              <div className="mb-4 flex items-center gap-3">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-amber-100">
+                  <AlertCircle className="h-6 w-6 text-amber-600" />
+                </div>
+                <h3 className="text-xl font-bold text-slate-900">
+                  Xác nhận thay đổi
+                </h3>
+              </div>
+
+              <p className="mb-6 text-sm text-slate-600">
+                Bạn có chắc chắn muốn thay đổi trạng thái booking từ{' '}
+                <span className="font-semibold text-slate-900">
+                  {translateStatus(updateStatusBooking.status)}
+                </span>{' '}
+                sang{' '}
+                <span className="font-semibold text-slate-900">
+                  {translateStatus(newStatus)}
+                </span>
+                ?
+              </p>
+
+              {statusAdminComment && (
+                <div className="mb-4 rounded-lg bg-slate-50 p-3">
+                  <p className="text-xs font-semibold text-slate-700 mb-1">Ghi chú:</p>
+                  <p className="text-sm text-slate-600">{statusAdminComment}</p>
+                </div>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  onClick={() => setShowConfirmDialog(false)}
+                  className="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  disabled={isProcessing}
+                >
+                  Không
+                </button>
+                <button
+                  onClick={handleUpdateStatus}
+                  disabled={isProcessing}
+                  className="flex-1 rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isProcessing ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Đang cập nhật...
+                    </span>
+                  ) : (
+                    'Có, thay đổi'
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };

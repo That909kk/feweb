@@ -91,6 +91,7 @@ export interface LogoutResponse extends ApiResponse {
 // User Profile Types
 export interface CustomerData {
   customerId: string;
+  accountId: string;
   username: string;
   avatar?: string;
   fullName: string;
@@ -155,6 +156,7 @@ export interface GetCustomerInfoResponse extends ApiResponse {
 
 export interface EmployeeData {
   employeeId: string;
+  accountId: string;
   username: string;
   avatar?: string;
   fullName: string;
@@ -169,6 +171,7 @@ export interface EmployeeData {
 
 export interface AdminData {
   adminProfileId: string;
+  accountId: string;
   username: string;
   avatar?: string;
   fullName: string;
@@ -374,7 +377,8 @@ export interface CreateBookingRequest {
   promoCode?: string | null;
   // Booking Post Feature fields (khi không chọn nhân viên)
   title?: string | null;
-  imageUrl?: string | null;
+  imageUrl?: string | null; // Deprecated: Kept for backward compatibility, use imageUrls instead
+  imageUrls?: string[] | null; // Array of image URLs (support multiple images 0-10)
   bookingDetails: BookingDetailRequest[];
   assignments?: BookingAssignmentRequest[];
   paymentMethodId: number;
@@ -458,7 +462,8 @@ export interface BookingResponse extends ApiResponse {
     updatedAt: string;
     // Booking Post Feature fields
     title?: string;
-    imageUrl?: string;
+    imageUrl?: string; // Deprecated: Kept for backward compatibility, use imageUrls instead
+    imageUrls?: string[]; // Array of image URLs (support multiple images 0-10)
     isVerified?: boolean;
     adminComment?: string;
     // Additional fields

@@ -98,6 +98,7 @@ export const logoutApi = async (deviceType: DeviceType = 'WEB'): Promise<LogoutR
     localStorage.removeItem('selectedRole');
     localStorage.removeItem('expireIn');
     localStorage.removeItem('deviceType');
+    localStorage.removeItem('accountId');
     localStorage.removeItem('adminProfileId');
     localStorage.removeItem('customerId');
     localStorage.removeItem('employeeId');

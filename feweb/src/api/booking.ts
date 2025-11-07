@@ -54,24 +54,47 @@ export const getCustomerDefaultAddressApi = async (customerId: string): Promise<
 
 // Create new booking
 // Có thể tạo với hoặc không có employee (booking post)
-// Theo API-TestCases-Booking-CreateWithImage.md và API-Booking-Post-Feature.md
+// Theo API-TestCases-Booking-CreateWithMultipleImages.md và API-Booking-Post-Feature.md
+// Hỗ trợ nhiều ảnh (0-10 ảnh)
 export const createBookingApi = async (
   data: CreateBookingRequest,
-  image?: File
+  images?: File[]
 ): Promise<BookingResponse> => {
   try {
     console.log('Creating booking with data:', JSON.stringify(data, null, 2));
+    console.log('Number of images:', images?.length || 0);
     
     // Backend LUÔN yêu cầu multipart/form-data cho tất cả booking
-    // (Theo API-TestCases-Booking-CreateWithImage.md và log lỗi)
+    // (Theo API-TestCases-Booking-CreateWithMultipleImages.md)
     const formData = new FormData();
     
     // Gửi booking data dưới dạng JSON string trong field "booking"
     formData.append('booking', JSON.stringify(data));
     
-    // Nếu có image, thêm vào formData
-    if (image) {
-      formData.append('image', image);
+    // Nếu có images, thêm vào formData (tối đa 10 ảnh)
+    if (images && images.length > 0) {
+      // Validate số lượng ảnh
+      if (images.length > 10) {
+        throw new Error('Số lượng ảnh không được vượt quá 10');
+      }
+      
+      // Thêm từng ảnh vào formData với key "images"
+      images.forEach((image) => {
+        // Validate file type
+        if (!image.type.startsWith('image/')) {
+          throw new Error('Tất cả file phải là định dạng ảnh');
+        }
+        
+        // Validate file size (max 10MB)
+        if (image.size > 10 * 1024 * 1024) {
+          throw new Error('Kích thước mỗi file không được vượt quá 10MB');
+        }
+        
+        // Skip empty files
+        if (image.size > 0) {
+          formData.append('images', image);
+        }
+      });
     }
     
     const response = await api.post<BookingResponse>('/customer/bookings', formData, {

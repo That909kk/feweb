@@ -225,6 +225,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem('deviceType', deviceType);
         localStorage.setItem('selectedRole', userRole);
         
+        // Lưu accountId (chung cho tất cả role)
+        if (profileData.accountId) {
+          localStorage.setItem('accountId', profileData.accountId);
+        }
+        
         // Lưu ID theo role (adminProfileId/customerId/employeeId)
         if (userRole === 'ADMIN') {
           const adminData = profileData as AdminData;
@@ -387,6 +392,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       localStorage.removeItem('refreshToken');
       localStorage.removeItem('expireIn');
       localStorage.removeItem('deviceType');
+      localStorage.removeItem('accountId');
       localStorage.removeItem('customerId');
       localStorage.removeItem('employeeId');
       localStorage.removeItem('adminProfileId');

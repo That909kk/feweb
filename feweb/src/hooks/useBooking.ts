@@ -31,12 +31,12 @@ export const useBooking = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createBooking = async (request: CreateBookingRequest, image?: File) => {
+  const createBooking = async (request: CreateBookingRequest, images?: File[]) => {
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await createBookingApi(request, image);
+      const response = await createBookingApi(request, images);
       // Return the data object, not the full response
       return response.data;
     } catch (err: any) {

@@ -337,27 +337,60 @@ const BookingSuccessPage: React.FC = () => {
                   </div>
                 )}
 
-                {/* Booking Post Image - Only show if image exists */}
-                {bookingData.imageUrl && (
+                {/* Booking Post Images - Only show if images exist */}
+                {(bookingData.imageUrls && bookingData.imageUrls.length > 0) || bookingData.imageUrl ? (
                   <div className="rounded-2xl border border-brand-outline/20 bg-gradient-to-br from-cyan-50 to-blue-50 p-5">
                     <div className="flex items-center gap-3 mb-4">
                       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-100">
                         <Sparkles className="h-5 w-5 text-cyan-600" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-brand-navy">Hình ảnh tham khảo</h3>
+                        <h3 className="font-semibold text-brand-navy">
+                          Hình ảnh tham khảo
+                          {bookingData.imageUrls && bookingData.imageUrls.length > 1 && (
+                            <span className="ml-2 text-sm text-cyan-600">
+                              ({bookingData.imageUrls.length} ảnh)
+                            </span>
+                          )}
+                        </h3>
                         <p className="text-sm text-brand-text/70">Ảnh khu vực cần dọn dẹp</p>
                       </div>
                     </div>
-                    <div className="rounded-xl overflow-hidden shadow-md">
-                      <img 
-                        src={bookingData.imageUrl} 
-                        alt="Booking reference" 
-                        className="w-full h-auto object-cover"
-                      />
-                    </div>
+                    
+                    {/* Grid display for multiple images */}
+                    {bookingData.imageUrls && bookingData.imageUrls.length > 0 ? (
+                      <div className={`grid gap-3 ${
+                        bookingData.imageUrls.length === 1 
+                          ? 'grid-cols-1' 
+                          : bookingData.imageUrls.length === 2 
+                          ? 'grid-cols-2' 
+                          : 'grid-cols-2 sm:grid-cols-3'
+                      }`}>
+                        {bookingData.imageUrls.map((url: string, index: number) => (
+                          <div key={index} className="rounded-xl overflow-hidden shadow-md relative group">
+                            <img 
+                              src={url} 
+                              alt={`Booking reference ${index + 1}`} 
+                              className="w-full h-48 object-cover transition-transform group-hover:scale-105"
+                            />
+                            <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 text-white text-xs rounded">
+                              {index + 1}/{bookingData.imageUrls?.length || 0}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : bookingData.imageUrl ? (
+                      // Fallback to single imageUrl for backward compatibility
+                      <div className="rounded-xl overflow-hidden shadow-md">
+                        <img 
+                          src={bookingData.imageUrl} 
+                          alt="Booking reference" 
+                          className="w-full h-auto object-cover"
+                        />
+                      </div>
+                    ) : null}
                   </div>
-                )}
+                ) : null}
               </div>
             ) : (
               <div className="rounded-2xl border border-amber-200 bg-gradient-to-br from-amber-50 to-orange-50 p-6 text-center">

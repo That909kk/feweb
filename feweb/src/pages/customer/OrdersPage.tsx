@@ -50,7 +50,8 @@ type BookingItem = {
   };
   // Booking Post Feature fields
   title?: string;
-  imageUrl?: string;
+  imageUrl?: string; // Deprecated: use imageUrls instead
+  imageUrls?: string[]; // Array of image URLs
   isVerified?: boolean;
   adminComment?: string;
   promotion?: {
@@ -448,19 +449,46 @@ const OrdersPage: React.FC = () => {
                   </p>
                 </div>
 
-                {/* Hiển thị title và image cho booking post */}
+                {/* Hiển thị title và images cho booking post */}
               {isPost && selectedBooking.title && (
                 <div className="rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-indigo-100/50 p-5 shadow-sm">
-                  {selectedBooking.imageUrl && (
-                    <img 
-                      src={selectedBooking.imageUrl} 
-                      alt={selectedBooking.title}
-                      className="w-full rounded-xl object-cover mb-4 max-h-80 shadow-md"
-                      onError={(e) => {
-                        (e.target as HTMLImageElement).style.display = 'none';
-                      }}
-                    />
-                  )}
+                  {/* Display multiple images or single image */}
+                  {(selectedBooking.imageUrls && selectedBooking.imageUrls.length > 0) || selectedBooking.imageUrl ? (
+                    <div className={`mb-4 grid gap-3 ${
+                      selectedBooking.imageUrls && selectedBooking.imageUrls.length > 1
+                        ? selectedBooking.imageUrls.length === 2
+                          ? 'grid-cols-2'
+                          : 'grid-cols-2 sm:grid-cols-3'
+                        : 'grid-cols-1'
+                    }`}>
+                      {selectedBooking.imageUrls && selectedBooking.imageUrls.length > 0 ? (
+                        selectedBooking.imageUrls.map((url, index) => (
+                          <div key={index} className="relative group">
+                            <img 
+                              src={url} 
+                              alt={`${selectedBooking.title} - Ảnh ${index + 1}`}
+                              className="w-full rounded-xl object-cover h-48 shadow-md transition-transform group-hover:scale-105"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                            <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 text-white text-xs rounded">
+                              {index + 1}/{selectedBooking.imageUrls?.length || 0}
+                            </div>
+                          </div>
+                        ))
+                      ) : selectedBooking.imageUrl ? (
+                        <img 
+                          src={selectedBooking.imageUrl} 
+                          alt={selectedBooking.title}
+                          className="w-full rounded-xl object-cover max-h-80 shadow-md"
+                          onError={(e) => {
+                            (e.target as HTMLImageElement).style.display = 'none';
+                          }}
+                        />
+                      ) : null}
+                    </div>
+                  ) : null}
                   <div className="flex items-center gap-2 mb-2">
                     {selectedBooking.services && selectedBooking.services.length > 0 && selectedBooking.services[0].iconUrl && (
                       <img 
@@ -928,16 +956,24 @@ const OrdersPage: React.FC = () => {
                             </span>
                           )}
                         </div>
-                        {booking.imageUrl && (
-                          <img 
-                            src={booking.imageUrl} 
-                            alt={booking.title}
-                            className="h-16 w-16 rounded-lg object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = 'none';
-                            }}
-                          />
-                        )}
+                        {/* Display first image as thumbnail */}
+                        {(booking.imageUrls && booking.imageUrls.length > 0) || booking.imageUrl ? (
+                          <div className="relative">
+                            <img 
+                              src={booking.imageUrls && booking.imageUrls.length > 0 ? booking.imageUrls[0] : booking.imageUrl!} 
+                              alt={booking.title}
+                              className="h-16 w-16 rounded-lg object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                            {booking.imageUrls && booking.imageUrls.length > 1 && (
+                              <div className="absolute bottom-1 right-1 bg-black/70 text-white text-xs px-1.5 py-0.5 rounded">
+                                +{booking.imageUrls.length - 1}
+                              </div>
+                            )}
+                          </div>
+                        ) : null}
                       </div>
                     </div>
                   )}

@@ -18,7 +18,7 @@ import { useCategories } from '../../hooks/useCategories';
 import { useAddress } from '../../hooks/useAddress';
 import { getOrCreateConversationApi } from '../../api/chat';
 import DashboardLayout from '../../layouts/DashboardLayout';
-import ImageUpload from '../../components/ImageUpload';
+import MultipleImageUpload from '../../components/MultipleImageUpload';
 import type { 
   CreateBookingRequest,
   SuitableEmployee,
@@ -142,7 +142,7 @@ const BookingPage: React.FC = () => {
   
   // State for booking post (when no employee selected)
   const [postTitle, setPostTitle] = useState<string>('');
-  const [postImageFile, setPostImageFile] = useState<File | null>(null); // Lưu File object, không lưu base64
+  const [postImageFiles, setPostImageFiles] = useState<File[]>([]); // Lưu nhiều File objects
   
   // State cho địa chỉ 2 cấp mới
   const [selectedProvinceCode, setSelectedProvinceCode] = useState<string>('');
@@ -1104,9 +1104,9 @@ const BookingPage: React.FC = () => {
       }
       
       // Call API to create booking
-      // Gửi File object nếu có (chỉ khi là booking post)
-      const imageFile = selectedEmployees.length === 0 && postImageFile ? postImageFile : undefined;
-      const result = await createBooking(bookingRequest, imageFile as File | undefined);
+      // Gửi nhiều File objects nếu có (cho cả booking thông thường và booking post)
+      const imageFiles = postImageFiles.length > 0 ? postImageFiles : undefined;
+      const result = await createBooking(bookingRequest, imageFiles);
       
       if (result) {
         console.log('✅ [BOOKING] Booking created successfully:', result);
@@ -2190,7 +2190,7 @@ const BookingPage: React.FC = () => {
                     onClick={() => {
                       setShowEmployeeSelection(true);
                       setPostTitle('');
-                      setPostImageFile(null); // Reset file object
+                      setPostImageFiles([]); // Reset image files
                     }}
                     className={`p-5 rounded-xl border-2 transition-all duration-200 ${
                       showEmployeeSelection
@@ -2290,12 +2290,12 @@ const BookingPage: React.FC = () => {
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">
                           Hình ảnh bài đăng
-                          <span className="text-gray-400 font-normal ml-1">(Tùy chọn)</span>
+                          <span className="text-gray-400 font-normal ml-1">(Tùy chọn, tối đa 10 ảnh)</span>
                         </label>
-                        <ImageUpload
-                          onImageUploaded={(_imageUrl, file) => setPostImageFile(file || null)}
-                          currentImageUrl={postImageFile ? URL.createObjectURL(postImageFile) : ''}
-                          onRemoveImage={() => setPostImageFile(null)}
+                        <MultipleImageUpload
+                          onImagesChanged={(files) => setPostImageFiles(files)}
+                          currentImages={postImageFiles}
+                          maxImages={10}
                           className="w-full"
                         />
                       </div>
@@ -2537,17 +2537,23 @@ const BookingPage: React.FC = () => {
                     )}
                     
                     {/* Show booking post image if no employee selected and image exists */}
-                    {selectedEmployees.length === 0 && postImageFile && (
+                    {selectedEmployees.length === 0 && postImageFiles.length > 0 && (
                       <div className="flex items-start">
                         <div className="w-2 h-2 bg-indigo-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
                         <div className="flex-1">
-                          <p className="text-sm font-medium text-gray-500 mb-2">Hình ảnh tham khảo</p>
-                          <div className="rounded-lg overflow-hidden border border-indigo-200 shadow-sm">
-                            <img 
-                              src={URL.createObjectURL(postImageFile)} 
-                              alt="Booking reference" 
-                              className="w-full h-auto object-cover max-h-64"
-                            />
+                          <p className="text-sm font-medium text-gray-500 mb-2">
+                            Hình ảnh tham khảo ({postImageFiles.length} ảnh)
+                          </p>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                            {postImageFiles.map((file, index) => (
+                              <div key={index} className="rounded-lg overflow-hidden border border-indigo-200 shadow-sm">
+                                <img 
+                                  src={URL.createObjectURL(file)} 
+                                  alt={`Booking reference ${index + 1}`} 
+                                  className="w-full h-32 object-cover"
+                                />
+                              </div>
+                            ))}
                           </div>
                         </div>
                       </div>

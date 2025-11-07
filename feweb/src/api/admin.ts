@@ -634,3 +634,48 @@ export const verifyBookingApi = async (
   }
 };
 
+/**
+ * Get booking details by ID
+ * Endpoint: GET /api/v1/admin/bookings/{bookingId}
+ * Theo API-TestCases-Admin-UpdateBookingStatus.md Test Case 11
+ */
+export const getBookingByIdApi = async (
+  bookingId: string
+): Promise<any> => {
+  try {
+    console.log(`[API] Admin fetching booking details for ${bookingId}`);
+    const response = await api.get(`/admin/bookings/${bookingId}`);
+    console.log('[API] Booking details:', response.data);
+    return response.data.data || response.data;
+  } catch (error: any) {
+    console.error('[API] Error fetching booking details:', error);
+    throw error;
+  }
+};
+
+/**
+ * Update booking status
+ * Endpoint: PUT /api/v1/admin/bookings/{bookingId}/status
+ * Theo API-TestCases-Admin-UpdateBookingStatus.md
+ */
+export const updateBookingStatusApi = async (
+  bookingId: string,
+  data: {
+    status: string;
+    adminComment?: string;
+  }
+): Promise<ApiResponse<any>> => {
+  try {
+    console.log(`[API] Admin updating booking status ${bookingId}:`, data);
+    const response = await api.put<ApiResponse<any>>(
+      `/admin/bookings/${bookingId}/status`,
+      data
+    );
+    console.log('[API] Booking status update result:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('[API] Error updating booking status:', error);
+    throw error;
+  }
+};
+

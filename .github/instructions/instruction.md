@@ -30,6 +30,7 @@ Xây dựng hệ thống đa nền tảng (Web, Mobile) phục vụ:
 - Đảm bảo clean code, dễ đọc, chia nhỏ đúng cách để dễ dàng bảo trì
 - Đảm bảo không có bất kỳ lỗi syntax 
 - Đảm bảo không có bất kỳ lỗi nào trước khi chạy thử để test
+- Không viết thêm .md
 ## Thông tin quyền tác giả hiển thị
 - Lê Minh Thật (That909kk)
 - mthat456@gmail.com
