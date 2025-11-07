@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { 
   CheckCircle, 
@@ -17,17 +17,81 @@ import {
 import { DashboardLayout } from '../../layouts';
 import { SectionCard, MetricCard } from '../../shared/components';
 import { getBookingStatusInVietnamese, getBookingStatusAccent, formatEndTime } from '../../shared/utils/bookingUtils';
+import { getOrCreateConversationApi } from '../../api/chat';
+import { useAuth } from '../../contexts/AuthContext';
 
 const BookingSuccessPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user } = useAuth();
   const bookingData = location.state?.bookingData;
+  const [conversationId, setConversationId] = useState<string | null>(null);
+  const [isCreatingConversation, setIsCreatingConversation] = useState(false);
+  const [_conversationError, setConversationError] = useState<string | null>(null); // Reserved for future error display
 
   // Nếu không có dữ liệu booking, redirect về dashboard
   if (!bookingData) {
     navigate('/customer');
     return null;
   }
+
+  // Tự động tạo conversation khi có nhân viên được phân công
+  // Luồng: Sau khi xác nhận đặt lịch thành công -> gọi API get-or-create conversation -> hiển thị trang thành công
+  useEffect(() => {
+    const createConversation = async () => {
+      // Chỉ tạo conversation nếu:
+      // 1. Có nhân viên được phân công
+      // 2. Có customerId từ user context
+      // 3. Chưa tạo conversation (conversationId === null)
+      // 4. Không đang trong quá trình tạo
+      if (
+        bookingData.assignedEmployees?.length > 0 &&
+        user?.customerId &&
+        !conversationId &&
+        !isCreatingConversation
+      ) {
+        setIsCreatingConversation(true);
+        setConversationError(null);
+        
+        try {
+          // Lấy employeeId của nhân viên đầu tiên được phân công
+          const firstEmployee = bookingData.assignedEmployees[0];
+          const employeeId = firstEmployee.employeeId;
+
+          console.log('[BookingSuccess] 🔄 Creating/Getting conversation:', {
+            customerId: user.customerId,
+            employeeId: employeeId
+          });
+
+          // Gọi API GET /api/v1/conversations/get-or-create
+          const response = await getOrCreateConversationApi({
+            customerId: user.customerId,
+            employeeId: employeeId
+          });
+
+          if (response.success && response.data) {
+            setConversationId(response.data.conversationId);
+            console.log('[BookingSuccess] ✅ Conversation ready:', {
+              conversationId: response.data.conversationId,
+              isNewConversation: !response.data.lastMessage,
+              employeeName: response.data.employeeName
+            });
+          } else {
+            console.warn('[BookingSuccess] ⚠️ API returned success but no data');
+          }
+        } catch (error: any) {
+          console.error('[BookingSuccess] ❌ Error creating conversation:', error);
+          setConversationError(error?.response?.data?.message || 'Không thể tạo cuộc hội thoại');
+          // Không hiển thị lỗi cho user, chỉ log để debug
+          // Người dùng vẫn có thể chat sau thông qua trang chat list
+        } finally {
+          setIsCreatingConversation(false);
+        }
+      }
+    };
+
+    createConversation();
+  }, [bookingData.assignedEmployees, user?.customerId, conversationId, isCreatingConversation]);
 
   // Lấy trạng thái tiếng Việt và accent color
   const vietnameseStatus = getBookingStatusInVietnamese(bookingData.status);
@@ -71,6 +135,16 @@ const BookingSuccessPage: React.FC = () => {
             <div className="text-sm text-emerald-50">Tổng thanh toán</div>
             <div className="text-2xl font-bold">{bookingData.formattedTotalAmount}</div>
           </div>
+          
+          {/* Chat Ready Notification - Only show when conversation is ready */}
+          {conversationId && bookingData.assignedEmployees?.length > 0 && (
+            <div className="mt-4 animate-fade-in rounded-full bg-white/20 px-5 py-2 backdrop-blur-sm">
+              <div className="flex items-center gap-2 text-sm font-medium text-white">
+                <MessageCircle className="h-4 w-4" />
+                <span>Bạn đã có thể chat với nhân viên ngay!</span>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -497,16 +571,39 @@ const BookingSuccessPage: React.FC = () => {
             <ArrowRight className="h-5 w-5 text-brand-text/40 group-hover:text-blue-600" />
           </Link>
 
+          {/* Chat Link - Navigate to conversation if created, otherwise to chat list */}
           <Link
-            to="/customer/chat"
-            className="group flex items-center gap-4 rounded-2xl border border-brand-outline/20 bg-gradient-to-r from-white to-emerald-50/50 p-4 transition hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg"
+            to={conversationId ? `/customer/chat/${conversationId}` : "/customer/chat"}
+            className={`group flex items-center gap-4 rounded-2xl border border-brand-outline/20 bg-gradient-to-r from-white to-emerald-50/50 p-4 transition hover:-translate-y-1 hover:border-emerald-200 hover:shadow-lg ${
+              !conversationId && bookingData.assignedEmployees?.length === 0 ? 'opacity-50 cursor-not-allowed' : ''
+            } ${isCreatingConversation ? 'opacity-70 pointer-events-none' : ''}`}
+            onClick={(e) => {
+              // Prevent navigation if no employees assigned or still creating conversation
+              if ((!conversationId && bookingData.assignedEmployees?.length === 0) || isCreatingConversation) {
+                e.preventDefault();
+              }
+            }}
           >
             <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-100 group-hover:bg-emerald-200">
-              <MessageCircle className="h-6 w-6 text-emerald-600" />
+              {isCreatingConversation ? (
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" />
+              ) : (
+                <MessageCircle className="h-6 w-6 text-emerald-600" />
+              )}
             </div>
             <div className="flex-1">
-              <h3 className="font-semibold text-brand-navy group-hover:text-emerald-600">Trao đổi</h3>
-              <p className="text-sm text-brand-text/70">Chat với nhân viên</p>
+              <h3 className="font-semibold text-brand-navy group-hover:text-emerald-600">
+                {isCreatingConversation ? 'Đang kết nối...' : 'Trao đổi'}
+              </h3>
+              <p className="text-sm text-brand-text/70">
+                {isCreatingConversation 
+                  ? 'Đang tạo cuộc hội thoại' 
+                  : bookingData.assignedEmployees?.length > 0 
+                    ? conversationId 
+                      ? 'Chat với nhân viên' 
+                      : 'Nhấn để bắt đầu chat'
+                    : 'Chờ phân công nhân viên'}
+              </p>
             </div>
             <ArrowRight className="h-5 w-5 text-brand-text/40 group-hover:text-emerald-600" />
           </Link>

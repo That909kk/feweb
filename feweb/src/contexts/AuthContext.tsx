@@ -18,6 +18,7 @@ import type {
 
 interface AuthUser {
   id: string; // Role-specific ID (customerId/employeeId/adminId)
+  accountId: string; // Account ID (dùng cho chat và các tính năng chung)
   customerId?: string; // For CUSTOMER role
   employeeId?: string; // For EMPLOYEE role
   username: string;
@@ -251,6 +252,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         // Create user object based on profile data
         const authUser: AuthUser = {
           id: getIdFromProfileData(profileData, userRole),
+          accountId: profileData.accountId, // Lưu accountId cho chat và các tính năng chung
           customerId: userRole === 'CUSTOMER' ? (profileData as CustomerData).customerId : undefined,
           employeeId: userRole === 'EMPLOYEE' ? (profileData as EmployeeData).employeeId : undefined,
           username: profileData.username || username,

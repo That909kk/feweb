@@ -13,8 +13,11 @@ const ChatPage: React.FC = () => {
       description="Trao đổi trực tiếp với khách hàng về các booking"
     >
       <div className="h-[calc(100vh-200px)]">
-        {user?.employeeId ? (
-          <ChatContainer senderId={user.employeeId} />
+        {user?.employeeId && user?.accountId ? (
+          <ChatContainer 
+            senderId={user.employeeId} 
+            accountId={user.accountId}
+          />
         ) : (
           <div className="flex items-center justify-center h-full">
             <p className="text-gray-500">Vui lòng đăng nhập để sử dụng tính năng chat</p>

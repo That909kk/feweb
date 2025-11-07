@@ -6,15 +6,23 @@ import { webSocketService } from '../../services/websocket';
 import { MessageCircle } from 'lucide-react';
 
 interface ChatContainerProps {
-  senderId: string; // customerId or employeeId
+  senderId: string; // customerId (for CUSTOMER) or employeeId (for EMPLOYEE) - dùng cho GET conversations
+  accountId: string; // accountId - dùng cho send message và mark-read
 }
 
 export const ChatContainer: React.FC<ChatContainerProps> = ({
-  senderId
+  senderId,
+  accountId
 }) => {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
   const [wsError, setWsError] = useState<string | null>(null);
+
+  // Debug: Log senderId and accountId
+  useEffect(() => {
+    console.log('🔍 [ChatContainer] senderId (for conversations):', senderId);
+    console.log('🔍 [ChatContainer] accountId (for messages):', accountId);
+  }, [senderId, accountId]);
 
   const connectWebSocket = useCallback(async () => {
     try {
@@ -102,7 +110,8 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
           {selectedConversation ? (
             <ChatWindow
               conversation={selectedConversation}
-              currentAccountId={senderId}
+              currentAccountId={accountId}
+              currentSenderId={senderId}
               onBack={handleBack}
             />
           ) : (

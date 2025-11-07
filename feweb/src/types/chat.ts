@@ -93,6 +93,7 @@ export interface WebSocketMessage {
   messageType: MessageType;
   content: string | null;
   imageUrl: string | null;
-  isRead: boolean;
-  createdAt: string;
+  timestamp?: string; // WebSocket dùng timestamp thay vì createdAt
+  createdAt?: string; // Có thể có hoặc không
+  isRead?: boolean; // Optional vì WebSocket message mới chưa có isRead
 }

@@ -150,14 +150,16 @@ export const sendTextMessageApi = async (
 ): Promise<ApiResponse<ChatMessage>> => {
   try {
     console.log('[Chat API] Sending text message:', data);
-    const formData = new FormData();
-    formData.append('conversationId', data.conversationId);
-    formData.append('senderId', data.senderId);
-    formData.append('content', data.content);
+    
+    // Use URLSearchParams for application/x-www-form-urlencoded
+    const params = new URLSearchParams();
+    params.append('conversationId', data.conversationId);
+    params.append('senderId', data.senderId);
+    params.append('content', data.content);
 
     const response = await api.post<ApiResponse<ChatMessage>>(
       '/messages/send/text',
-      formData,
+      params,
       {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
@@ -273,19 +275,19 @@ export const getUnreadMessageCountApi = async (
 
 /**
  * Mark messages as read
- * PUT /api/v1/messages/conversation/{conversationId}/mark-read?accountId={accountId}
+ * PUT /api/v1/messages/conversation/{conversationId}/mark-read?receiverId={receiverId}
  */
 export const markMessagesAsReadApi = async (
   conversationId: string,
-  accountId: string
+  receiverId: string
 ): Promise<ApiResponse<void>> => {
   try {
-    console.log(`[Chat API] Marking messages as read for conversation ${conversationId}, accountId: ${accountId}`);
+    console.log(`[Chat API] Marking messages as read for conversation ${conversationId}, receiverId: ${receiverId}`);
     const response = await api.put<ApiResponse<void>>(
       `/messages/conversation/${conversationId}/mark-read`,
       null,
       {
-        params: { accountId }
+        params: { receiverId }
       }
     );
     console.log('[Chat API] Messages marked as read');

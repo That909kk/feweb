@@ -6,6 +6,18 @@ import { ChatContainer } from '../../components/chat';
 const ChatPage: React.FC = () => {
   const { user } = useAuth();
 
+  // Debug: Kiểm tra IDs
+  React.useEffect(() => {
+    if (user) {
+      console.log('🔍 [ChatPage Debug]', {
+        accountId: user.accountId,
+        customerId: user.customerId,
+        username: user.username,
+        role: user.role
+      });
+    }
+  }, [user]);
+
   return (
     <DashboardLayout
       role="CUSTOMER"
@@ -13,8 +25,11 @@ const ChatPage: React.FC = () => {
       description="Trao đổi trực tiếp với nhân viên về các dịch vụ đã đặt"
     >
       <div className="h-[calc(100vh-200px)]">
-        {user?.customerId ? (
-          <ChatContainer senderId={user.customerId} />
+        {user?.customerId && user?.accountId ? (
+          <ChatContainer 
+            senderId={user.customerId} 
+            accountId={user.accountId}
+          />
         ) : (
           <div className="flex items-center justify-center h-full">
             <p className="text-gray-500">Vui lòng đăng nhập để sử dụng tính năng chat</p>

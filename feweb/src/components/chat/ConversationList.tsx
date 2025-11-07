@@ -102,8 +102,19 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     <div className="space-y-1">
       {conversations.map((conversation) => {
         const isSelected = conversation.conversationId === selectedConversationId;
-        const otherPersonName = conversation.employeeName || conversation.customerName;
-        const otherPersonAvatar = conversation.employeeAvatar || conversation.customerAvatar;
+        
+        // Xác định tên và avatar người đối thoại
+        // So sánh senderId với conversation để biết user hiện tại là ai
+        const isCurrentUserCustomer = senderId === conversation.customerId;
+        
+        // Customer thấy tên Employee, Employee thấy tên Customer
+        const otherPersonName = isCurrentUserCustomer 
+          ? conversation.employeeName 
+          : conversation.customerName;
+          
+        const otherPersonAvatar = isCurrentUserCustomer 
+          ? conversation.employeeAvatar 
+          : conversation.customerAvatar;
 
         return (
           <div

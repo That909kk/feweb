@@ -8,21 +8,44 @@ import { webSocketService } from '../../services/websocket';
 
 interface ChatWindowProps {
   conversation: Conversation;
-  currentAccountId: string;
+  currentAccountId: string; // accountId - dùng cho send message & mark-read
+  currentSenderId: string; // customerId hoặc employeeId - dùng để xác định user hiện tại
   onBack?: () => void;
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({
   conversation,
   currentAccountId,
+  currentSenderId,
   onBack
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const otherPersonName = conversation.employeeName || conversation.customerName;
-  const otherPersonAvatar = conversation.employeeAvatar || conversation.customerAvatar;
+  // Xác định tên và avatar của người đối thoại (không phải mình)
+  // So sánh currentSenderId (customerId/employeeId) với conversation
+  const isCurrentUserCustomer = currentSenderId === conversation.customerId;
+  
+  // Nếu user hiện tại là Customer → hiển thị thông tin Employee
+  // Nếu user hiện tại là Employee → hiển thị thông tin Customer
+  const otherPersonName = isCurrentUserCustomer 
+    ? conversation.employeeName 
+    : conversation.customerName;
+      
+  const otherPersonAvatar = isCurrentUserCustomer 
+    ? conversation.employeeAvatar 
+    : conversation.customerAvatar;
+
+  // Debug: Log để kiểm tra
+  useEffect(() => {
+    console.log('🔍 [ChatWindow] currentAccountId:', currentAccountId);
+    console.log('🔍 [ChatWindow] currentSenderId:', currentSenderId);
+    console.log('🔍 [ChatWindow] conversation.customerId:', conversation.customerId);
+    console.log('🔍 [ChatWindow] conversation.employeeId:', conversation.employeeId);
+    console.log('🔍 [ChatWindow] isCurrentUserCustomer:', isCurrentUserCustomer);
+    console.log('🔍 [ChatWindow] otherPersonName:', otherPersonName);
+  }, [currentAccountId, currentSenderId, conversation, isCurrentUserCustomer, otherPersonName]);
 
   useEffect(() => {
     loadMessages();
@@ -58,7 +81,22 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       conversation.conversationId,
       (newMessage) => {
         console.log('New message received via WebSocket:', newMessage);
-        setMessages(prev => [...prev, newMessage]);
+        
+        // Convert WebSocket message to ChatMessage format
+        const chatMessage: ChatMessage = {
+          messageId: newMessage.messageId,
+          conversationId: newMessage.conversationId,
+          senderId: newMessage.senderId,
+          senderName: newMessage.senderName,
+          senderAvatar: newMessage.senderAvatar,
+          messageType: newMessage.messageType,
+          content: newMessage.content,
+          imageUrl: newMessage.imageUrl,
+          isRead: newMessage.isRead ?? false,
+          createdAt: newMessage.timestamp || newMessage.createdAt || new Date().toISOString()
+        };
+        
+        setMessages(prev => [...prev, chatMessage]);
         
         // Mark as read if sender is not current user
         if (newMessage.senderId !== currentAccountId) {
@@ -70,6 +108,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const markAsRead = async () => {
     try {
+      // receiverId phải là accountId, không phải customerId/employeeId
       await markMessagesAsReadApi(conversation.conversationId, currentAccountId);
     } catch (err) {
       console.error('Error marking messages as read:', err);
@@ -78,16 +117,15 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const handleSendText = async (content: string) => {
     try {
-      const response = await sendTextMessageApi({
+      // senderId phải là accountId, không phải customerId/employeeId
+      await sendTextMessageApi({
         conversationId: conversation.conversationId,
         senderId: currentAccountId,
         content
       });
       
-      // Message will be added via WebSocket, but add optimistically for better UX
-      if (response.data) {
-        setMessages(prev => [...prev, response.data!]);
-      }
+      // Message will be added via WebSocket automatically
+      // No need to add optimistically to avoid duplicates
     } catch (err: any) {
       console.error('Error sending text:', err);
       throw err;

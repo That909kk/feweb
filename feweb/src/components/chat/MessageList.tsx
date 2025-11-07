@@ -31,13 +31,29 @@ export const MessageList: React.FC<MessageListProps> = ({
   }, [messages]);
 
   const formatMessageTime = (dateString: string) => {
-    const date = new Date(dateString);
-    if (isToday(date)) {
-      return format(date, 'HH:mm');
-    } else if (isYesterday(date)) {
-      return 'Hôm qua ' + format(date, 'HH:mm');
-    } else {
-      return format(date, 'dd/MM/yyyy HH:mm', { locale: vi });
+    if (!dateString) {
+      return '';
+    }
+    
+    try {
+      const date = new Date(dateString);
+      
+      // Kiểm tra date có hợp lệ không
+      if (isNaN(date.getTime())) {
+        console.warn('[MessageList] Invalid date:', dateString);
+        return '';
+      }
+      
+      if (isToday(date)) {
+        return format(date, 'HH:mm');
+      } else if (isYesterday(date)) {
+        return 'Hôm qua ' + format(date, 'HH:mm');
+      } else {
+        return format(date, 'dd/MM/yyyy HH:mm', { locale: vi });
+      }
+    } catch (error) {
+      console.error('[MessageList] Error formatting date:', dateString, error);
+      return '';
     }
   };
 
@@ -81,6 +97,11 @@ export const MessageList: React.FC<MessageListProps> = ({
 
         {messages.map((message) => {
           const isOwn = message.senderId === currentUserId;
+          
+          // Debug: Log message để kiểm tra createdAt
+          if (!message.createdAt) {
+            console.warn('[MessageList] Message missing createdAt:', message);
+          }
 
           return (
             <div
