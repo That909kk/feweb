@@ -24,6 +24,7 @@ import {
   EmployeeChatPage
 } from './pages/employee';
 import { BookingPosts } from './pages/employee/BookingPosts';
+import EmployeeAssignments from './pages/employee/Assignments';
 
 // Admin pages  
 import { 
@@ -97,6 +98,11 @@ function App() {
             <Route path="/employee/booking-posts" element={
               <ProtectedRoute requiredRole="EMPLOYEE">
                 <BookingPosts />
+              </ProtectedRoute>
+            } />
+            <Route path="/employee/assignments" element={
+              <ProtectedRoute requiredRole="EMPLOYEE">
+                <EmployeeAssignments />
               </ProtectedRoute>
             } />
             <Route path="/employee/requests" element={

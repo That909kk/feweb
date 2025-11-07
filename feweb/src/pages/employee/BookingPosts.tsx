@@ -7,7 +7,7 @@
 import React, { useEffect, useState } from 'react';
 import { 
   Briefcase, Calendar, Clock, MapPin, AlertCircle, Loader2, 
-  Tag, CheckCircle, User, Sparkles, X, ZoomIn, ChevronLeft, ChevronRight
+  Tag, CheckCircle, Sparkles, X, ChevronLeft, ChevronRight, MapPinned
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { getVerifiedAwaitingEmployeeBookingsApi, acceptBookingDetailApi } from '../../api/employee';
@@ -22,6 +22,17 @@ interface BookingPost {
     bookingCode: string;
     customerId: string;
     customerName: string;
+    customer?: {
+      customerId: string;
+      fullName: string;
+      avatar: string;
+      email: string;
+      phoneNumber: string;
+      isMale: boolean;
+      birthdate: string;
+      rating: number | null;
+      vipLevel: string | null;
+    };
     address: {
       addressId: string;
       fullAddress: string;
@@ -83,10 +94,11 @@ export const BookingPosts: React.FC = () => {
   const [currentImages, setCurrentImages] = useState<string[]>([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingBookingDetailId, setPendingBookingDetailId] = useState<string | null>(null);
+  const [matchEmployeeZones, setMatchEmployeeZones] = useState(true);
 
   useEffect(() => {
     loadBookingPosts();
-  }, [currentPage]);
+  }, [currentPage, matchEmployeeZones]);
 
   // Keyboard navigation for image gallery
   useEffect(() => {
@@ -111,7 +123,7 @@ export const BookingPosts: React.FC = () => {
       setIsLoading(true);
       setError(null);
       
-      const response = await getVerifiedAwaitingEmployeeBookingsApi(currentPage, 10);
+      const response = await getVerifiedAwaitingEmployeeBookingsApi(currentPage, 10, matchEmployeeZones);
       
       setBookingPosts(response.data || []);
       setTotalPages(response.totalPages || 1);
@@ -205,6 +217,29 @@ export const BookingPosts: React.FC = () => {
     });
   };
 
+  const getTimeAgo = (dateTimeStr: string) => {
+    const now = new Date();
+    const createdDate = new Date(dateTimeStr);
+    const diffInMs = now.getTime() - createdDate.getTime();
+    const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+    const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+    const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+
+    if (diffInMinutes < 1) {
+      return 'Vừa xong';
+    } else if (diffInMinutes < 60) {
+      return `${diffInMinutes} phút trước`;
+    } else if (diffInHours < 24) {
+      return `${diffInHours} giờ trước`;
+    } else if (diffInDays === 1) {
+      return 'Hôm qua';
+    } else if (diffInDays < 7) {
+      return `${diffInDays} ngày trước`;
+    } else {
+      return formatDateTime(dateTimeStr);
+    }
+  };
+
   const metrics = {
     total: bookingPosts.length,
     withImage: bookingPosts.filter(bp => (bp.data.imageUrls && bp.data.imageUrls.length > 0) || bp.data.imageUrl).length
@@ -238,6 +273,35 @@ export const BookingPosts: React.FC = () => {
         title="Danh sách Bài đăng"
         description="Nhấn 'Nhận việc' để nhận công việc phù hợp với bạn"
       >
+        {/* Filter Toggle */}
+        <div className="mb-6 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <MapPinned className="h-5 w-5 text-slate-600" />
+              <div>
+                <div className="font-semibold text-slate-900">Hiển thị các bài đăng phù hợp</div>
+                <div className="text-sm text-slate-500">
+                  {matchEmployeeZones 
+                    ? 'Chỉ hiển thị công việc trong khu vực của bạn' 
+                    : 'Hiển thị tất cả công việc (bao gồm ngoài khu vực)'}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={() => setMatchEmployeeZones(!matchEmployeeZones)}
+              className={`relative inline-flex h-8 w-14 flex-shrink-0 items-center rounded-full transition-colors ${
+                matchEmployeeZones ? 'bg-emerald-500' : 'bg-slate-300'
+              }`}
+            >
+              <span
+                className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-lg transition-transform ${
+                  matchEmployeeZones ? 'translate-x-7' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+        </div>
+
         {error && (
           <div className="mb-6 flex items-center gap-3 rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
             <AlertCircle className="h-5 w-5" />
@@ -291,10 +355,22 @@ export const BookingPosts: React.FC = () => {
                           </span>
                         )}
                       </div>
-                      <p className="mt-1 flex items-center gap-2 text-sm text-slate-600">
-                        <User className="h-4 w-4" />
-                        {bookingPost.data.customerName}
-                      </p>
+                      <div className="mt-2 flex items-center gap-2.5">
+                        {bookingPost.data.customer?.avatar && (
+                          <img
+                            src={bookingPost.data.customer.avatar}
+                            alt={bookingPost.data.customerName}
+                            className="h-10 w-10 rounded-full object-cover border-2 border-slate-200"
+                          />
+                        )}
+                        <div className="flex flex-col">
+                          <span className="text-base font-semibold text-slate-700">{bookingPost.data.customerName}</span>
+                          <span className="text-xs text-slate-500">
+                            <Clock className="inline h-3 w-3 mr-1" />
+                            {getTimeAgo(bookingPost.data.createdAt)}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                     <div className="text-right">
                       <div className="text-2xl font-bold text-emerald-600">
@@ -317,47 +393,59 @@ export const BookingPosts: React.FC = () => {
                   {((bookingPost.data.imageUrls && bookingPost.data.imageUrls.length > 0) || bookingPost.data.imageUrl) && (
                     <div className="mb-4">
                       {bookingPost.data.imageUrls && bookingPost.data.imageUrls.length > 0 ? (
-                        <div className={`grid gap-3 ${
+                        <div className={`grid gap-1 ${
                           bookingPost.data.imageUrls.length === 1 
                             ? 'grid-cols-1' 
                             : bookingPost.data.imageUrls.length === 2 
                             ? 'grid-cols-2' 
-                            : 'grid-cols-2 sm:grid-cols-3'
+                            : 'grid-cols-2'
                         }`}>
-                          {bookingPost.data.imageUrls.map((url, index) => (
-                            <div key={index} className="relative group bg-slate-50 rounded-xl overflow-hidden">
+                          {bookingPost.data.imageUrls.slice(0, 5).map((url, index) => (
+                            <div 
+                              key={index} 
+                              className={`relative rounded-lg overflow-hidden cursor-pointer ${
+                                bookingPost.data.imageUrls!.length === 1 
+                                  ? 'col-span-1 h-[400px]' 
+                                  : bookingPost.data.imageUrls!.length === 2
+                                  ? 'h-[300px]'
+                                  : index === 0 && bookingPost.data.imageUrls!.length >= 3
+                                  ? 'col-span-2 h-[300px]'
+                                  : 'h-[150px]'
+                              }`}
+                              onClick={() => openImageGallery(bookingPost.data.imageUrls!, index)}
+                            >
                               <img
                                 src={url}
-                                alt={`Booking post image ${index + 1}`}
-                                className="w-full h-48 object-cover cursor-pointer transition-transform hover:scale-105"
-                                onClick={() => openImageGallery(bookingPost.data.imageUrls!, index)}
+                                alt={`Hình ${index + 1}`}
+                                className="w-full h-full object-cover"
                               />
-                              <div className="absolute bottom-2 left-2 px-2 py-1 bg-black/60 text-white text-xs rounded">
+                              
+                              {/* Counter badge */}
+                              <div className="absolute top-2 right-2 px-2 py-0.5 bg-black/60 backdrop-blur-sm text-white text-xs font-medium rounded">
                                 {index + 1}/{bookingPost.data.imageUrls?.length || 0}
                               </div>
-                              <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-all rounded-xl opacity-0 group-hover:opacity-100 cursor-pointer"
-                                   onClick={() => openImageGallery(bookingPost.data.imageUrls!, index)}>
-                                <div className="bg-white/90 rounded-full p-3 transform scale-75 group-hover:scale-100 transition-transform">
-                                  <ZoomIn className="h-6 w-6 text-slate-700" />
+
+                              {/* Show "+X more" on last visible image if there are more than 5 */}
+                              {index === 4 && bookingPost.data.imageUrls!.length > 5 && (
+                                <div className="absolute inset-0 bg-black/70 flex items-center justify-center">
+                                  <div className="text-white text-3xl font-bold">
+                                    +{bookingPost.data.imageUrls!.length - 5}
+                                  </div>
                                 </div>
-                              </div>
+                              )}
                             </div>
                           ))}
                         </div>
                       ) : bookingPost.data.imageUrl ? (
-                        <div className="relative group bg-slate-50 rounded-xl overflow-hidden">
+                        <div 
+                          className="relative rounded-lg overflow-hidden cursor-pointer h-[400px]"
+                          onClick={() => openImageGallery([bookingPost.data.imageUrl!], 0)}
+                        >
                           <img
                             src={bookingPost.data.imageUrl}
-                            alt="Booking post"
-                            className="w-full max-h-[500px] object-contain cursor-pointer transition-transform hover:scale-[1.02]"
-                            onClick={() => openImageGallery([bookingPost.data.imageUrl!], 0)}
+                            alt="Hình booking"
+                            className="w-full h-full object-cover"
                           />
-                          <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/20 transition-all rounded-xl opacity-0 group-hover:opacity-100 cursor-pointer"
-                               onClick={() => openImageGallery([bookingPost.data.imageUrl!], 0)}>
-                            <div className="bg-white/90 rounded-full p-3 transform scale-75 group-hover:scale-100 transition-transform">
-                              <ZoomIn className="h-6 w-6 text-slate-700" />
-                            </div>
-                          </div>
                         </div>
                       ) : null}
                     </div>

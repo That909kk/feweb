@@ -2,7 +2,7 @@ import { api } from './client';
 import type { ApiResponse } from './client';
 
 // Employee Profile interface based on API response
-interface EmployeeAccount {
+export interface EmployeeAccount {
   accountId: string;
   username: string;
   password: string;
@@ -18,7 +18,12 @@ interface EmployeeAccount {
   }>;
 }
 
-interface EmployeeProfile {
+export interface WorkingZone {
+  ward: string;
+  city: string;
+}
+
+export interface EmployeeProfile {
   employeeId: string;
   account: EmployeeAccount;
   avatar: string;
@@ -31,12 +36,13 @@ interface EmployeeProfile {
   bio: string;
   rating: string | null;
   employeeStatus: string;
+  workingZones: WorkingZone[];
   createdAt: string;
   updatedAt: string;
 }
 
 // Update Employee Profile Request interface
-interface UpdateEmployeeProfileRequest {
+export interface UpdateEmployeeProfileRequest {
   avatar: string;
   fullName: string;
   isMale: boolean;
@@ -64,24 +70,155 @@ interface UpdateEmployeeProfileResponse {
   employeeStatus: string;
 }
 
-// Assignment interface dựa trên API response thực tế
+// Assignment interface dựa trên API response THỰC TẾ từ backend (07/11/2025)
+// Response from GET /employee/{employeeId}/assignments
+// NOTE: Backend trả về serviceAddress, estimatedDurationHours, totalAmount
 interface Assignment {
   assignmentId: string;
   bookingCode: string;
   serviceName: string;
   customerName: string;
   customerPhone: string;
-  serviceAddress: string;
-  bookingTime: string;
-  estimatedDurationHours: number;
-  pricePerUnit: number;
-  quantity: number;
-  totalAmount: number;
-  status: string;
-  assignedAt: string;
+  serviceAddress: string;           // Backend uses "serviceAddress" not "address"
+  bookingTime: string;              // Format: "2025-11-15 09:00:00" (space separator)
+  estimatedDurationHours: number;   // Backend uses "estimatedDurationHours" with suffix
+  pricePerUnit: number;             // Giá mỗi đơn vị
+  quantity: number;                 // Số lượng
+  totalAmount: number;              // Backend uses "totalAmount" not "subTotal"
+  status: string;                   // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW
+  assignedAt: string | null;        // Deprecated
   checkInTime: string | null;
   checkOutTime: string | null;
   note: string | null;
+  customerEmail?: string;
+  customerAvatar?: string;
+}
+
+// Employee Bookings API Response Interfaces
+interface EmployeeBookingCustomer {
+  customerId: string;
+  fullName: string;
+  avatar: string;
+  email: string;
+  phoneNumber: string;
+  isMale: boolean;
+  birthdate: string;
+  rating: number | null;
+  vipLevel: string | null;
+}
+
+interface EmployeeBookingAddress {
+  addressId: string;
+  fullAddress: string;
+  ward: string;
+  city: string;
+  latitude: number;
+  longitude: number;
+  isDefault: boolean;
+}
+
+interface EmployeeBookingPromotion {
+  promotionId: number;
+  promoCode: string;
+  description: string;
+  discountType: string;
+  discountValue: number;
+  maxDiscountAmount: number;
+}
+
+interface EmployeeBookingService {
+  serviceId: number;
+  name: string;
+  description: string;
+  basePrice: number;
+  unit: string;
+  estimatedDurationHours: number;
+  iconUrl: string;
+  categoryName: string;
+  isActive: boolean;
+}
+
+interface EmployeeBookingEmployee {
+  employeeId: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  avatar: string;
+  rating: number | null;
+  employeeStatus: string;
+  skills: string[];
+  bio: string;
+}
+
+interface EmployeeBookingAssignment {
+  assignmentId: string;
+  employee: EmployeeBookingEmployee;
+  status: string;
+  checkInTime: string | null;
+  checkOutTime: string | null;
+  createdAt: string | null;
+  updatedAt: string | null;
+}
+
+interface EmployeeBookingDetail {
+  bookingDetailId: string;
+  service: EmployeeBookingService;
+  quantity: number;
+  pricePerUnit: number;
+  formattedPricePerUnit: string;
+  subTotal: number;
+  formattedSubTotal: string;
+  selectedChoices: any[];
+  assignments: EmployeeBookingAssignment[];
+  duration: string;
+  formattedDuration: string;
+}
+
+interface EmployeeBookingPayment {
+  paymentId: string;
+  amount: number;
+  paymentMethod: string | null;
+  paymentStatus: string;
+  transactionCode: string | null;
+  createdAt: string;
+  paidAt: string | null;
+}
+
+interface EmployeeBookingData {
+  bookingId: string;
+  bookingCode: string;
+  customerId: string;
+  customerName: string;
+  customer: EmployeeBookingCustomer;
+  address: EmployeeBookingAddress;
+  bookingTime: string;
+  note: string;
+  totalAmount: number;
+  formattedTotalAmount: string;
+  status: string;
+  title: string | null;
+  imageUrls: string[];
+  isPost: boolean;
+  isVerified: boolean;
+  adminComment: string | null;
+  promotion: EmployeeBookingPromotion | null;
+  bookingDetails: EmployeeBookingDetail[];
+  payment: EmployeeBookingPayment | null;
+  createdAt: string;
+}
+
+interface EmployeeBookingWrapper {
+  success: boolean;
+  message: string;
+  data: EmployeeBookingData;
+}
+
+interface EmployeeBookingsResponse {
+  totalPages: number;
+  data: EmployeeBookingWrapper[];
+  success: boolean;
+  currentPage: number;
+  totalItems: number;
 }
 
 // Available Booking interface - matches real API response
@@ -154,7 +291,39 @@ interface AssignmentsResponse {
   success: boolean;
 }
 
-// Get employee assignments with pagination and filtering
+// Get employee bookings - NEW API (wraps full booking data)
+// Endpoint: GET /api/v1/employee/bookings/{employeeId}
+export const getEmployeeBookingsApi = async (
+  employeeId: string,
+  fromDate?: string,
+  page: number = 0,
+  size: number = 10
+): Promise<EmployeeBookingsResponse> => {
+  try {
+    const params = new URLSearchParams({
+      page: page.toString(),
+      size: size.toString()
+    });
+
+    if (fromDate && fromDate.trim() !== '') {
+      params.append('fromDate', fromDate);
+      console.log(`[API] Fetching employee bookings from date: ${fromDate}`);
+    }
+
+    const url = `/employee/bookings/${employeeId}?${params.toString()}`;
+    console.log(`[API] Request URL: ${url}`);
+
+    const response = await api.get<EmployeeBookingsResponse>(url);
+    console.log('[API] Employee Bookings Response:', response.data);
+
+    return response.data;
+  } catch (error: any) {
+    console.error('[API] Error fetching employee bookings:', error);
+    throw error;
+  }
+};
+
+// Get employee assignments with pagination and filtering (LEGACY)
 export const getEmployeeAssignmentsApi = async (
   employeeId: string, 
   status?: string, 
@@ -178,6 +347,8 @@ export const getEmployeeAssignmentsApi = async (
     console.log(`[API] Request URL: ${url}`);
     
     const response = await api.get<AssignmentsResponse>(url);
+    console.log('[API] Assignments Response:', response.data);
+    console.log('[API] Assignments Data:', response.data?.data);
     return response.data;
   } catch (error) {
     console.error(`Error fetching assignments for employee ${employeeId}:`, error);
@@ -185,18 +356,22 @@ export const getEmployeeAssignmentsApi = async (
   }
 };
 
-// Update assignment status
-export const updateAssignmentStatusApi = async (
-  assignmentId: string, 
-  status: 'ACCEPTED' | 'STARTED' | 'COMPLETED' | 'REJECTED'
+// Accept Assignment - NEW API (07/11/2025)
+// Endpoint: POST /api/v1/employee/assignments/{assignmentId}/accept
+export const acceptAssignmentApi = async (
+  assignmentId: string,
+  employeeId: string
 ): Promise<ApiResponse<Assignment>> => {
   try {
-    const response = await api.patch<ApiResponse<Assignment>>(`/employee/assignments/${assignmentId}/status`, {
-      status
-    });
+    console.log(`[API] Accepting assignment ${assignmentId} for employee ${employeeId}`);
+    
+    const url = `/employee/assignments/${assignmentId}/accept?employeeId=${employeeId}`;
+    const response = await api.post<ApiResponse<Assignment>>(url);
+    
+    console.log('[API] Accept assignment response:', response.data);
     return response.data;
-  } catch (error) {
-    console.error(`Error updating assignment ${assignmentId} status:`, error);
+  } catch (error: any) {
+    console.error(`Error accepting assignment ${assignmentId}:`, error);
     throw error;
   }
 };
@@ -466,18 +641,44 @@ export const updateEmployeeProfileApi = async (
 // Endpoint: POST /api/v1/employee/assignments/{assignmentId}/check-in
 export const checkInAssignmentApi = async (
   assignmentId: string,
-  employeeId: string
+  employeeId: string,
+  imageDescription?: string,
+  images?: File[]
 ): Promise<ApiResponse<Assignment>> => {
   try {
     console.log('[API] Check-in Assignment Request:', {
       assignmentId,
       employeeId,
+      imageDescription,
+      imageCount: images?.length || 0,
       url: `/employee/assignments/${assignmentId}/check-in`
     });
     
+    // Tạo FormData để gửi ảnh
+    const formData = new FormData();
+    
+    // Thêm request body dưới dạng JSON string
+    const requestBody = {
+      employeeId,
+      imageDescription: imageDescription || ''
+    };
+    formData.append('request', new Blob([JSON.stringify(requestBody)], { type: 'application/json' }));
+    
+    // Thêm các file ảnh
+    if (images && images.length > 0) {
+      images.forEach(image => {
+        formData.append('images', image);
+      });
+    }
+    
     const response = await api.post<ApiResponse<Assignment>>(
       `/employee/assignments/${assignmentId}/check-in`,
-      { employeeId }
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
     );
     
     console.log('[API] Check-in Assignment Response:', response.data);
@@ -501,18 +702,44 @@ export const checkInAssignmentApi = async (
 // Endpoint: POST /api/v1/employee/assignments/{assignmentId}/check-out
 export const checkOutAssignmentApi = async (
   assignmentId: string,
-  employeeId: string
+  employeeId: string,
+  imageDescription?: string,
+  images?: File[]
 ): Promise<ApiResponse<Assignment>> => {
   try {
     console.log('[API] Check-out Assignment Request:', {
       assignmentId,
       employeeId,
+      imageDescription,
+      imageCount: images?.length || 0,
       url: `/employee/assignments/${assignmentId}/check-out`
     });
     
+    // Tạo FormData để gửi ảnh
+    const formData = new FormData();
+    
+    // Thêm request body dưới dạng JSON string
+    const requestBody = {
+      employeeId,
+      imageDescription: imageDescription || ''
+    };
+    formData.append('request', new Blob([JSON.stringify(requestBody)], { type: 'application/json' }));
+    
+    // Thêm các file ảnh
+    if (images && images.length > 0) {
+      images.forEach(image => {
+        formData.append('images', image);
+      });
+    }
+    
     const response = await api.post<ApiResponse<Assignment>>(
       `/employee/assignments/${assignmentId}/check-out`,
-      { employeeId }
+      formData,
+      {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      }
     );
     
     console.log('[API] Check-out Assignment Response:', response.data);
@@ -537,7 +764,8 @@ export const checkOutAssignmentApi = async (
 // Theo API-Booking-Verified-Awaiting-Employee.md
 export const getVerifiedAwaitingEmployeeBookingsApi = async (
   page: number = 0,
-  size: number = 10
+  size: number = 10,
+  matchEmployeeZones: boolean = true
 ): Promise<{
   data: any[];
   currentPage: number;
@@ -545,14 +773,14 @@ export const getVerifiedAwaitingEmployeeBookingsApi = async (
   totalPages: number;
 }> => {
   try {
-    console.log('[API] Fetching verified awaiting employee bookings:', { page, size });
+    console.log('[API] Fetching verified awaiting employee bookings:', { page, size, matchEmployeeZones });
     const response = await api.get<{
       data: any[];
       currentPage: number;
       totalItems: number;
       totalPages: number;
     }>('/employee/bookings/verified-awaiting-employee', {
-      params: { page, size }
+      params: { page, size, matchEmployeeZones }
     });
     console.log('[API] Verified awaiting employee bookings fetched:', response.data);
     return response.data;
@@ -564,8 +792,9 @@ export const getVerifiedAwaitingEmployeeBookingsApi = async (
 
 export default {
   getAllEmployeesApi,
+  getEmployeeBookingsApi,
   getEmployeeAssignmentsApi,
-  updateAssignmentStatusApi,
+  acceptAssignmentApi,
   getEmployeeStatisticsApi,
   cancelAssignmentApi,
   getAvailableBookingsApi,

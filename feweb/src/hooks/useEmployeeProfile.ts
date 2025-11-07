@@ -1,52 +1,10 @@
 import { useState, useEffect } from 'react';
-import { getEmployeeProfileApi, updateEmployeeProfileApi } from '../api/employee';
-
-// Type definitions
-interface EmployeeAccount {
-  accountId: string;
-  username: string;
-  password: string;
-  phoneNumber: string;
-  status: string;
-  isPhoneVerified: boolean;
-  createdAt: string;
-  updatedAt: string;
-  lastLogin: string;
-  roles: Array<{
-    roleId: number;
-    roleName: string;
-  }>;
-}
-
-interface EmployeeProfile {
-  employeeId: string;
-  account: EmployeeAccount;
-  avatar: string;
-  fullName: string;
-  isMale: boolean;
-  email: string;
-  birthdate: string;
-  hiredDate: string;
-  skills: string[];
-  bio: string;
-  rating: string | null;
-  employeeStatus: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-interface UpdateEmployeeProfileRequest {
-  avatar: string;
-  fullName: string;
-  isMale: boolean;
-  email: string;
-  birthdate: string;
-  hiredDate: string;
-  skills: string[];
-  bio: string;
-  rating: string | null;
-  employeeStatus: string;
-}
+import { 
+  getEmployeeProfileApi, 
+  updateEmployeeProfileApi,
+  type EmployeeProfile,
+  type UpdateEmployeeProfileRequest
+} from '../api/employee';
 
 export const useEmployeeProfile = (employeeId: string | undefined) => {
   const [profile, setProfile] = useState<EmployeeProfile | null>(null);
@@ -90,16 +48,10 @@ export const useEmployeeProfile = (employeeId: string | undefined) => {
     setError(null);
 
     try {
-      const updatedProfile = await updateEmployeeProfileApi(employeeId, profileData);
+      await updateEmployeeProfileApi(employeeId, profileData);
       
-      // Update local state with new profile data
-      if (profile) {
-        setProfile({
-          ...profile,
-          ...updatedProfile,
-          updatedAt: new Date().toISOString()
-        });
-      }
+      // Refetch profile to get latest data
+      await fetchProfile();
       
       return true;
     } catch (err: any) {

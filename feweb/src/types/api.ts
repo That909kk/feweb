@@ -127,30 +127,30 @@ export interface UpdateCustomerResponse extends ApiResponse {
 export interface GetCustomerInfoResponse extends ApiResponse {
   data: {
     customerId: string;
-    account: {
-      accountId: string;
-      username: string;
-      password: string;
-      phoneNumber: string;
-      status: string;
-      isPhoneVerified: boolean;
-      createdAt: string;
-      updatedAt: string;
-      lastLogin: string;
-      roles: Array<{
-        roleId: number;
-        roleName: string;
-      }>;
-    };
-    avatar?: string;
     fullName: string;
-    isMale: boolean;
     email: string;
+    avatar?: string;
+    isMale: boolean;
     birthdate?: string;
     rating?: number | null;
     vipLevel?: string | null;
-    createdAt: string;
-    updatedAt: string;
+    account: {
+      accountId: string;
+      phoneNumber: string;
+      status: string;
+      isPhoneVerified: boolean;
+      lastLogin: string;
+      roles: string[];
+    };
+    addresses?: Array<{
+      addressId: string;
+      fullAddress: string;
+      ward: string;
+      city: string;
+      latitude: number;
+      longitude: number;
+      isDefault: boolean;
+    }>;
   };
 }
 

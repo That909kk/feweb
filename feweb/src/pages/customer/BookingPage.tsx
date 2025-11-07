@@ -153,6 +153,15 @@ const BookingPage: React.FC = () => {
   const [manualAddress, setManualAddress] = useState<string>(''); // Địa chỉ nhập tay
   const [isManualAddress, setIsManualAddress] = useState<boolean>(false);
   
+  // State cho thông tin địa chỉ mặc định từ API
+  const [defaultAddressInfo, setDefaultAddressInfo] = useState<{
+    addressId: string;
+    ward: string;
+    city: string;
+    latitude?: number;
+    longitude?: number;
+  } | null>(null);
+  
   // Hook cho địa chỉ
   const { 
     provinces, 
@@ -228,6 +237,43 @@ const BookingPage: React.FC = () => {
       }));
     }
   }, [user]);
+
+  // Load default address info khi component mount nếu addressSource là 'profile'
+  useEffect(() => {
+    const loadDefaultAddressInfo = async () => {
+      if (addressSource === 'profile' && user?.customerId && !defaultAddressInfo) {
+        try {
+          console.log('🏠 [INIT] Loading default address info on mount');
+          const defaultAddress = await getDefaultAddress(user.customerId);
+          
+          if (defaultAddress && defaultAddress.addressId) {
+            console.log('🏠 [INIT] Got default address:', defaultAddress);
+            
+            // Lưu tất cả thông tin cần thiết từ default address
+            setDefaultAddressInfo({
+              addressId: defaultAddress.addressId,
+              ward: defaultAddress.ward || '',
+              city: defaultAddress.city || '',
+              latitude: defaultAddress.latitude,
+              longitude: defaultAddress.longitude
+            });
+            
+            // Cập nhật coordinates nếu có
+            if (defaultAddress.latitude && defaultAddress.longitude) {
+              setMapCoordinates({
+                lat: defaultAddress.latitude,
+                lng: defaultAddress.longitude
+              });
+            }
+          }
+        } catch (error) {
+          console.error('🏠 [INIT ERROR] Failed to load default address:', error);
+        }
+      }
+    };
+    
+    loadDefaultAddressInfo();
+  }, [addressSource, user?.customerId, getDefaultAddress, defaultAddressInfo]);
 
   // Auto calculate price when service or options change
   useEffect(() => {
@@ -501,6 +547,7 @@ const BookingPage: React.FC = () => {
       
       if (service === 'Nominatim') {
         addressDetails = data.address || {};
+        console.log('Nominatim address details:', addressDetails);
       } else if (service === 'Photon') {
         const props = data.properties || {};
         addressDetails = {
@@ -519,7 +566,8 @@ const BookingPage: React.FC = () => {
         houseNumber: addressDetails.house_number || addressDetails.housenumber || '',
         street: addressDetails.road || addressDetails.street || addressDetails.way || '',
         neighbourhood: addressDetails.neighbourhood || addressDetails.suburb || addressDetails.residential || '',
-        ward: addressDetails.ward || addressDetails.quarter || addressDetails.village || addressDetails.hamlet || '',
+        // Ward trong Nominatim thường là suburb, quarter, village, hamlet
+        ward: addressDetails.suburb || addressDetails.quarter || addressDetails.village || addressDetails.hamlet || addressDetails.neighbourhood || '',
         district: addressDetails.county || addressDetails.state_district || addressDetails.city_district || addressDetails.district || '',
         city: addressDetails.city || addressDetails.town || addressDetails.municipality || '',
         state: addressDetails.state || addressDetails.province || '',
@@ -580,6 +628,19 @@ const BookingPage: React.FC = () => {
       
       console.log('Final formatted address:', formattedAddress);
       
+      // Lưu thông tin ward và city vào state để sử dụng khi tìm nhân viên
+      if (detailedAddress.ward) {
+        setSelectedCommuneName(detailedAddress.ward);
+      }
+      
+      // City có thể là city hoặc state (Thành phố Hồ Chí Minh thường ở state)
+      const cityName = detailedAddress.state || detailedAddress.city || '';
+      if (cityName) {
+        setSelectedProvinceName(cityName);
+      }
+      
+      console.log('Saved ward:', detailedAddress.ward, 'city:', cityName);
+      
       return formattedAddress;
     } catch (error) {
       console.error('Lỗi khi lấy địa chỉ:', error);
@@ -590,7 +651,7 @@ const BookingPage: React.FC = () => {
   };
 
   // Hàm chọn nguồn địa chỉ
-  const handleAddressSourceChange = (source: 'profile' | 'current' | 'custom') => {
+  const handleAddressSourceChange = async (source: 'profile' | 'current' | 'custom') => {
     console.log(`🏠 [ADDRESS] Switching address source to: ${source}`);
     setAddressSource(source);
     
@@ -607,11 +668,15 @@ const BookingPage: React.FC = () => {
       setStreetAddress('');
       setManualAddress('');
       resetCommunes();
+      // Clear default address info
+      setDefaultAddressInfo(null);
     } else if (source === 'current') {
       setCustomAddress('');
       setCurrentLocationAddress('');
       // Tự động lấy vị trí hiện tại và hiển thị bản đồ
       getCurrentLocation();
+      // Clear default address info
+      setDefaultAddressInfo(null);
     } else if (source === 'profile') {
       setCustomAddress('');
       setCurrentLocationAddress('');
@@ -624,6 +689,37 @@ const BookingPage: React.FC = () => {
       setStreetAddress('');
       setManualAddress('');
       resetCommunes();
+      
+      // Load default address info ngay khi chọn profile
+      if (user?.customerId && !defaultAddressInfo) {
+        try {
+          console.log('🏠 [DEBUG] Loading default address info for profile source');
+          const defaultAddress = await getDefaultAddress(user.customerId);
+          
+          if (defaultAddress && defaultAddress.addressId) {
+            console.log('🏠 [SUCCESS] Got default address:', defaultAddress);
+            
+            // Lưu tất cả thông tin cần thiết
+            setDefaultAddressInfo({
+              addressId: defaultAddress.addressId,
+              ward: defaultAddress.ward || '',
+              city: defaultAddress.city || '',
+              latitude: defaultAddress.latitude,
+              longitude: defaultAddress.longitude
+            });
+            
+            // Cập nhật coordinates nếu có
+            if (defaultAddress.latitude && defaultAddress.longitude) {
+              setMapCoordinates({
+                lat: defaultAddress.latitude,
+                lng: defaultAddress.longitude
+              });
+            }
+          }
+        } catch (error) {
+          console.error('🏠 [ERROR] Failed to load default address:', error);
+        }
+      }
     }
   };
 
@@ -931,14 +1027,48 @@ const BookingPage: React.FC = () => {
     if (bookingData.serviceId && bookingData.date && bookingData.time && bookingData.duration) {
       const bookingDateTime = `${bookingData.date}T${bookingData.time}:00`;
       
+      // Xác định ward và city dựa trên addressSource
+      let ward = '';
+      let city = '';
+      
+      if (addressSource === 'profile' && defaultAddressInfo) {
+        // Sử dụng thông tin từ default address API
+        ward = defaultAddressInfo.ward;
+        city = defaultAddressInfo.city;
+        console.log('🏠 [EMPLOYEE_SEARCH] Using profile address - ward:', ward, 'city:', city);
+      } else if (addressSource === 'custom') {
+        // Sử dụng thông tin từ địa chỉ tùy chỉnh
+        ward = selectedCommuneName || '';
+        city = selectedProvinceName || '';
+        console.log('🏠 [EMPLOYEE_SEARCH] Using custom address - ward:', ward, 'city:', city);
+      } else if (addressSource === 'current') {
+        // Sử dụng thông tin từ vị trí hiện tại (nếu có geocoding)
+        ward = selectedCommuneName || '';
+        city = selectedProvinceName || '';
+        console.log('🏠 [EMPLOYEE_SEARCH] Using current location - ward:', ward, 'city:', city);
+        console.log('🏠 [EMPLOYEE_SEARCH] State values - selectedCommuneName:', selectedCommuneName, 'selectedProvinceName:', selectedProvinceName);
+      }
+      
+      // Fallback values nếu không có thông tin
+      if (!ward) {
+        console.warn('🏠 [EMPLOYEE_SEARCH] No ward found, using fallback');
+        ward = 'Phường Tây Thạnh';
+      }
+      if (!city) {
+        console.warn('🏠 [EMPLOYEE_SEARCH] No city found, using fallback');
+        city = 'TP. Hồ Chí Minh';
+      }
+      
+      console.log('🏠 [EMPLOYEE_SEARCH] Final values - ward:', ward, 'city:', city);
+      
       try {
         await loadSuitableEmployees({
           serviceId: parseInt(bookingData.serviceId),
           bookingTime: bookingDateTime,
-          ward: 'Phường Tây Thạnh', // Default ward
-          city: 'TP. Hồ Chí Minh', // Default city
-          latitude: mapCoordinates?.lat || 10.7769,
-          longitude: mapCoordinates?.lng || 106.6601
+          ward: ward,
+          city: city,
+          latitude: mapCoordinates?.lat ,
+          longitude: mapCoordinates?.lng
         });
       } catch (error) {
         setEmployeeSelectionErrors(['Không thể tải danh sách nhân viên phù hợp. Vui lòng thử lại sau.']);
@@ -996,24 +1126,38 @@ const BookingPage: React.FC = () => {
       }
 
       if (addressSource === 'profile') {
-        // Use default address from profile
-        try {
-          console.log('🏠 [DEBUG] Getting default address for customer:', user.customerId);
-          const defaultAddress = await getDefaultAddress(user.customerId);
-          
-          if (defaultAddress && defaultAddress.addressId) {
-            addressId = defaultAddress.addressId;
-            console.log('🏠 [SUCCESS] Got addressId from API:', addressId);
-            console.log('🏠 [DEBUG] Full address details:', defaultAddress);
-          } else {
-            console.error('🏠 [ERROR] API returned empty or invalid address data:', defaultAddress);
-            setErrorMessages(['Không thể lấy địa chỉ mặc định từ hệ thống. Vui lòng liên hệ hỗ trợ.']);
+        // Use default address from profile (đã load sẵn từ trước)
+        if (defaultAddressInfo?.addressId) {
+          addressId = defaultAddressInfo.addressId;
+          console.log('🏠 [SUCCESS] Using cached addressId:', addressId);
+        } else {
+          // Fallback: nếu chưa có thì mới gọi API
+          try {
+            console.log('🏠 [DEBUG] Default address not cached, fetching from API');
+            const defaultAddress = await getDefaultAddress(user.customerId);
+            
+            if (defaultAddress && defaultAddress.addressId) {
+              addressId = defaultAddress.addressId;
+              console.log('🏠 [SUCCESS] Got addressId from API:', addressId);
+              
+              // Lưu lại để dùng sau
+              setDefaultAddressInfo({
+                addressId: defaultAddress.addressId,
+                ward: defaultAddress.ward || '',
+                city: defaultAddress.city || '',
+                latitude: defaultAddress.latitude,
+                longitude: defaultAddress.longitude
+              });
+            } else {
+              console.error('🏠 [ERROR] API returned empty or invalid address data:', defaultAddress);
+              setErrorMessages(['Không thể lấy địa chỉ mặc định từ hệ thống. Vui lòng liên hệ hỗ trợ.']);
+              return;
+            }
+          } catch (error) {
+            console.error('🏠 [ERROR] Failed to get default address from API:', error);
+            setErrorMessages(['Không thể kết nối tới hệ thống để lấy địa chỉ. Vui lòng thử lại sau.']);
             return;
           }
-        } catch (error) {
-          console.error('🏠 [ERROR] Failed to get default address from API:', error);
-          setErrorMessages(['Không thể kết nối tới hệ thống để lấy địa chỉ. Vui lòng thử lại sau.']);
-          return;
         }
       } else if (addressSource === 'current' || addressSource === 'custom') {
         // Use new address (current location or custom input)

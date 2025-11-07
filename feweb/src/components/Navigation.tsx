@@ -106,9 +106,9 @@ const navigationConfig: Record<UserRole, NavItemConfig[]> = {
       icon: Megaphone
     },
     {
-      to: '/employee/available',
+      to: '/employee/assignments',
       label: 'Công việc',
-      description: 'Nhận thêm ca phù hợp',
+      description: 'Công việc được phân công',
       icon: HardHat
     },
     {

@@ -17,25 +17,27 @@ import { DashboardLayout } from '../../layouts';
 import { useAuth } from '../../contexts/AuthContext';
 import { useEmployeeAssignments } from '../../hooks/useEmployee';
 import AvailableBookings from '../../components/AvailableBookings';
-import EmployeeBookings from '../../components/EmployeeBookings';
+// import EmployeeBookings from '../../components/EmployeeBookings'; // Tạm thời comment do API lỗi
 import { SectionCard, MetricCard } from '../../shared/components';
-import { cancelAssignmentApi, checkInAssignmentApi, checkOutAssignmentApi } from '../../api/employee';
+import { cancelAssignmentApi, checkInAssignmentApi, checkOutAssignmentApi, acceptAssignmentApi } from '../../api/employee';
 
 type AssignmentStatus =
   | 'ALL'
+  | 'PENDING'
   | 'ASSIGNED'
-  | 'CONFIRMED'
   | 'IN_PROGRESS'
   | 'COMPLETED'
-  | 'CANCELLED';
+  | 'CANCELLED'
+  | 'NO_SHOW';
 
 const statusDescriptors: Record<AssignmentStatus, { label: string; badge: string }> = {
   ALL: { label: 'Tất cả', badge: 'bg-slate-100 text-slate-700' },
-  ASSIGNED: { label: 'Mới phân công', badge: 'bg-sky-100 text-sky-700' },
-  CONFIRMED: { label: 'Đã nhận việc', badge: 'bg-cyan-100 text-cyan-700' },
-  IN_PROGRESS: { label: 'Đang thực hiện', badge: 'bg-amber-100 text-amber-700' },
+  PENDING: { label: 'Chờ xác nhận', badge: 'bg-amber-100 text-amber-700' },
+  ASSIGNED: { label: 'Đã nhận việc', badge: 'bg-sky-100 text-sky-700' },
+  IN_PROGRESS: { label: 'Đang thực hiện', badge: 'bg-blue-100 text-blue-700' },
   COMPLETED: { label: 'Đã hoàn thành', badge: 'bg-emerald-100 text-emerald-700' },
-  CANCELLED: { label: 'Đã hủy', badge: 'bg-rose-100 text-rose-700' }
+  CANCELLED: { label: 'Đã hủy', badge: 'bg-rose-100 text-rose-700' },
+  NO_SHOW: { label: 'Không đến', badge: 'bg-red-100 text-red-700' }
 };
 
 const EmployeeDashboard: React.FC = () => {
@@ -144,6 +146,28 @@ const EmployeeDashboard: React.FC = () => {
       setStatusBanner({
         type: 'error',
         text: err?.message || 'Không thể check-in lúc này. Vui lòng thử lại sau.'
+      });
+    } finally {
+      setIsActioning(false);
+    }
+  };
+
+  const handleAcceptAssignment = async (assignmentId: string) => {
+    if (!employeeId) return;
+    
+    setIsActioning(true);
+    try {
+      await acceptAssignmentApi(assignmentId, employeeId);
+      await getAssignments(employeeId, statusFilter === 'ALL' ? undefined : statusFilter);
+      setStatusBanner({
+        type: 'success',
+        text: 'Đã nhận việc thành công! Hãy chuẩn bị và đến đúng giờ nhé.'
+      });
+    } catch (err: any) {
+      console.error('Accept assignment error:', err);
+      setStatusBanner({
+        type: 'error',
+        text: err?.response?.data?.message || err?.message || 'Không thể nhận việc lúc này. Vui lòng thử lại sau.'
       });
     } finally {
       setIsActioning(false);
@@ -308,32 +332,52 @@ const EmployeeDashboard: React.FC = () => {
                   <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
                     <span className="inline-flex items-center gap-2">
                       <CalendarClock className="h-4 w-4 text-emerald-500" />
-                      {new Date(assignment.bookingTime).toLocaleString('vi-VN')}
+                      {assignment.bookingTime ? new Date(assignment.bookingTime).toLocaleString('vi-VN') : 'N/A'}
                     </span>
                     <span className="inline-flex items-center gap-2">
                       <Clock8 className="h-4 w-4 text-emerald-500" />
-                      Ước tính {assignment.estimatedDurationHours} giờ
+                      Ước tính {assignment.estimatedDurationHours ?? 0} giờ
                     </span>
                     <span className="inline-flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-emerald-500" />
-                      {assignment.serviceAddress}
+                      {assignment.serviceAddress || 'Chưa có địa chỉ'}
                     </span>
                   </div>
 
-                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4 text-sm text-emerald-700">
-                    Khách hàng: <strong>{assignment.customerName}</strong> · SĐT: <strong>{assignment.customerPhone}</strong>
+                  {/* Thông tin khách hàng */}
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                    <p className="text-sm font-semibold text-emerald-900">
+                      Khách hàng: {assignment.customerName}
+                    </p>
+                    {assignment.customerPhone && (
+                      <p className="mt-1 text-xs text-emerald-700">
+                        SĐT: {assignment.customerPhone}
+                      </p>
+                    )}
                   </div>
 
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="text-sm text-slate-500">
                       Thu nhập dự kiến:{' '}
                       <span className="font-semibold text-emerald-600">
-                        {assignment.totalAmount.toLocaleString('vi-VN')}₫
+                        {(assignment.totalAmount ?? 0).toLocaleString('vi-VN')}₫
                       </span>
                     </div>
                     <div className="flex flex-wrap gap-2">
-                      {/* Nút Check-in - hiển thị cho CONFIRMED */}
-                      {assignment.status === 'CONFIRMED' && !assignment.checkInTime && (
+                      {/* Nút Nhận việc - hiển thị cho PENDING */}
+                      {assignment.status === 'PENDING' && (
+                        <button
+                          onClick={() => handleAcceptAssignment(assignment.assignmentId)}
+                          disabled={isActioning}
+                          className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
+                        >
+                          <CheckCircle2 className="h-4 w-4" />
+                          Nhận việc
+                        </button>
+                      )}
+                      
+                      {/* Nút Check-in - hiển thị cho ASSIGNED (đã nhận việc, chưa bắt đầu) */}
+                      {assignment.status === 'ASSIGNED' && !assignment.checkInTime && (
                         <button
                           onClick={() => handleCheckIn(assignment.assignmentId)}
                           disabled={isActioning}
@@ -356,7 +400,8 @@ const EmployeeDashboard: React.FC = () => {
                         </button>
                       )}
                       
-                      {assignment.status === 'ASSIGNED' && (
+                      {/* Nút Từ chối - hiển thị cho PENDING */}
+                      {assignment.status === 'PENDING' && (
                         <button
                           onClick={() => openCancelModal(assignment.assignmentId)}
                           className="rounded-full border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:-translate-y-0.5 hover:border-rose-300"
@@ -364,12 +409,14 @@ const EmployeeDashboard: React.FC = () => {
                           Từ chối
                         </button>
                       )}
-                      {(assignment.status === 'ASSIGNED' || assignment.status === 'CONFIRMED') && (
+                      
+                      {/* Nút Hủy - hiển thị cho ASSIGNED (đã nhận nhưng chưa check-in) */}
+                      {assignment.status === 'ASSIGNED' && !assignment.checkInTime && (
                         <button
                           onClick={() => openCancelModal(assignment.assignmentId)}
                           className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:-translate-y-0.5 hover:border-slate-300"
                         >
-                          Hủy công việc
+                          Hủy
                         </button>
                       )}
                     </div>
@@ -390,12 +437,13 @@ const EmployeeDashboard: React.FC = () => {
         />
       </SectionCard>
 
-      <SectionCard
+      {/* Tạm thời ẩn do API booking-details đang lỗi 500 */}
+      {/* <SectionCard
         title="Chi tiết công việc đang thực hiện"
         description="Theo dõi tiến độ và đánh dấu hoàn thành ngay tại đây."
       >
         <EmployeeBookings />
-      </SectionCard>
+      </SectionCard> */}
 
       {showCancelModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 backdrop-blur-sm">

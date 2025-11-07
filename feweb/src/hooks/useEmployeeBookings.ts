@@ -13,9 +13,16 @@ export const useEmployeeBookings = () => {
   const [error, setError] = useState<string | null>(null);
   const [bookingDetails, setBookingDetails] = useState<BookingDetail[]>([]);
   const [availableBookings, setAvailableBookings] = useState<BookingDetail[]>([]);
+  const [hasError, setHasError] = useState(false); // Track if error occurred
 
   // Get booking details for the current employee
   const getEmployeeBookingDetails = async (employeeId: string) => {
+    // Nếu đã có lỗi trước đó, không gọi lại API để tránh spam
+    if (hasError) {
+      console.log('[useEmployeeBookings] Skipping API call due to previous error');
+      return [];
+    }
+    
     setIsLoading(true);
     setError(null);
     
@@ -23,6 +30,7 @@ export const useEmployeeBookings = () => {
       const response = await getEmployeeBookingDetailsApi(employeeId);
       if (response.success) {
         setBookingDetails(response.data);
+        setHasError(false); // Reset error flag on success
         return response.data;
       } else {
         throw new Error(response.message || 'Failed to load booking details');
@@ -30,6 +38,7 @@ export const useEmployeeBookings = () => {
     } catch (err: any) {
       const errorMessage = err?.response?.data?.message || err.message || 'Failed to load booking details';
       setError(errorMessage);
+      setHasError(true); // Set error flag to prevent retries
       console.error('Get employee booking details error:', err);
       return [];
     } finally {

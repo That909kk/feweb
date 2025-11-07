@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
-import { Edit3, Save, X, Upload, Shield, User, Calendar, Clock, Lock, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
+import { Edit3, Save, X, Upload, Shield, Lock, Eye, EyeOff, CheckCircle, XCircle, MapPin, Star } from 'lucide-react';
 import { DashboardLayout } from '../../layouts';
 import { SectionCard } from '../../shared/components';
 import { useCustomer } from '../../hooks';
@@ -16,17 +16,21 @@ interface CustomerFormData {
   email: string;
   phoneNumber: string;
   isMale: boolean;
-  birthdate: string;
-  accountStatus: string;
-  isPhoneVerified: boolean;
+  birthdate?: string;
   rating?: number | null;
   vipLevel?: string | null;
+  accountStatus: string;
+  isPhoneVerified: boolean;
   lastLogin?: string;
-  createdAt?: string;
-  updatedAt?: string;
-  roles: Array<{
-    roleId: number;
-    roleName: string;
+  roles: string[];
+  addresses?: Array<{
+    addressId: string;
+    fullAddress: string;
+    ward: string;
+    city: string;
+    latitude: number;
+    longitude: number;
+    isDefault: boolean;
   }>;
 }
 
@@ -76,14 +80,13 @@ const ProfilePage: React.FC = () => {
     phoneNumber: '',
     isMale: true,
     birthdate: '',
-    accountStatus: '',
-    isPhoneVerified: false,
     rating: null,
     vipLevel: null,
+    accountStatus: '',
+    isPhoneVerified: false,
     lastLogin: '',
-    createdAt: '',
-    updatedAt: '',
-    roles: []
+    roles: [],
+    addresses: []
   });
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -103,14 +106,13 @@ const ProfilePage: React.FC = () => {
             phoneNumber: data.account.phoneNumber || '',
             isMale: data.isMale ?? true,
             birthdate: data.birthdate || '',
-            accountStatus: data.account.status || '',
-            isPhoneVerified: data.account.isPhoneVerified ?? false,
             rating: data.rating ?? null,
             vipLevel: data.vipLevel || null,
+            accountStatus: data.account.status || '',
+            isPhoneVerified: data.account.isPhoneVerified ?? false,
             lastLogin: data.account.lastLogin || '',
-            createdAt: data.createdAt || '',
-            updatedAt: data.updatedAt || '',
-            roles: data.account.roles || []
+            roles: data.account.roles || [],
+            addresses: data.addresses || []
           });
           setPreviewUrl(data.avatar || '');
         }
@@ -183,7 +185,7 @@ const ProfilePage: React.FC = () => {
         fullName: formData.fullName,
         isMale: formData.isMale,
         email: formData.email,
-        birthdate: formData.birthdate
+        birthdate: formData.birthdate || ''
       };
 
       const result = await updateCustomer(currentCustomerId, updateData);
@@ -324,14 +326,13 @@ const ProfilePage: React.FC = () => {
             phoneNumber: data.account.phoneNumber || '',
             isMale: data.isMale ?? true,
             birthdate: data.birthdate || '',
-            accountStatus: data.account.status || '',
-            isPhoneVerified: data.account.isPhoneVerified ?? false,
             rating: data.rating ?? null,
             vipLevel: data.vipLevel || null,
+            accountStatus: data.account.status || '',
+            isPhoneVerified: data.account.isPhoneVerified ?? false,
             lastLogin: data.account.lastLogin || '',
-            createdAt: data.createdAt || '',
-            updatedAt: data.updatedAt || '',
-            roles: data.account.roles || []
+            roles: data.account.roles || [],
+            addresses: data.addresses || []
           });
           setPreviewUrl(data.avatar || '');
         }
@@ -479,42 +480,6 @@ const ProfilePage: React.FC = () => {
                   {formData.fullName || 'Chưa có tên'}
                 </h3>
                 <p className="text-brand-text/70">{formData.email}</p>
-                
-                {/* VIP Level Badge */}
-                <div className="mt-3 flex justify-center">
-                  {formData.vipLevel === 'DIAMOND' && (
-                    <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-purple-500 to-indigo-600 px-3 py-1 text-xs font-semibold text-white">
-                      Kim cương
-                    </span>
-                  )}
-                  {formData.vipLevel === 'GOLD' && (
-                    <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-yellow-400 to-yellow-600 px-3 py-1 text-xs font-semibold text-white">
-                      Vàng
-                    </span>
-                  )}
-                  {formData.vipLevel === 'SILVER' && (
-                    <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-gray-400 to-gray-600 px-3 py-1 text-xs font-semibold text-white">
-                      Bạc
-                    </span>
-                  )}
-                  {formData.vipLevel === 'BRONZE' && (
-                    <span className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-orange-400 to-orange-600 px-3 py-1 text-xs font-semibold text-white">
-                      Đồng
-                    </span>
-                  )}
-                  {(!formData.vipLevel || formData.vipLevel === '') && (
-                    <span className="inline-flex items-center gap-2 rounded-full bg-brand-outline/20 px-3 py-1 text-xs font-medium text-brand-text/70">
-                      Thành viên thường
-                    </span>
-                  )}
-                </div>
-
-                {/* Rating */}
-                {formData.rating && formData.rating > 0 && (
-                  <div className="mt-2 flex items-center justify-center gap-1 text-sm text-brand-secondary">
-                    <span>⭐ {formData.rating} điểm</span>
-                  </div>
-                )}
               </div>
             </div>
           </SectionCard>
@@ -579,19 +544,6 @@ const ProfilePage: React.FC = () => {
                     disabled={true}
                     className="block w-full px-4 py-3 rounded-2xl border-0 bg-brand-outline/10 text-brand-text/90"
                   />
-                  <div className="absolute inset-y-0 right-0 flex items-center pr-4">
-                    {formData.isPhoneVerified ? (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-status-success">
-                        <Shield className="h-3 w-3" />
-                        Đã xác thực
-                      </span>
-                    ) : (
-                      <span className="inline-flex items-center gap-1 text-xs font-medium text-status-warning">
-                        <X className="h-3 w-3" />
-                        Chưa xác thực
-                      </span>
-                    )}
-                  </div>
                 </div>
               </div>
 
@@ -634,90 +586,73 @@ const ProfilePage: React.FC = () => {
                   }`}
                 />
               </div>
-
-              {/* Roles */}
-              {formData.roles.length > 0 && (
-                <div className="space-y-2 md:col-span-2">
-                  <label className="block text-sm font-medium text-brand-text/80">
-                    Vai trò
-                  </label>
-                  <div className="flex flex-wrap gap-2">
-                    {formData.roles.map((role, index) => (
-                      <span
-                        key={index}
-                        className="inline-flex items-center gap-1 rounded-full bg-brand-teal/10 border border-brand-teal/20 px-3 py-1 text-sm font-medium text-brand-teal"
-                      >
-                        <User className="h-3 w-3" />
-                        {role.roleName}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
             </div>
           </SectionCard>
         </div>
 
-        {/* Account Info */}
+        {/* Addresses Section */}
+        {formData.addresses && formData.addresses.length > 0 && (
+          <div className="lg:col-span-3">
+            <SectionCard
+              title="Địa chỉ của tôi"
+              description="Danh sách địa chỉ đã lưu"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {formData.addresses.map((address) => (
+                  <div
+                    key={address.addressId}
+                    className={`relative p-4 pt-5 rounded-2xl border-2 transition-all duration-200 ${
+                      address.isDefault
+                        ? 'border-brand-teal bg-brand-teal/5'
+                        : 'border-brand-outline/20 bg-white hover:border-brand-teal/40'
+                    }`}
+                  >
+                    {address.isDefault && (
+                      <div className="absolute top-2 right-2">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-white bg-brand-teal rounded-lg shadow-sm">
+                          <Star className="h-3 w-3 fill-current" />
+                          Mặc định
+                        </span>
+                      </div>
+                    )}
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-1">
+                        <div className="p-2 bg-brand-teal/10 rounded-xl">
+                          <MapPin className="h-5 w-5 text-brand-teal" />
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0 pr-20">
+                        <p className="text-sm font-medium text-brand-text mb-2 line-clamp-2">
+                          {address.fullAddress}
+                        </p>
+                        <div className="space-y-1">
+                          <p className="text-xs text-brand-text/60">
+                            <span className="font-medium">Phường/Xã:</span> {address.ward}
+                          </p>
+                          <p className="text-xs text-brand-text/60">
+                            <span className="font-medium">Thành phố:</span> {address.city}
+                          </p>
+                          <p className="text-xs text-brand-text/50">
+                            {address.latitude.toFixed(6)}, {address.longitude.toFixed(6)}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          </div>
+        )}
+
+        {/* Account Info - Change Password Only */}
         <div className="lg:col-span-3">
           <SectionCard
-            title="Thông tin tài khoản"
-            description="Thông tin hệ thống và trạng thái tài khoản"
+            title="Bảo mật tài khoản"
+            description="Quản lý mật khẩu và bảo mật"
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {/* Account Status */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-brand-text/80">
-                  Trạng thái tài khoản
-                </label>
-                <div className="flex items-center">
-                  <span className={`inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium ${
-                    formData.accountStatus === 'ACTIVE' 
-                      ? 'bg-status-success/10 text-status-success border border-status-success/20' 
-                      : 'bg-status-warning/10 text-status-warning border border-status-warning/20'
-                  }`}>
-                    <Shield className="h-4 w-4" />
-                    {formData.accountStatus === 'ACTIVE' ? 'Hoạt động' : 'Không hoạt động'}
-                  </span>
-                </div>
-              </div>
-
-              {/* Last Login */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-brand-text/80">
-                  Đăng nhập cuối
-                </label>
-                <div className="flex items-center gap-2 text-sm text-brand-text/70">
-                  <Clock className="h-4 w-4" />
-                  {formData.lastLogin ? new Date(formData.lastLogin).toLocaleString('vi-VN') : 'Chưa có thông tin'}
-                </div>
-              </div>
-
-              {/* Created At */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-brand-text/80">
-                  Ngày tạo
-                </label>
-                <div className="flex items-center gap-2 text-sm text-brand-text/70">
-                  <Calendar className="h-4 w-4" />
-                  {formData.createdAt ? new Date(formData.createdAt).toLocaleString('vi-VN') : 'Chưa có thông tin'}
-                </div>
-              </div>
-
-              {/* Updated At */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-brand-text/80">
-                  Cập nhật cuối
-                </label>
-                <div className="flex items-center gap-2 text-sm text-brand-text/70">
-                  <Clock className="h-4 w-4" />
-                  {formData.updatedAt ? new Date(formData.updatedAt).toLocaleString('vi-VN') : 'Chưa có thông tin'}
-                </div>
-              </div>
-            </div>
-
             {/* Change Password Button */}
-            <div className="mt-6 pt-6 border-t border-brand-outline/20">
+            <div className="pt-2">
               <button
                 onClick={() => setShowChangePasswordModal(true)}
                 className="inline-flex items-center gap-2 px-6 py-3 bg-brand-teal text-white rounded-2xl hover:bg-brand-teal/90 transition-all duration-200 shadow-sm hover:shadow-md"

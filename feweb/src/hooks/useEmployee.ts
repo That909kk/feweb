@@ -1,27 +1,30 @@
 import { useState } from 'react';
 import { 
-  getEmployeeAssignmentsApi, 
-  updateAssignmentStatusApi, 
+  getEmployeeAssignmentsApi,
   getEmployeeStatisticsApi 
 } from '../api/employee';
 
+// Assignment interface matching ACTUAL API response (07/11/2025)
+// Backend returns: serviceAddress, estimatedDurationHours, totalAmount
 interface Assignment {
   assignmentId: string;
   bookingCode: string;
   serviceName: string;
   customerName: string;
   customerPhone: string;
-  serviceAddress: string;
-  bookingTime: string;
-  estimatedDurationHours: number;
-  pricePerUnit: number;
-  quantity: number;
-  totalAmount: number;
-  status: string;
-  assignedAt: string;
+  serviceAddress: string;           // Backend uses "serviceAddress"
+  bookingTime: string;              // Format: "2025-11-15 09:00:00"
+  estimatedDurationHours: number;   // Backend uses "estimatedDurationHours"
+  pricePerUnit: number;             // Giá mỗi đơn vị
+  quantity: number;                 // Số lượng
+  totalAmount: number;              // Backend uses "totalAmount"
+  status: string;                   // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW
+  assignedAt: string | null;
   checkInTime: string | null;
   checkOutTime: string | null;
   note: string | null;
+  customerEmail?: string;
+  customerAvatar?: string;
 }
 
 interface EmployeeStats {
@@ -47,13 +50,28 @@ export const useEmployeeAssignments = () => {
     setError(null);
 
     try {
+      // Use employee assignments API endpoint: GET /employee/{employeeId}/assignments
       const response = await getEmployeeAssignmentsApi(employeeId, status, page, size);
+      
+      console.log('[useEmployee] Assignments API Response:', response);
+      
       if (response && response.success && response.data) {
-        setAssignments(response.data || []);
+        console.log('[useEmployee] Assignments data:', response.data);
+        
+        // Sort by bookingTime ascending (earliest first)
+        const sortedAssignments = [...response.data].sort((a, b) => {
+          const dateTimeA = new Date(a.bookingTime);
+          const dateTimeB = new Date(b.bookingTime);
+          return dateTimeA.getTime() - dateTimeB.getTime();
+        });
+        
+        console.log('[useEmployee] Sorted assignments:', sortedAssignments);
+        
+        setAssignments(sortedAssignments);
         setIsInitialized(true);
-        return response.data || [];
+        return sortedAssignments;
       } else {
-        throw new Error(response?.message || 'Failed to load assignments');
+        throw new Error('Failed to load assignments');
       }
     } catch (err: any) {
       const errorMessage = err?.response?.data?.message || err?.message || 'Không thể tải danh sách công việc';
@@ -89,34 +107,6 @@ export const useEmployeeAssignments = () => {
     }
   };
 
-  const updateAssignmentStatus = async (
-    assignmentId: string, 
-    status: 'ACCEPTED' | 'STARTED' | 'COMPLETED' | 'REJECTED'
-  ): Promise<boolean> => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const response = await updateAssignmentStatusApi(assignmentId, status);
-      if (response && response.success) {
-        // Update local assignments
-        setAssignments(prev => 
-          prev.map(a => a.assignmentId === assignmentId ? { ...a, status } : a)
-        );
-        return true;
-      } else {
-        throw new Error(response?.message || 'Failed to update assignment status');
-      }
-    } catch (err: any) {
-      const errorMessage = err?.response?.data?.message || err?.message || 'Failed to update assignment status';
-      setError(errorMessage);
-      console.error('Update assignment status error:', err);
-      return false;
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
   return {
     assignments,
     stats,
@@ -124,8 +114,7 @@ export const useEmployeeAssignments = () => {
     isInitialized,
     error,
     getAssignments,
-    getStatistics,
-    updateAssignmentStatus
+    getStatistics
   };
 };
 

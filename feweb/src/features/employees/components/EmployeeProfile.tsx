@@ -1,8 +1,22 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import ReactDOM from 'react-dom';
+import { Edit3, Save, X, Shield, Lock, Eye, EyeOff, CheckCircle, XCircle, MapPin, Briefcase, Award } from 'lucide-react';
+import { DashboardLayout } from '../../../layouts';
+import { SectionCard } from '../../../shared/components';
 import { useEmployeeProfile } from '../../../hooks';
 import { useAuth } from '../../../contexts/AuthContext';
-import Navigation from '../../../components/Navigation';
-import employeeProfileData from '../../../static-data/pages/employee-profile.json';
+import { changePasswordApi, type ChangePasswordRequest } from '../../../api';
+import changePasswordData from '../../../static-data/pages/change-password.json';
+
+interface WorkingZone {
+  ward: string;
+  city: string;
+}
+
+interface Role {
+  roleId: number;
+  roleName: string;
+}
 
 interface EmployeeFormData {
   employeeId: string;
@@ -15,32 +29,57 @@ interface EmployeeFormData {
   hiredDate: string;
   skills: string[];
   bio: string;
-  rating: string;
+  rating: string | null;
   employeeStatus: string;
-  username: string;
   accountStatus: string;
   isPhoneVerified: boolean;
   lastLogin: string;
-  createdAt: string;
-  updatedAt: string;
-  roles: Array<{
-    roleId: number;
-    roleName: string;
-  }>;
+  roles: Role[];
+  workingZones: WorkingZone[];
 }
 
 interface EmployeeProfileProps {
   employeeId?: string;
 }
 
-const EmployeeProfile: React.FC<EmployeeProfileProps> = React.memo(({ employeeId }) => {
+const EmployeeProfile: React.FC<EmployeeProfileProps> = ({ employeeId }) => {
   const { user } = useAuth();
-  const { profile, isLoading, isUpdating, error, updateProfile, fetchProfile, clearError } = useEmployeeProfile(
-    employeeId || (user?.role === 'EMPLOYEE' ? user.id : undefined)
-  );
+  const currentEmployeeId = employeeId || user?.employeeId;
+  
+  const { profile, isLoading, error, updateProfile, fetchProfile, clearError } = useEmployeeProfile(currentEmployeeId);
   
   const [isEditing, setIsEditing] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
+  
+  // Prevent body scroll when modal is open
+  useEffect(() => {
+    if (showChangePasswordModal) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [showChangePasswordModal]);
+  
+  // Change Password State
+  const [passwordData, setPasswordData] = useState<ChangePasswordRequest>({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false
+  });
+  const [passwordLoading, setPasswordLoading] = useState(false);
+  const [passwordError, setPasswordError] = useState<string>('');
+  const [passwordSuccess, setPasswordSuccess] = useState(false);
+  
+  const passwordTextData = changePasswordData?.vi || {};
 
   const [formData, setFormData] = useState<EmployeeFormData>({
     employeeId: '',
@@ -53,48 +92,42 @@ const EmployeeProfile: React.FC<EmployeeProfileProps> = React.memo(({ employeeId
     hiredDate: '',
     skills: [],
     bio: '',
-    rating: '',
+    rating: null,
     employeeStatus: '',
-    username: '',
     accountStatus: '',
     isPhoneVerified: false,
     lastLogin: '',
-    createdAt: '',
-    updatedAt: '',
-    roles: []
+    roles: [],
+    workingZones: []
   });
 
+  const [previewUrl, setPreviewUrl] = useState<string>('');
   const [skillsInput, setSkillsInput] = useState<string>('');
 
-  // Get text data based on language (defaulting to Vietnamese)
-  const textData = employeeProfileData?.vi || {};
-
-  // Load employee data when profile changes
+  // Load employee data from API
   useEffect(() => {
     if (profile) {
-      setFormData({
+      const newFormData = {
         employeeId: profile.employeeId,
         avatar: profile.avatar || '',
         fullName: profile.fullName || '',
         email: profile.email || '',
-        phoneNumber: profile.account.phoneNumber || '',
+        phoneNumber: profile.account?.phoneNumber || '',
         isMale: profile.isMale ?? true,
         birthdate: profile.birthdate || '',
         hiredDate: profile.hiredDate || '',
         skills: profile.skills || [],
         bio: profile.bio || '',
-        rating: profile.rating || '',
+        rating: profile.rating ?? null,
         employeeStatus: profile.employeeStatus || '',
-        username: profile.account.username || '',
-        accountStatus: profile.account.status || '',
-        isPhoneVerified: profile.account.isPhoneVerified ?? false,
-        lastLogin: profile.account.lastLogin || '',
-        createdAt: profile.createdAt || '',
-        updatedAt: profile.updatedAt || '',
-        roles: profile.account.roles || []
-      });
-      
-      // Convert skills array to comma-separated string for input
+        accountStatus: profile.account?.status || '',
+        isPhoneVerified: profile.account?.isPhoneVerified ?? false,
+        lastLogin: profile.account?.lastLogin || '',
+        roles: profile.account?.roles || [],
+        workingZones: profile.workingZones || []
+      };
+      setFormData(newFormData);
+      setPreviewUrl(profile.avatar || '');
       setSkillsInput(profile.skills ? profile.skills.join(', ') : '');
     }
   }, [profile]);
@@ -107,119 +140,204 @@ const EmployeeProfile: React.FC<EmployeeProfileProps> = React.memo(({ employeeId
     }
   }, [showSuccess]);
 
-  // Handle input changes
-  const handleInputChange = useCallback((field: keyof EmployeeFormData, value: any) => {
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+    
+    if (type === 'checkbox') {
+      const checked = (e.target as HTMLInputElement).checked;
+      setFormData(prev => ({
+        ...prev,
+        [name]: checked
+      }));
+    } else if (name === 'isMale') {
+      setFormData(prev => ({
+        ...prev,
+        isMale: value === 'true'
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+  }, []);
+
+  const handleSkillsChange = useCallback((value: string) => {
+    setSkillsInput(value);
+    const skillsArray = value.split(',').map(skill => skill.trim()).filter(skill => skill !== '');
     setFormData(prev => ({
       ...prev,
-      [field]: value
+      skills: skillsArray
     }));
   }, []);
 
-  // Handle skills input change
-  const handleSkillsChange = useCallback((value: string) => {
-    setSkillsInput(value);
-    // Convert comma-separated string to array
-    const skillsArray = value.split(',').map(skill => skill.trim()).filter(skill => skill !== '');
-    handleInputChange('skills', skillsArray);
-  }, [handleInputChange]);
+  const handleEdit = useCallback(() => {
+    setIsEditing(true);
+    clearError();
+  }, [clearError]);
 
-  // Handle form submission
-  const handleSubmit = async () => {
-    try {
-      clearError();
-      
-      // Validate required fields
-      if (!formData.fullName.trim()) {
-        throw new Error(textData.validations?.fullNameRequired || 'Họ tên không được để trống');
-      }
-      
-      if (!formData.email.trim()) {
-        throw new Error(textData.validations?.emailRequired || 'Email không được để trống');
-      }
-
-      // Email validation
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(formData.email)) {
-        throw new Error(textData.validations?.emailInvalid || 'Email không hợp lệ');
-      }
-
-      // Prepare update data
-      const updateData = {
-        avatar: formData.avatar,
-        fullName: formData.fullName.trim(),
-        isMale: formData.isMale,
-        email: formData.email.trim(),
-        birthdate: formData.birthdate,
-        hiredDate: formData.hiredDate,
-        skills: formData.skills,
-        bio: formData.bio.trim(),
-        rating: formData.rating === '' ? null : formData.rating, // Explicitly handle empty string
-        employeeStatus: formData.employeeStatus || 'AVAILABLE'
-      };
-
-      // Only log in development
-      if (import.meta.env.DEV) {
-        console.log('[DEBUG] Update data being sent:', updateData);
-        console.log('[DEBUG] formData.rating:', formData.rating, 'Type:', typeof formData.rating);
-        console.log('[DEBUG] Final rating value:', updateData.rating, 'Type:', typeof updateData.rating);
-      }
-
-      const success = await updateProfile(updateData);
-      
-      if (success) {
-        setIsEditing(false);
-        setShowSuccess(true);
-        // Refresh profile data
-        await fetchProfile();
-      }
-    } catch (err: any) {
-      console.error('Error updating profile:', err);
-    }
-  };
-
-  // Handle cancel edit
-  const handleCancel = () => {
+  const handleCancel = useCallback(() => {
     if (profile) {
-      // Reset form data to original profile data
       setFormData({
         employeeId: profile.employeeId,
         avatar: profile.avatar || '',
         fullName: profile.fullName || '',
         email: profile.email || '',
-        phoneNumber: profile.account.phoneNumber || '',
+        phoneNumber: profile.account?.phoneNumber || '',
         isMale: profile.isMale ?? true,
         birthdate: profile.birthdate || '',
         hiredDate: profile.hiredDate || '',
         skills: profile.skills || [],
         bio: profile.bio || '',
-        rating: profile.rating || '',
+        rating: profile.rating ?? null,
         employeeStatus: profile.employeeStatus || '',
-        username: profile.account.username || '',
-        accountStatus: profile.account.status || '',
-        isPhoneVerified: profile.account.isPhoneVerified ?? false,
-        lastLogin: profile.account.lastLogin || '',
-        createdAt: profile.createdAt || '',
-        updatedAt: profile.updatedAt || '',
-        roles: profile.account.roles || []
+        accountStatus: profile.account?.status || '',
+        isPhoneVerified: profile.account?.isPhoneVerified ?? false,
+        lastLogin: profile.account?.lastLogin || '',
+        roles: profile.account?.roles || [],
+        workingZones: profile.workingZones || []
       });
-      
+      setPreviewUrl(profile.avatar || '');
       setSkillsInput(profile.skills ? profile.skills.join(', ') : '');
     }
     setIsEditing(false);
     clearError();
+  }, [profile, clearError]);
+
+  const handleSubmit = useCallback(async (e?: React.FormEvent) => {
+    if (e) {
+      e.preventDefault();
+    }
+    
+    if (!currentEmployeeId) {
+      console.error('No employee ID available');
+      return;
+    }
+
+    clearError();
+
+    try {
+      // For now, just update without avatar upload
+      // You can add uploadAvatar functionality similar to customer if needed
+      
+      const updateData = {
+        avatar: formData.avatar,
+        fullName: formData.fullName,
+        isMale: formData.isMale,
+        email: formData.email,
+        birthdate: formData.birthdate,
+        hiredDate: formData.hiredDate,
+        skills: formData.skills,
+        bio: formData.bio,
+        rating: formData.rating,
+        employeeStatus: formData.employeeStatus
+      };
+
+      const success = await updateProfile(updateData);
+      
+      if (success) {
+        setShowSuccess(true);
+        setIsEditing(false);
+        setTimeout(() => setShowSuccess(false), 3000);
+        await fetchProfile();
+      }
+    } catch (err) {
+      console.error('Error updating profile:', err);
+    }
+  }, [currentEmployeeId, formData, clearError, updateProfile, fetchProfile]);
+
+  // Change Password Handlers
+  const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setPasswordData(prev => ({ ...prev, [name]: value }));
+    setPasswordError('');
   };
 
-  // Utility functions
-  const formatDate = (dateString: string) => {
-    if (!dateString) return 'Chưa cập nhật';
+  const togglePasswordVisibility = (field: 'current' | 'new' | 'confirm') => {
+    setShowPasswords(prev => ({ ...prev, [field]: !prev[field] }));
+  };
+
+  const validatePasswordForm = (): boolean => {
+    if (!passwordData.currentPassword) {
+      setPasswordError(passwordTextData.messages?.currentPasswordRequired || 'Vui lòng nhập mật khẩu hiện tại');
+      return false;
+    }
+    if (!passwordData.newPassword) {
+      setPasswordError(passwordTextData.messages?.newPasswordRequired || 'Vui lòng nhập mật khẩu mới');
+      return false;
+    }
+    if (passwordData.newPassword.length < 6) {
+      setPasswordError(passwordTextData.messages?.passwordTooShort || 'Mật khẩu mới phải có ít nhất 6 ký tự');
+      return false;
+    }
+    if (passwordData.newPassword.length > 50) {
+      setPasswordError(passwordTextData.messages?.passwordTooLong || 'Mật khẩu mới không được vượt quá 50 ký tự');
+      return false;
+    }
+    if (!passwordData.confirmPassword) {
+      setPasswordError(passwordTextData.messages?.confirmPasswordRequired || 'Vui lòng xác nhận mật khẩu mới');
+      return false;
+    }
+    if (passwordData.newPassword !== passwordData.confirmPassword) {
+      setPasswordError(passwordTextData.messages?.passwordMismatch || 'Mật khẩu xác nhận không khớp');
+      return false;
+    }
+    if (passwordData.currentPassword === passwordData.newPassword) {
+      setPasswordError(passwordTextData.messages?.samePassword || 'Mật khẩu mới phải khác mật khẩu hiện tại');
+      return false;
+    }
+    return true;
+  };
+
+  const handlePasswordSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!validatePasswordForm()) return;
+
+    setPasswordLoading(true);
+    setPasswordError('');
+
     try {
-      return new Date(dateString).toLocaleDateString('vi-VN');
-    } catch {
-      return dateString;
+      const response = await changePasswordApi(passwordData);
+      
+      if (response.success) {
+        setPasswordSuccess(true);
+        setTimeout(() => {
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          window.location.href = '/auth';
+        }, 2000);
+      }
+    } catch (err: any) {
+      console.error('Change password error:', err);
+      const errorMessage = err.response?.data?.message;
+      
+      if (errorMessage === 'Mật khẩu hiện tại không đúng') {
+        setPasswordError(passwordTextData.messages?.incorrectPassword || errorMessage);
+      } else if (errorMessage === 'Mật khẩu xác nhận không khớp') {
+        setPasswordError(passwordTextData.messages?.passwordMismatch || errorMessage);
+      } else {
+        setPasswordError(errorMessage || passwordTextData.messages?.error || 'Có lỗi xảy ra khi đổi mật khẩu');
+      }
+    } finally {
+      setPasswordLoading(false);
     }
   };
 
-  const formatDateForInput = (dateString: string) => {
+  const handleCancelPasswordChange = () => {
+    setShowChangePasswordModal(false);
+    setPasswordData({
+      currentPassword: '',
+      newPassword: '',
+      confirmPassword: ''
+    });
+    setPasswordError('');
+    setPasswordSuccess(false);
+    setShowPasswords({ current: false, new: false, confirm: false });
+  };
+
+  const formatDate = (dateString: string) => {
     if (!dateString) return '';
     try {
       return new Date(dateString).toISOString().split('T')[0];
@@ -228,578 +346,625 @@ const EmployeeProfile: React.FC<EmployeeProfileProps> = React.memo(({ employeeId
     }
   };
 
-  const formatDateTime = (dateString: string) => {
-    if (!dateString) return 'Chưa có thông tin';
-    try {
-      return new Date(dateString).toLocaleString('vi-VN');
-    } catch {
-      return dateString;
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const badges = {
-      'ACTIVE': 'bg-green-100 text-green-800',
-      'INACTIVE': 'bg-red-100 text-red-800',
-      'SUSPENDED': 'bg-yellow-100 text-yellow-800'
+  const getStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      'AVAILABLE': 'bg-status-success/10 text-status-success border-status-success/20',
+      'BUSY': 'bg-orange-50 text-orange-700 border-orange-200',
+      'UNAVAILABLE': 'bg-status-danger/10 text-status-danger border-status-danger/20',
+      'ON_LEAVE': 'bg-purple-50 text-purple-700 border-purple-200'
     };
-    return badges[status as keyof typeof badges] || 'bg-gray-100 text-gray-800';
+    return colors[status] || 'bg-gray-100 text-gray-700 border-gray-200';
   };
 
-  // Early return if loading
+  const getStatusText = (status: string) => {
+    const texts: Record<string, string> = {
+      'AVAILABLE': 'Sẵn sàng',
+      'BUSY': 'Đang bận',
+      'UNAVAILABLE': 'Không khả dụng',
+      'ON_LEAVE': 'Nghỉ phép'
+    };
+    return texts[status] || status;
+  };
+
+  // Loading state
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navigation />
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-center h-64">
-            <div className="flex flex-col items-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-              <p className="mt-4 text-gray-600">Đang tải thông tin nhân viên...</p>
-            </div>
+      <DashboardLayout role="EMPLOYEE" title="Hồ Sơ Nhân Viên">
+        <div className="flex items-center justify-center h-64">
+          <div className="flex flex-col items-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brand-teal"></div>
+            <p className="mt-4 text-brand-text/60">Đang tải thông tin nhân viên...</p>
           </div>
         </div>
-      </div>
-    );
-  }
-
-  // Early return if textData is not loaded
-  if (!textData || !textData.fields) {
-    return (
-      <div className="min-h-screen bg-gray-50">
-        <Navigation />
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <div className="text-center">Đang khởi tạo...</div>
-        </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   // Error state
   if (error && !profile) {
     return (
-      <div className="min-h-screen bg-gray-50">
-        <Navigation />
-        <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-          <div className="bg-red-50 border border-red-200 rounded-md p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
+      <DashboardLayout role="EMPLOYEE" title="Hồ Sơ Nhân Viên">
+        <div className="bg-status-danger/10 border border-status-danger/20 rounded-2xl p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <X className="h-5 w-5 text-status-danger" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-status-danger">
+                Có lỗi xảy ra
+              </h3>
+              <div className="mt-2 text-sm text-status-danger/80">
+                <p>{error}</p>
               </div>
-              <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">
-                  Có lỗi xảy ra
-                </h3>
-                <div className="mt-2 text-sm text-red-700">
-                  <p>{error}</p>
-                </div>
-                <div className="mt-4">
-                  <button
-                    type="button"
-                    onClick={() => window.location.reload()}
-                    className="bg-red-50 text-red-800 px-3 py-2 rounded-md text-sm font-medium hover:bg-red-100"
-                  >
-                    Tải lại trang
-                  </button>
-                </div>
+              <div className="mt-4">
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="bg-status-danger/10 text-status-danger px-3 py-2 rounded-xl text-sm font-medium hover:bg-status-danger/20"
+                >
+                  Tải lại trang
+                </button>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      </DashboardLayout>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <Navigation />
-      
-      <div className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        {/* Success Message */}
-        {showSuccess && (
-          <div className="mb-6 bg-green-50 border border-green-200 rounded-md p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-green-800">
-                  {textData.messages?.saveSuccess || 'Cập nhật thông tin thành công!'}
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Error Message */}
-        {error && profile && (
-          <div className="mb-6 bg-red-50 border border-red-200 rounded-md p-4">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm font-medium text-red-800">{error}</p>
-              </div>
-              <div className="ml-auto pl-3">
-                <div className="-mx-1.5 -my-1.5">
-                  <button
-                    type="button"
-                    onClick={clearError}
-                    className="bg-red-50 text-red-500 p-1.5 rounded-md hover:bg-red-100"
-                  >
-                    <svg className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Header */}
-        <div className="bg-white shadow rounded-lg mb-6">
-          <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                
-              </div>
-              <div className="ml-4">
-                <h1 className="text-2xl font-bold text-gray-900">
-                  {textData.title || 'Hồ Sơ Nhân Viên'}
-                </h1>
-                
-              </div>
-            </div>
-            
-            {/* Action Buttons */}
-            <div className="flex space-x-3">
-              {isEditing ? (
+    <>
+    <DashboardLayout
+      role="EMPLOYEE"
+      title="Hồ Sơ Nhân Viên"
+      description="Quản lý thông tin cá nhân và tài khoản"
+      actions={
+        isEditing ? (
+          <div className="flex gap-2">
+            <button
+              onClick={handleCancel}
+              disabled={isLoading}
+              className="inline-flex items-center gap-2 rounded-2xl bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 transition-colors"
+            >
+              <X className="h-4 w-4" />
+              Hủy
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="inline-flex items-center gap-2 rounded-2xl bg-brand-navy px-4 py-2 text-sm font-medium text-white shadow-lg hover:bg-brand-navyHover transition-colors"
+            >
+              {isLoading ? (
                 <>
-                  <button
-                    type="button"
-                    onClick={handleCancel}
-                    disabled={isUpdating}
-                    className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
-                  >
-                    {textData.actions?.cancel || 'Hủy'}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleSubmit}
-                    disabled={isUpdating}
-                    className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 flex items-center"
-                  >
-                    {isUpdating && (
-                      <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                    )}
-                    {textData.actions?.save || 'Lưu thay đổi'}
-                  </button>
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  Đang lưu...
                 </>
               ) : (
-                <button
-                  type="button"
-                  onClick={() => setIsEditing(true)}
-                  className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  {textData.actions?.edit || 'Chỉnh sửa'}
-                </button>
+                <>
+                  <Save className="h-4 w-4" />
+                  Lưu thay đổi
+                </>
               )}
-            </div>
+            </button>
           </div>
-
-          <div className="p-6 space-y-8">
-            {/* Avatar Section */}
-            <div className="flex items-start space-x-6 pb-6 border-b border-gray-200">
-              <div className="relative flex-shrink-0">
-                {formData.avatar ? (
-                  <img
-                    src={formData.avatar}
-                    alt={formData.fullName}
-                    className="h-32 w-32 rounded-full object-cover border-4 border-white shadow-lg"
-                  />
-                ) : (
-                  <div className="h-32 w-32 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center border-4 border-white shadow-lg">
-                    <span className="text-white font-medium text-4xl">
-                      {formData.fullName ? formData.fullName.charAt(0).toUpperCase() : 'U'}
-                    </span>
-                  </div>
-                )}
-                <button
-                  type="button"
-                  className="absolute bottom-0 right-0 inline-flex items-center justify-center h-10 w-10 rounded-full bg-blue-600 text-white shadow-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 border-2 border-white"
-                >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
-                  </svg>
-                </button>
-              </div>
-              <div className="flex-1 min-w-0">
-                <div>
-                  <h2 className="text-2xl font-bold text-gray-900">{formData.fullName || 'Chưa có tên'}</h2>
-                  <p className="text-sm text-gray-500">{formData.email}</p>
-                  <div className="mt-2 flex items-center space-x-4 text-sm">
-                    {/* Work Status */}
-                    <div className="flex items-center">
-                      <svg className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0H8m8 0v6.96" />
-                      </svg>
-                      {formData.employeeStatus === 'AVAILABLE' && <span className="text-green-600 font-medium">Sẵn sàng</span>}
-                      {formData.employeeStatus === 'BUSY' && <span className="text-orange-600 font-medium">Đang bận</span>}
-                      {formData.employeeStatus === 'UNAVAILABLE' && <span className="text-red-600 font-medium">Không có sẵn</span>}
-                      {formData.employeeStatus === 'ON_LEAVE' && <span className="text-purple-600 font-medium">Nghỉ phép</span>}
-                    </div>
-                    
-                    {/* Rating */}
-                    <div className="flex items-center">
-                      <svg className="flex-shrink-0 mr-1.5 h-4 w-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
-                      </svg>
-                      {formData.rating === 'HIGHEST' && <span className="text-emerald-600 font-medium">Xuất sắc</span>}
-                      {formData.rating === 'HIGH' && <span className="text-blue-600 font-medium">Tốt</span>}
-                      {formData.rating === 'MEDIUM' && <span className="text-yellow-600 font-medium">Trung bình</span>}
-                      {formData.rating === 'LOW' && <span className="text-orange-600 font-medium">Kém</span>}
-                      {formData.rating === 'LOWEST' && <span className="text-red-600 font-medium">Rất kém</span>}
-                      {(!formData.rating || formData.rating === '') && <span className="text-gray-500">Chưa đánh giá</span>}
-                    </div>
-                  </div>
-                  {isEditing && (
-                    <div className="mt-4">
-                      <input
-                        type="url"
-                        value={formData.avatar}
-                        onChange={(e) => handleInputChange('avatar', e.target.value)}
-                        className="block w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md shadow-sm text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        placeholder="Hoặc nhập URL ảnh"
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
+        ) : (
+          <button
+            onClick={handleEdit}
+            className="inline-flex items-center gap-2 rounded-2xl bg-brand-navy px-4 py-2 text-sm font-medium text-white shadow-lg hover:bg-brand-navyHover transition-colors"
+          >
+            <Edit3 className="h-4 w-4" />
+            Chỉnh sửa
+          </button>
+        )
+      }
+    >
+      {/* Success Message */}
+      {showSuccess && (
+        <div className="mb-6 bg-status-success/10 border border-status-success/20 rounded-2xl p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <Shield className="h-5 w-5 text-status-success" />
             </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Basic Information - Editable Fields */}
-              <div className="border-t border-gray-200 pt-6">
-                <h4 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                  </svg>
-                  {textData.sections?.basicInfo || 'Thông tin cơ bản'}
-                </h4>
-                
-                <div className="space-y-6">
-                  {/* Full Name */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {textData.fields?.fullName || 'Họ và tên'} *
-                    </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={formData.fullName}
-                        onChange={(e) => handleInputChange('fullName', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder={textData.placeholders?.fullName || 'Nhập họ và tên'}
-                      />
-                    ) : (
-                      <p className="text-gray-900 py-2 px-3 bg-gray-50 rounded-md">{formData.fullName || 'Chưa cập nhật'}</p>
-                    )}
-                  </div>
-
-                  {/* Gender */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {textData.fields?.gender || 'Giới tính'}
-                    </label>
-                    {isEditing ? (
-                      <select
-                        value={formData.isMale ? 'male' : 'female'}
-                        onChange={(e) => handleInputChange('isMale', e.target.value === 'male')}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="male">{textData.genderOptions?.male || 'Nam'}</option>
-                        <option value="female">{textData.genderOptions?.female || 'Nữ'}</option>
-                      </select>
-                    ) : (
-                      <p className="text-gray-900 py-2 px-3 bg-gray-50 rounded-md">
-                        {formData.isMale ? (textData.genderOptions?.male || 'Nam') : (textData.genderOptions?.female || 'Nữ')}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Email */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {textData.fields?.email || 'Email'} *
-                    </label>
-                    {isEditing ? (
-                      <input
-                        type="email"
-                        value={formData.email}
-                        onChange={(e) => handleInputChange('email', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder={textData.placeholders?.email || 'Nhập địa chỉ email'}
-                      />
-                    ) : (
-                      <p className="text-gray-900 py-2 px-3 bg-gray-50 rounded-md">{formData.email || 'Chưa cập nhật'}</p>
-                    )}
-                  </div>
-
-                  {/* Birth Date */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {textData.fields?.birthdate || 'Ngày sinh'}
-                    </label>
-                    {isEditing ? (
-                      <input
-                        type="date"
-                        value={formatDateForInput(formData.birthdate)}
-                        onChange={(e) => handleInputChange('birthdate', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    ) : (
-                      <p className="text-gray-900 py-2 px-3 bg-gray-50 rounded-md">{formatDate(formData.birthdate)}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-
-              {/* Work Information */}
-              <div className="border-t border-gray-200 pt-6">
-                <h4 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2-2v2m8 0H8m8 0v6.96" />
-                  </svg>
-                  {textData.sections?.workInfo || 'Thông tin công việc'}
-                </h4>
-                
-                <div className="space-y-6">
-                  {/* Hire Date */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {textData.fields?.hiredDate || 'Ngày vào làm'}
-                    </label>
-                    {isEditing ? (
-                      <input
-                        type="date"
-                        value={formatDateForInput(formData.hiredDate)}
-                        onChange={(e) => handleInputChange('hiredDate', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                    ) : (
-                      <p className="text-gray-900 py-2 px-3 bg-gray-50 rounded-md">{formatDate(formData.hiredDate)}</p>
-                    )}
-                  </div>
-
-                  {/* Employee Status */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {textData.fields?.employeeStatus || 'Trạng thái làm việc'}
-                    </label>
-                    {isEditing ? (
-                      <select
-                        value={formData.employeeStatus}
-                        onChange={(e) => handleInputChange('employeeStatus', e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="AVAILABLE">
-                          {textData.statusOptions?.AVAILABLE || 'Sẵn sàng'}
-                        </option>
-                        <option value="BUSY">
-                          {textData.statusOptions?.BUSY || 'Đang bận'}
-                        </option>
-                        <option value="UNAVAILABLE">
-                          {textData.statusOptions?.UNAVAILABLE || 'Không có sẵn'}
-                        </option>
-                        <option value="ON_LEAVE">
-                          {textData.statusOptions?.ON_LEAVE || 'Nghỉ phép'}
-                        </option>
-                      </select>
-                    ) : (
-                      <p className="text-gray-900 py-2 px-3 bg-gray-50 rounded-md">
-                        {textData.statusOptions?.[formData.employeeStatus as keyof typeof textData.statusOptions] || formData.employeeStatus}
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Rating */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      {textData.fields?.rating || 'Đánh giá'}
-                    </label>
-                    {isEditing ? (
-                      <select
-                        value={formData.rating || ''}
-                        onChange={(e) => handleInputChange('rating', e.target.value)}
-                        className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                      >
-                        <option value="">Chưa đánh giá</option>
-                        <option value="HIGHEST">
-                          {textData.ratingOptions?.HIGHEST || 'Xuất sắc'}
-                        </option>
-                        <option value="HIGH">
-                          {textData.ratingOptions?.HIGH || 'Tốt'}
-                        </option>
-                        <option value="MEDIUM">
-                          {textData.ratingOptions?.MEDIUM || 'Trung bình'}
-                        </option>
-                        <option value="LOW">
-                          {textData.ratingOptions?.LOW || 'Kém'}
-                        </option>
-                        <option value="LOWEST">
-                          {textData.ratingOptions?.LOWEST || 'Rất kém'}
-                        </option>
-                      </select>
-                    ) : (
-                      <p className="text-gray-900 py-2 px-3 bg-gray-50 rounded-md">
-                        {formData.rating ? 
-                          (textData.ratingOptions?.[formData.rating as keyof typeof textData.ratingOptions] || formData.rating) 
-                          : 'Chưa đánh giá'
-                        }
-                      </p>
-                    )}
-                  </div>
-
-                  {/* Skills */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {textData.fields?.skills || 'Kỹ năng'}
-                    </label>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={skillsInput}
-                        onChange={(e) => handleSkillsChange(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder={textData.placeholders?.skills || 'Nhập kỹ năng (phân cách bằng dấu phẩy)'}
-                      />
-                    ) : (
-                      <div className="py-2 px-3 bg-gray-50 rounded-md">
-                        {formData.skills.length > 0 ? (
-                          <div className="flex flex-wrap gap-2">
-                            {formData.skills.map((skill, index) => (
-                              <span
-                                key={index}
-                                className="px-2 py-1 bg-blue-100 text-blue-800 text-sm rounded-full"
-                              >
-                                {skill}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <p className="text-gray-500">Chưa có kỹ năng</p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Bio */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      {textData.fields?.bio || 'Giới thiệu bản thân'}
-                    </label>
-                    {isEditing ? (
-                      <textarea
-                        value={formData.bio}
-                        onChange={(e) => handleInputChange('bio', e.target.value)}
-                        rows={4}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder={textData.placeholders?.bio || 'Giới thiệu về kinh nghiệm và kỹ năng của bạn...'}
-                      />
-                    ) : (
-                      <p className="text-gray-900 py-2 px-3 bg-gray-50 rounded-md">{formData.bio || 'Chưa có giới thiệu'}</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Account Information - Read Only */}
-            <div className="mt-8 pt-8 border-t border-gray-200">
-              <h4 className="text-lg font-medium text-gray-900 mb-6 flex items-center">
-                <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                Thông tin tài khoản
-              </h4>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h5 className="text-sm font-medium text-gray-500 mb-1">Tên đăng nhập</h5>
-                  <p className="text-gray-900">{formData.username || 'Chưa có thông tin'}</p>
-                </div>
-                
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h5 className="text-sm font-medium text-gray-500 mb-1">Số điện thoại</h5>
-                  <div className="flex items-center">
-                    <p className="text-gray-900">{formData.phoneNumber || 'Chưa có thông tin'}</p>
-                    {formData.isPhoneVerified && (
-                      <svg className="w-4 h-4 ml-1 text-green-500" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                      </svg>
-                    )}
-                  </div>
-                </div>
-                
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h5 className="text-sm font-medium text-gray-500 mb-1">Trạng thái tài khoản</h5>
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(formData.accountStatus)}`}>
-                    {formData.accountStatus === 'ACTIVE' ? 'Hoạt động' : 
-                     formData.accountStatus === 'INACTIVE' ? 'Không hoạt động' : 
-                     formData.accountStatus === 'SUSPENDED' ? 'Tạm khóa' : formData.accountStatus}
-                  </span>
-                </div>
-                
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h5 className="text-sm font-medium text-gray-500 mb-1">Lần đăng nhập cuối</h5>
-                  <p className="text-gray-900 text-sm">{formatDateTime(formData.lastLogin)}</p>
-                </div>
-                
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h5 className="text-sm font-medium text-gray-500 mb-1">Ngày tạo tài khoản</h5>
-                  <p className="text-gray-900 text-sm">{formatDateTime(formData.createdAt)}</p>
-                </div>
-                
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h5 className="text-sm font-medium text-gray-500 mb-1">Cập nhật lần cuối</h5>
-                  <p className="text-gray-900 text-sm">{formatDateTime(formData.updatedAt)}</p>
-                </div>
-                
-                <div className="bg-gray-50 p-4 rounded-lg md:col-span-2">
-                  <h5 className="text-sm font-medium text-gray-500 mb-2">Quyền hạn</h5>
-                  <div className="flex flex-wrap gap-1">
-                    {formData.roles.length > 0 ? (
-                      formData.roles.map((role, index) => (
-                        <span key={index} className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800">
-                          {role.roleName}
-                        </span>
-                      ))
-                    ) : (
-                      <span className="text-gray-500 text-sm">Chưa có quyền hạn</span>
-                    )}
-                  </div>
-                </div>
-              </div>
+            <div className="ml-3">
+              <p className="text-sm font-medium text-status-success">
+                Cập nhật thông tin thành công!
+              </p>
             </div>
           </div>
         </div>
+      )}
+
+      {/* Error Message */}
+      {error && (
+        <div className="mb-6 bg-status-danger/10 border border-status-danger/20 rounded-2xl p-4">
+          <div className="flex items-center">
+            <div className="flex-shrink-0">
+              <X className="h-5 w-5 text-status-danger" />
+            </div>
+            <div className="ml-3 flex-1">
+              <p className="text-sm font-medium text-status-danger">{error}</p>
+            </div>
+            <div className="ml-3">
+              <button
+                type="button"
+                onClick={clearError}
+                className="bg-status-danger/10 text-status-danger p-1.5 rounded-lg hover:bg-status-danger/20 transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Profile Card */}
+        <div className="lg:col-span-1">
+          <SectionCard
+            title="Ảnh đại diện"
+            description="Cập nhật ảnh đại diện của bạn"
+          >
+            <div className="flex flex-col items-center space-y-6">
+              <div className="relative">
+                {previewUrl ? (
+                  <img
+                    src={previewUrl}
+                    alt={formData.fullName}
+                    className="h-32 w-32 rounded-3xl object-cover border-4 border-white shadow-lg"
+                  />
+                ) : (
+                  <div className="h-32 w-32 rounded-3xl bg-gradient-to-br from-brand-teal to-brand-navy flex items-center justify-center border-4 border-white shadow-lg">
+                    <span className="text-white font-bold text-4xl">
+                      {formData.fullName ? formData.fullName.charAt(0).toUpperCase() : 'E'}
+                    </span>
+                  </div>
+                )}
+              </div>
+              
+              <div className="text-center">
+                <h3 className="text-xl font-semibold text-brand-navy">
+                  {formData.fullName || 'Chưa có tên'}
+                </h3>
+                <p className="text-brand-text/70">{formData.email}</p>
+                {formData.employeeStatus && (
+                  <div className="mt-3">
+                    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border ${getStatusColor(formData.employeeStatus)}`}>
+                      <Briefcase className="h-3 w-3" />
+                      {getStatusText(formData.employeeStatus)}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </SectionCard>
+        </div>
+
+        {/* Personal Information */}
+        <div className="lg:col-span-2">
+          <SectionCard
+            title="Thông tin cá nhân"
+            description="Cập nhật thông tin cá nhân của bạn"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Full Name */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  Họ và tên <span className="text-status-danger">*</span>
+                </label>
+                <input
+                  type="text"
+                  name="fullName"
+                  value={formData.fullName || ''}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className={`block w-full px-4 py-3 rounded-2xl border-0 transition-all duration-200 ${
+                    isEditing 
+                      ? 'bg-brand-background shadow-sm ring-1 ring-brand-outline/30 focus:ring-2 focus:ring-brand-teal focus:bg-white' 
+                      : 'bg-brand-outline/10 text-brand-text/90'
+                  }`}
+                  required
+                />
+              </div>
+
+              {/* Email */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  Email <span className="text-status-danger">*</span>
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email || ''}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className={`block w-full px-4 py-3 rounded-2xl border-0 transition-all duration-200 ${
+                    isEditing 
+                      ? 'bg-brand-background shadow-sm ring-1 ring-brand-outline/30 focus:ring-2 focus:ring-brand-teal focus:bg-white' 
+                      : 'bg-brand-outline/10 text-brand-text/90'
+                  }`}
+                  required
+                />
+              </div>
+
+              {/* Phone Number */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  Số điện thoại
+                </label>
+                <input
+                  type="tel"
+                  value={formData.phoneNumber || ''}
+                  disabled={true}
+                  className="block w-full px-4 py-3 rounded-2xl border-0 bg-brand-outline/10 text-brand-text/90"
+                />
+              </div>
+
+              {/* Gender */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  Giới tính
+                </label>
+                <select
+                  name="isMale"
+                  value={formData.isMale?.toString() || 'true'}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className={`block w-full px-4 py-3 rounded-2xl border-0 transition-all duration-200 ${
+                    isEditing 
+                      ? 'bg-brand-background shadow-sm ring-1 ring-brand-outline/30 focus:ring-2 focus:ring-brand-teal focus:bg-white' 
+                      : 'bg-brand-outline/10 text-brand-text/90'
+                  }`}
+                >
+                  <option value="true">Nam</option>
+                  <option value="false">Nữ</option>
+                </select>
+              </div>
+
+              {/* Birthdate */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  Ngày sinh
+                </label>
+                <input
+                  type="date"
+                  name="birthdate"
+                  value={formatDate(formData.birthdate)}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className={`block w-full px-4 py-3 rounded-2xl border-0 transition-all duration-200 ${
+                    isEditing 
+                      ? 'bg-brand-background shadow-sm ring-1 ring-brand-outline/30 focus:ring-2 focus:ring-brand-teal focus:bg-white' 
+                      : 'bg-brand-outline/10 text-brand-text/90'
+                  }`}
+                />
+              </div>
+
+              {/* Hired Date */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  Ngày vào làm
+                </label>
+                <input
+                  type="date"
+                  name="hiredDate"
+                  value={formatDate(formData.hiredDate)}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  className={`block w-full px-4 py-3 rounded-2xl border-0 transition-all duration-200 ${
+                    isEditing 
+                      ? 'bg-brand-background shadow-sm ring-1 ring-brand-outline/30 focus:ring-2 focus:ring-brand-teal focus:bg-white' 
+                      : 'bg-brand-outline/10 text-brand-text/90'
+                  }`}
+                />
+              </div>
+            </div>
+          </SectionCard>
+        </div>
+
+        {/* Skills & Bio Section */}
+        <div className="lg:col-span-3">
+          <SectionCard
+            title="Kỹ năng & Giới thiệu"
+            description="Thông tin về kỹ năng và mô tả công việc"
+          >
+            <div className="grid grid-cols-1 gap-6">
+              {/* Skills */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  Kỹ năng
+                </label>
+                {isEditing ? (
+                  <input
+                    type="text"
+                    value={skillsInput}
+                    onChange={(e) => handleSkillsChange(e.target.value)}
+                    placeholder="Nhập kỹ năng, cách nhau bởi dấu phẩy (VD: Dọn dẹp, Nấu ăn, Chăm sóc)"
+                    className="block w-full px-4 py-3 rounded-2xl border-0 bg-brand-background shadow-sm ring-1 ring-brand-outline/30 focus:ring-2 focus:ring-brand-teal focus:bg-white transition-all duration-200"
+                  />
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.skills && formData.skills.length > 0 ? (
+                      formData.skills.map((skill, index) => (
+                        <span
+                          key={index}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium bg-brand-teal/10 text-brand-teal border border-brand-teal/20"
+                        >
+                          <Award className="h-3.5 w-3.5" />
+                          {skill}
+                        </span>
+                      ))
+                    ) : (
+                      <p className="text-brand-text/50 italic">Chưa có kỹ năng</p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Bio */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-brand-text/80">
+                  Giới thiệu bản thân
+                </label>
+                <textarea
+                  name="bio"
+                  value={formData.bio || ''}
+                  onChange={handleInputChange}
+                  disabled={!isEditing}
+                  rows={4}
+                  placeholder="Mô tả kinh nghiệm và điểm mạnh của bạn..."
+                  className={`block w-full px-4 py-3 rounded-2xl border-0 transition-all duration-200 resize-none ${
+                    isEditing 
+                      ? 'bg-brand-background shadow-sm ring-1 ring-brand-outline/30 focus:ring-2 focus:ring-brand-teal focus:bg-white' 
+                      : 'bg-brand-outline/10 text-brand-text/90'
+                  }`}
+                />
+              </div>
+            </div>
+          </SectionCard>
+        </div>
+
+        {/* Working Zones */}
+        {formData.workingZones && formData.workingZones.length > 0 && (
+          <div className="lg:col-span-3">
+            <SectionCard
+              title="Khu vực làm việc"
+              description="Các khu vực bạn có thể phục vụ"
+            >
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {formData.workingZones.map((zone, index) => (
+                  <div
+                    key={index}
+                    className="relative p-4 rounded-2xl border-2 border-brand-outline/20 bg-white hover:border-brand-teal/40 transition-all duration-200"
+                  >
+                    <div className="flex items-start gap-3">
+                      <div className="flex-shrink-0 mt-1">
+                        <div className="p-2 bg-brand-teal/10 rounded-xl">
+                          <MapPin className="h-5 w-5 text-brand-teal" />
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="space-y-1">
+                          <p className="text-xs text-brand-text/60">
+                            <span className="font-medium">Phường/Xã:</span> {zone.ward}
+                          </p>
+                          <p className="text-xs text-brand-text/60">
+                            <span className="font-medium">Thành phố:</span> {zone.city}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </SectionCard>
+          </div>
+        )}
+
+        {/* Account Security */}
+        <div className="lg:col-span-3">
+          <SectionCard
+            title="Bảo mật tài khoản"
+            description="Quản lý mật khẩu và bảo mật"
+          >
+            <div className="pt-2">
+              <button
+                onClick={() => setShowChangePasswordModal(true)}
+                className="inline-flex items-center gap-2 px-6 py-3 bg-brand-teal text-white rounded-2xl hover:bg-brand-teal/90 transition-all duration-200 shadow-sm hover:shadow-md"
+              >
+                <Lock className="h-4 w-4" />
+                Đổi mật khẩu
+              </button>
+            </div>
+          </SectionCard>
+        </div>
       </div>
-    </div>
+    </DashboardLayout>
+    
+    {/* Change Password Modal */}
+    {showChangePasswordModal && ReactDOM.createPortal(
+      <div 
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        onClick={(e) => {
+          if (e.target === e.currentTarget) handleCancelPasswordChange();
+        }}
+      >
+        <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg my-auto max-h-[90vh] flex flex-col overflow-hidden">
+          {/* Modal Header */}
+          <div className="bg-gradient-to-r from-brand-teal to-brand-navy px-6 py-4 rounded-t-3xl flex-shrink-0">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
+                  <Lock className="h-5 w-5 text-white" />
+                </div>
+                <h2 className="text-lg font-bold text-white">
+                  {passwordTextData.title || 'Đổi mật khẩu'}
+                </h2>
+              </div>
+              <button
+                onClick={handleCancelPasswordChange}
+                className="p-1.5 hover:bg-white/20 rounded-xl transition-colors"
+              >
+                <X className="h-5 w-5 text-white" />
+              </button>
+            </div>
+          </div>
+
+          {/* Modal Body */}
+          <div className="px-6 py-5 overflow-y-auto flex-1 scrollbar-thin rounded-b-3xl">
+            {passwordSuccess ? (
+              <div className="text-center py-8">
+                <div className="mx-auto w-20 h-20 bg-gradient-to-br from-status-success/20 to-status-success/10 rounded-full flex items-center justify-center mb-4 animate-in zoom-in duration-300">
+                  <CheckCircle className="w-12 h-12 text-status-success" />
+                </div>
+                <h3 className="text-2xl font-bold text-brand-text mb-2">
+                  {passwordTextData.messages?.success || 'Đổi mật khẩu thành công'}
+                </h3>
+                <p className="text-brand-text/60">
+                  {passwordTextData.messages?.sessionEnded || 'Phiên làm việc đã kết thúc. Vui lòng đăng nhập lại.'}
+                </p>
+              </div>
+            ) : (
+              <form onSubmit={handlePasswordSubmit} className="space-y-4">
+                {passwordError && (
+                  <div className="bg-status-danger/10 border border-status-danger/30 rounded-2xl p-4 flex items-start gap-3 animate-in slide-in-from-top duration-200">
+                    <div className="p-1 bg-status-danger/10 rounded-lg">
+                      <XCircle className="w-5 h-5 text-status-danger" />
+                    </div>
+                    <p className="text-sm text-status-danger font-medium flex-1">{passwordError}</p>
+                  </div>
+                )}
+
+                {/* Current Password */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-brand-text">
+                    {passwordTextData.labels?.currentPassword || 'Mật khẩu hiện tại'}
+                    <span className="text-status-danger ml-1">*</span>
+                  </label>
+                  <div className="relative group">
+                    <input
+                      type={showPasswords.current ? 'text' : 'password'}
+                      name="currentPassword"
+                      value={passwordData.currentPassword}
+                      onChange={handlePasswordChange}
+                      placeholder={passwordTextData.labels?.currentPasswordPlaceholder || 'Nhập mật khẩu hiện tại'}
+                      className="w-full px-4 py-3 pr-12 rounded-xl border-0 bg-gray-50 shadow-sm ring-1 ring-gray-200 focus:ring-2 focus:ring-brand-teal focus:bg-white transition-all duration-200 placeholder:text-gray-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => togglePasswordVisibility('current')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-brand-teal hover:bg-brand-teal/10 rounded-lg transition-all duration-200"
+                    >
+                      {showPasswords.current ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* New Password */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-brand-text">
+                    {passwordTextData.labels?.newPassword || 'Mật khẩu mới'}
+                    <span className="text-status-danger ml-1">*</span>
+                  </label>
+                  <div className="relative group">
+                    <input
+                      type={showPasswords.new ? 'text' : 'password'}
+                      name="newPassword"
+                      value={passwordData.newPassword}
+                      onChange={handlePasswordChange}
+                      placeholder={passwordTextData.labels?.newPasswordPlaceholder || 'Nhập mật khẩu mới (tối thiểu 6 ký tự)'}
+                      className="w-full px-4 py-3 pr-12 rounded-xl border-0 bg-gray-50 shadow-sm ring-1 ring-gray-200 focus:ring-2 focus:ring-brand-teal focus:bg-white transition-all duration-200 placeholder:text-gray-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => togglePasswordVisibility('new')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-brand-teal hover:bg-brand-teal/10 rounded-lg transition-all duration-200"
+                    >
+                      {showPasswords.new ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-gray-500 flex items-center gap-1.5">
+                    <span className="w-1 h-1 bg-gray-400 rounded-full"></span>
+                    {passwordTextData.hints?.passwordRequirements || 'Mật khẩu phải có từ 6-50 ký tự'}
+                  </p>
+                </div>
+
+                {/* Confirm Password */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-brand-text">
+                    {passwordTextData.labels?.confirmPassword || 'Xác nhận mật khẩu mới'}
+                    <span className="text-status-danger ml-1">*</span>
+                  </label>
+                  <div className="relative group">
+                    <input
+                      type={showPasswords.confirm ? 'text' : 'password'}
+                      name="confirmPassword"
+                      value={passwordData.confirmPassword}
+                      onChange={handlePasswordChange}
+                      placeholder={passwordTextData.labels?.confirmPasswordPlaceholder || 'Nhập lại mật khẩu mới'}
+                      className="w-full px-4 py-3 pr-12 rounded-xl border-0 bg-gray-50 shadow-sm ring-1 ring-gray-200 focus:ring-2 focus:ring-brand-teal focus:bg-white transition-all duration-200 placeholder:text-gray-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => togglePasswordVisibility('confirm')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-gray-400 hover:text-brand-teal hover:bg-brand-teal/10 rounded-lg transition-all duration-200"
+                    >
+                      {showPasswords.confirm ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Security Tip */}
+                <div className="bg-gradient-to-r from-brand-teal/10 to-brand-navy/10 border border-brand-teal/30 rounded-xl p-3.5">
+                  <div className="flex items-start gap-2.5">
+                    <div className="p-1.5 bg-brand-teal/20 rounded-lg">
+                      <Shield className="w-4 h-4 text-brand-teal" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-medium text-brand-teal mb-0.5">Lời khuyên bảo mật</p>
+                      <p className="text-xs text-brand-text/70">
+                        {passwordTextData.hints?.securityTip || 'Sử dụng mật khẩu mạnh với chữ hoa, chữ thường, số và ký tự đặc biệt'}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-3 pt-1">
+                  <button
+                    type="submit"
+                    disabled={passwordLoading}
+                    className="flex-1 bg-gradient-to-r from-brand-teal to-brand-navy text-white py-3 rounded-xl hover:shadow-lg transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed font-semibold disabled:hover:shadow-none"
+                  >
+                    {passwordLoading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                        </svg>
+                        Đang xử lý...
+                      </span>
+                    ) : (
+                      passwordTextData.actions?.submit || 'Đổi mật khẩu'
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleCancelPasswordChange}
+                    disabled={passwordLoading}
+                    className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl hover:bg-gray-200 transition-all duration-200 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {passwordTextData.actions?.cancel || 'Hủy'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      </div>,
+      document.body
+    )}
+    </>
   );
-});
+};
 
 export default EmployeeProfile;
