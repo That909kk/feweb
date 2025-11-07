@@ -91,7 +91,8 @@ const BookingSuccessPage: React.FC = () => {
     };
 
     createConversation();
-  }, [bookingData.assignedEmployees, user?.customerId, conversationId, isCreatingConversation]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [bookingData.assignedEmployees, user?.customerId]);
 
   // Lấy trạng thái tiếng Việt và accent color
   const vietnameseStatus = getBookingStatusInVietnamese(bookingData.status);
