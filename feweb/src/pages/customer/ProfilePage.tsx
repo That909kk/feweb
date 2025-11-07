@@ -597,43 +597,28 @@ const ProfilePage: React.FC = () => {
               title="Địa chỉ của tôi"
               description="Danh sách địa chỉ đã lưu"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {formData.addresses.map((address) => (
+              <div className="grid grid-cols-1 gap-4">
+                {formData.addresses.filter(address => address.isDefault).map((address) => (
                   <div
                     key={address.addressId}
-                    className={`relative p-4 pt-5 rounded-2xl border-2 transition-all duration-200 ${
-                      address.isDefault
-                        ? 'border-brand-teal bg-brand-teal/5'
-                        : 'border-brand-outline/20 bg-white hover:border-brand-teal/40'
-                    }`}
+                    className="relative p-5 rounded-2xl border-2 border-brand-teal bg-brand-teal/5 transition-all duration-200"
                   >
-                    {address.isDefault && (
-                      <div className="absolute top-2 right-2">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-white bg-brand-teal rounded-lg shadow-sm">
-                          <Star className="h-3 w-3 fill-current" />
-                          Mặc định
-                        </span>
-                      </div>
-                    )}
-                    <div className="flex items-start gap-3">
+                    <div className="flex items-start gap-4">
                       <div className="flex-shrink-0 mt-1">
-                        <div className="p-2 bg-brand-teal/10 rounded-xl">
-                          <MapPin className="h-5 w-5 text-brand-teal" />
+                        <div className="p-3 bg-brand-teal/10 rounded-xl">
+                          <MapPin className="h-6 w-6 text-brand-teal" />
                         </div>
                       </div>
-                      <div className="flex-1 min-w-0 pr-20">
-                        <p className="text-sm font-medium text-brand-text mb-2 line-clamp-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-base font-medium text-brand-text mb-3">
                           {address.fullAddress}
                         </p>
-                        <div className="space-y-1">
-                          <p className="text-xs text-brand-text/60">
+                        <div className="space-y-2">
+                          <p className="text-sm text-brand-text/70">
                             <span className="font-medium">Phường/Xã:</span> {address.ward}
                           </p>
-                          <p className="text-xs text-brand-text/60">
+                          <p className="text-sm text-brand-text/70">
                             <span className="font-medium">Thành phố:</span> {address.city}
-                          </p>
-                          <p className="text-xs text-brand-text/50">
-                            {address.latitude.toFixed(6)}, {address.longitude.toFixed(6)}
                           </p>
                         </div>
                       </div>
