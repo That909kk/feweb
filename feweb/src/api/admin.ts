@@ -679,3 +679,84 @@ export const updateBookingStatusApi = async (
   }
 };
 
+/**
+ * =========================================
+ * STATISTICS
+ * =========================================
+ */
+
+export interface RevenueStatistics {
+  period: string;
+  startDate: string;
+  endDate: string;
+  totalRevenue: number;
+  totalBookings: number;
+  averageRevenuePerBooking: number;
+  maxBookingAmount: number;
+  minBookingAmount: number;
+}
+
+export interface ServiceStatistic {
+  serviceId: string;
+  serviceName: string;
+  bookingCount: number;
+  percentage: number;
+  rank: number;
+}
+
+export interface ServiceBookingStatistics {
+  period: string;
+  startDate: string;
+  endDate: string;
+  totalBookings: number;
+  serviceStatistics: ServiceStatistic[];
+}
+
+export interface StatisticsParams {
+  period?: 'DAY' | 'WEEK' | 'MONTH' | 'QUARTER' | 'YEAR';
+  startDate?: string; // yyyy-MM-dd
+  endDate?: string;   // yyyy-MM-dd
+}
+
+/**
+ * Get revenue statistics
+ * Endpoint: GET /api/v1/admin/statistics/revenue
+ */
+export const getRevenueStatisticsApi = async (
+  params?: StatisticsParams
+): Promise<ApiResponse<RevenueStatistics>> => {
+  try {
+    console.log('[API] Fetching revenue statistics:', params);
+    const response = await api.get<ApiResponse<RevenueStatistics>>(
+      '/admin/statistics/revenue',
+      { params }
+    );
+    console.log('[API] Revenue statistics fetched:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('[API] Error fetching revenue statistics:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get service booking statistics
+ * Endpoint: GET /api/v1/admin/statistics/service-bookings
+ */
+export const getServiceBookingStatisticsApi = async (
+  params?: StatisticsParams
+): Promise<ApiResponse<ServiceBookingStatistics>> => {
+  try {
+    console.log('[API] Fetching service booking statistics:', params);
+    const response = await api.get<ApiResponse<ServiceBookingStatistics>>(
+      '/admin/statistics/service-bookings',
+      { params }
+    );
+    console.log('[API] Service booking statistics fetched:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('[API] Error fetching service booking statistics:', error);
+    throw error;
+  }
+};
+

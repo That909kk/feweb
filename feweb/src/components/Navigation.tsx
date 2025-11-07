@@ -138,6 +138,12 @@ const navigationConfig: Record<UserRole, NavItemConfig[]> = {
       icon: BarChart3
     },
     {
+      to: '/admin/statistics',
+      label: 'Thống kê',
+      description: 'Báo cáo & phân tích',
+      icon: BarChart3
+    },
+    {
       to: '/admin/users',
       label: 'Người dùng',
       description: 'Quản lý tài khoản',

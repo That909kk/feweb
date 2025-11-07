@@ -36,6 +36,7 @@ import {
   AdminPermissionManagement
 } from './pages/admin';
 import BookingVerification from './pages/admin/BookingVerification';
+import AdminStatistics from './pages/admin/Statistics';
 
 import './App.css';
 
@@ -125,6 +126,11 @@ function App() {
             <Route path="/admin/dashboard" element={
               <ProtectedRoute requiredRole="ADMIN">
                 <AdminDashboard />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/statistics" element={
+              <ProtectedRoute requiredRole="ADMIN">
+                <AdminStatistics />
               </ProtectedRoute>
             } />
             <Route path="/admin/users" element={
