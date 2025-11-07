@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import ReactDOM from 'react-dom';
-import { Edit3, Save, X, Upload, Shield, Lock, Eye, EyeOff, CheckCircle, XCircle, MapPin, Star } from 'lucide-react';
+import { Edit3, Save, X, Upload, Shield, Lock, Eye, EyeOff, CheckCircle, XCircle, MapPin } from 'lucide-react';
 import { DashboardLayout } from '../../layouts';
 import { SectionCard } from '../../shared/components';
 import { useCustomer } from '../../hooks';
