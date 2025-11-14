@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ChevronDown,
@@ -37,6 +37,8 @@ const roleLabels: Record<UserRole, string> = {
   ADMIN: 'Quản trị'
 };
 
+const SIDEBAR_STORAGE_KEY = 'homemate-sidebar-collapsed';
+
 const AppShell: React.FC<AppShellProps> = ({
   role,
   title,
@@ -47,7 +49,17 @@ const AppShell: React.FC<AppShellProps> = ({
 }) => {
   const { user, availableRoles, selectedRole, selectRole, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(true);
+  
+  // Lấy trạng thái menu từ localStorage, mặc định là false (mở rộng)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    const saved = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+    return saved !== null ? saved === 'true' : false;
+  });
+
+  // Lưu trạng thái menu vào localStorage khi thay đổi
+  useEffect(() => {
+    localStorage.setItem(SIDEBAR_STORAGE_KEY, String(sidebarCollapsed));
+  }, [sidebarCollapsed]);
 
   const badge = roleBadges[role];
 
@@ -108,7 +120,7 @@ const AppShell: React.FC<AppShellProps> = ({
             className="fixed inset-0 bg-brand-text/40 backdrop-blur-sm"
             onClick={() => setSidebarOpen(false)}
           />
-          <div className="relative ml-auto h-full w-80 bg-brand-surface shadow-elevation-md">
+          <div className="relative h-full w-80 bg-brand-surface shadow-elevation-md">
             <Navigation role={role} onNavigate={() => setSidebarOpen(false)} />
           </div>
         </div>

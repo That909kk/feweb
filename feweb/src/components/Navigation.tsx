@@ -216,7 +216,7 @@ const Navigation: React.FC<NavigationProps> = ({ role, collapsed, onNavigate }) 
           <Link
             key={item.to}
             to={item.to}
-            onClick={onNavigate}
+            onClick={onNavigate ? () => onNavigate() : undefined}
             className={[
               'group flex w-full items-center gap-3 rounded-2xl border px-4 py-3 transition-all duration-200',
               collapsed ? 'justify-center' : 'items-start',
@@ -251,7 +251,7 @@ const Navigation: React.FC<NavigationProps> = ({ role, collapsed, onNavigate }) 
           </Link>
         );
       }),
-    [collapsed, navItems]
+    [collapsed, navItems, onNavigate, isActive]
   );
 
   return (
@@ -279,7 +279,7 @@ const Navigation: React.FC<NavigationProps> = ({ role, collapsed, onNavigate }) 
           {quickAction && !collapsed && (
             <Link
               to={quickAction.to}
-              onClick={onNavigate}
+              onClick={onNavigate ? () => onNavigate() : undefined}
               className="flex items-center gap-3 rounded-3xl bg-brand-navy px-4 py-4 text-white shadow-elevation-sm transition hover:-translate-y-0.5 hover:bg-brand-navyHover"
             >
               <quickAction.icon className="h-5 w-5 text-white/90" />
@@ -294,7 +294,7 @@ const Navigation: React.FC<NavigationProps> = ({ role, collapsed, onNavigate }) 
           {quickAction && collapsed && (
             <Link
               to={quickAction.to}
-              onClick={onNavigate}
+              onClick={onNavigate ? () => onNavigate() : undefined}
               className="flex items-center justify-center rounded-full bg-brand-navy p-3 text-white shadow-elevation-sm transition hover:-translate-y-0.5 hover:bg-brand-navyHover"
               title={quickAction.label}
             >
