@@ -10,9 +10,10 @@ import type { ApiResponse } from './client';
 export interface Notification {
   notificationId: string;
   accountId: string;
+  targetRole?: 'CUSTOMER' | 'EMPLOYEE' | 'ADMIN';  // Role this notification is intended for
   type: 'BOOKING_CREATED' | 'BOOKING_CONFIRMED' | 'BOOKING_CANCELLED' | 'BOOKING_COMPLETED' | 
         'ASSIGNMENT_CREATED' | 'ASSIGNMENT_CANCELLED' | 'PAYMENT_SUCCESS' | 'PAYMENT_FAILED' | 
-        'REVIEW_RECEIVED' | 'SYSTEM_ANNOUNCEMENT';
+        'REVIEW_RECEIVED' | 'SYSTEM_ANNOUNCEMENT' | 'BOOKING_VERIFIED';
   title: string;
   message: string;
   relatedId: string | null;
@@ -44,9 +45,7 @@ export interface NotificationListResponse {
 
 export interface UnreadCountResponse {
   success: boolean;
-  data: {
-    unreadCount: number;
-  };
+  count: number;  // Backend trả về count trực tiếp, không phải data.unreadCount
 }
 
 /**

@@ -10,3 +10,4 @@ export * from './useRegister';
 export * from './useCustomer';
 export * from './useEmployeeProfile';
 export * from './useAddress';
+export * from './useWebSocketNotifications';

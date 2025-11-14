@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { Bell, X, CheckCheck, Trash2, Loader2 } from 'lucide-react';
 import { 
   getNotificationsApi, 
@@ -9,26 +9,64 @@ import {
   type Notification,
   type NotificationListParams
 } from '../api/notification';
+import { useAuth } from '../contexts/AuthContext';
+import { useWebSocketNotifications } from '../hooks/useWebSocketNotifications';
+import type { UserRole, NotificationWebSocketDTO } from '../services/notificationWebSocket';
+import { NotificationToastContainer } from './NotificationToast';
 
 interface NotificationBellProps {
   className?: string;
 }
 
 const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) => {
+  const { user } = useAuth();
   const [unreadCount, setUnreadCount] = useState<number>(0);
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
+  const [toastNotifications, setToastNotifications] = useState<NotificationWebSocketDTO[]>([]);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Determine current role from user
+  const currentRole: UserRole | null = user?.role as UserRole || null;
+  
+  // Show toast for new notifications
+  const showNotificationToast = useCallback((notification: NotificationWebSocketDTO) => {
+    console.log('[NotificationBell] New notification toast:', notification.title);
+    
+    // Add to toast notifications
+    setToastNotifications(prev => [...prev, notification]);
+    
+    // Update the unread count and reload notifications list
+    loadUnreadCount();
+    
+    // If dropdown is open, reload notifications
+    if (isOpen) {
+      loadNotifications(0);
+    }
+  }, [isOpen]);
+
+  // Remove toast notification
+  const removeToastNotification = useCallback((notificationId: string) => {
+    setToastNotifications(prev => prev.filter(n => n.notificationId !== notificationId));
+  }, []);
+
+  // WebSocket notifications (role-based)
+  const { connected: wsConnected } = useWebSocketNotifications({
+    accountId: user?.id,
+    role: currentRole,
+    enabled: !!user?.id && !!currentRole,
+    onNotification: showNotificationToast
+  });
 
   // Load unread count
   const loadUnreadCount = async () => {
     try {
       const response = await getUnreadNotificationCountApi();
-      if (response.success && response.data) {
-        setUnreadCount(response.data.unreadCount);
+      if (response.success) {
+        setUnreadCount(response.count);
       }
     } catch (error) {
       console.error('Error loading unread count:', error);
@@ -196,6 +234,11 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) =
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
+        {/* WebSocket Status Indicator */}
+        {wsConnected && (
+          <span className="absolute bottom-1 right-1 w-2 h-2 bg-green-500 rounded-full border border-white" 
+                title="Real-time notifications active" />
+        )}
       </button>
 
       {/* Notification Dropdown */}
@@ -310,6 +353,12 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) =
           </div>
         </div>
       )}
+      
+      {/* Toast Notifications */}
+      <NotificationToastContainer 
+        notifications={toastNotifications}
+        onRemove={removeToastNotification}
+      />
     </div>
   );
 };

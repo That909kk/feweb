@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import {
   CalendarClock,
@@ -18,6 +18,9 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useServices } from '../../hooks/useServices';
 import { useBooking } from '../../hooks/useBooking';
 import { MetricCard, SectionCard } from '../../shared/components';
+import { useWebSocketNotifications } from '../../hooks/useWebSocketNotifications';
+import { NotificationToastContainer } from '../../components/NotificationToast';
+import type { NotificationWebSocketDTO } from '../../services/notificationWebSocket';
 
 type CustomerBooking = {
   bookingId: string;
@@ -92,6 +95,33 @@ const CustomerDashboard: React.FC = () => {
   const { getCustomerBookings } = useBooking();
   const [recentBookings, setRecentBookings] = useState<CustomerBooking[]>([]);
   const [isLoadingBookings, setIsLoadingBookings] = useState(false);
+  const [toastNotifications, setToastNotifications] = useState<NotificationWebSocketDTO[]>([]);
+
+  // Handle WebSocket notifications
+  const handleNewNotification = useCallback((notification: NotificationWebSocketDTO) => {
+    console.log('[CustomerDashboard] New notification received:', notification);
+    
+    // Add to toast notifications
+    setToastNotifications(prev => [...prev, notification]);
+    
+    // Reload bookings if notification is related to bookings
+    if (notification.relatedType === 'BOOKING') {
+      loadRecentBookings();
+    }
+  }, []);
+
+  // Remove toast notification
+  const removeToastNotification = useCallback((notificationId: string) => {
+    setToastNotifications(prev => prev.filter(n => n.notificationId !== notificationId));
+  }, []);
+
+  // WebSocket notifications for CUSTOMER role
+  useWebSocketNotifications({
+    accountId: user?.id,
+    role: 'CUSTOMER',
+    enabled: !!user?.id,
+    onNotification: handleNewNotification
+  });
 
   const firstName = useMemo(() => {
     if (!user?.fullName) return 'Khách hàng';
@@ -124,41 +154,39 @@ const CustomerDashboard: React.FC = () => {
 
   const featuredServices = useMemo(() => services.slice(0, 4), [services]);
 
-  useEffect(() => {
-    const loadRecentBookings = async () => {
-      if (!user?.id) {
-        setRecentBookings([]);
-        return;
-      }
+  const loadRecentBookings = useCallback(async () => {
+    if (!user?.id) {
+      setRecentBookings([]);
+      return;
+    }
 
-      setIsLoadingBookings(true);
-      try {
-        const response = await getCustomerBookings(user.id);
-        // Handle paginated response with content array
-        if (response && typeof response === 'object' && 'content' in response) {
-          const content = (response as any).content;
-          if (Array.isArray(content)) {
-            setRecentBookings(content as CustomerBooking[]);
-          } else {
-            setRecentBookings([]);
-          }
-        } else if (Array.isArray(response)) {
-          setRecentBookings(response as CustomerBooking[]);
+    setIsLoadingBookings(true);
+    try {
+      const response = await getCustomerBookings(user.id);
+      // Handle paginated response with content array
+      if (response && typeof response === 'object' && 'content' in response) {
+        const content = (response as any).content;
+        if (Array.isArray(content)) {
+          setRecentBookings(content as CustomerBooking[]);
         } else {
           setRecentBookings([]);
         }
-      } catch (error) {
-        console.error('Load customer bookings error:', error);
+      } else if (Array.isArray(response)) {
+        setRecentBookings(response as CustomerBooking[]);
+      } else {
         setRecentBookings([]);
-      } finally {
-        setIsLoadingBookings(false);
       }
-    };
+    } catch (error) {
+      console.error('Load customer bookings error:', error);
+      setRecentBookings([]);
+    } finally {
+      setIsLoadingBookings(false);
+    }
+  }, [user?.id, getCustomerBookings]);
 
+  useEffect(() => {
     loadRecentBookings();
-    // getCustomerBookings is stable (wrapped in useCallback with [])
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
+  }, [loadRecentBookings]);
 
   const renderStatusBadge = (status: string) => {
     const badgeClass = statusBadgeMap[status] || statusBadgeMap.default;
@@ -210,6 +238,13 @@ const CustomerDashboard: React.FC = () => {
       </div>
 
       <div className="grid gap-6 lg:grid-cols-3">
+        <MetricCard
+          icon={Sparkles}
+          label="Đang chờ xử lý"
+          value={`${metrics.awaiting}`}
+          accent="secondary"
+          trendLabel="Ưu tiên xử lý trong hôm nay."
+        />
         <SectionCard
           title="Đơn sắp diễn ra"
           description="Theo dõi các dịch vụ sẽ diễn ra trong vài ngày tới."
@@ -354,6 +389,12 @@ const CustomerDashboard: React.FC = () => {
           </div>
         )}
       </SectionCard>
+      
+      {/* Toast Notifications */}
+      <NotificationToastContainer 
+        notifications={toastNotifications}
+        onRemove={removeToastNotification}
+      />
     </DashboardLayout>
   );
 };
