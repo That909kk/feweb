@@ -34,8 +34,17 @@ export const getAvailableEmployeesApi = async (
 };
 
 // Get employee schedule by ID
-export const getEmployeeScheduleApi = async (employeeId: string): Promise<ApiResponse<EmployeeSchedule>> => {
-  const response = await api.get<ApiResponse<EmployeeSchedule>>(`/employee-schedule/${employeeId}`);
+export const getEmployeeScheduleApi = async (
+  employeeId: string,
+  startDate?: string,
+  endDate?: string
+): Promise<ApiResponse<EmployeeSchedule>> => {
+  const response = await api.get<ApiResponse<EmployeeSchedule>>(`/employee-schedule/${employeeId}`, {
+    params: {
+      startDate,
+      endDate
+    }
+  });
   return response.data;
 };
 

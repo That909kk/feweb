@@ -337,6 +337,32 @@ export interface EmployeeSchedule {
   employeeId: string;
   fullName: string;
   avatar?: string;
+  employeeStatus: string;
+  rating?: string;
+  skills?: string[];
+  workingZones?: Array<{
+    ward: string;
+    city: string;
+  }>;
+  timeSlots: Array<{
+    startTime: string;
+    endTime: string;
+    type: 'AVAILABLE' | 'ASSIGNMENT' | 'UNAVAILABLE';
+    reason?: string | null;
+    bookingCode?: string | null;
+    serviceName?: string | null;
+    customerName?: string | null;
+    address?: string | null;
+    status?: string | null;
+    durationHours: number;
+  }>;
+}
+
+// Legacy availability format (kept for backward compatibility)
+export interface EmployeeAvailability {
+  employeeId: string;
+  fullName: string;
+  avatar?: string;
   status: string;
   rating?: number;
   experience?: number;
