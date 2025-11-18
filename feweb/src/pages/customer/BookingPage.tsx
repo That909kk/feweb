@@ -19,7 +19,6 @@ import { useAddress } from '../../hooks/useAddress';
 import DashboardLayout from '../../layouts/DashboardLayout';
 import MultipleImageUpload from '../../components/MultipleImageUpload';
 import type { 
-  CreateBookingRequest,
   SuitableEmployee,
   PaymentMethod
 } from '../../types/api';
@@ -29,8 +28,7 @@ const validateBookingForm = (
   formData: {
     serviceId: string;
     address: string;
-    date: string;
-    time: string;
+    bookingTimes: string[];
     duration: number | null;
   }
 ): string[] => {
@@ -38,31 +36,26 @@ const validateBookingForm = (
   
   if (!formData.serviceId) errors.push('Vui lòng chọn dịch vụ');
   if (!formData.address) errors.push('Vui lòng nhập địa chỉ');
-  if (!formData.date) errors.push('Vui lòng chọn ngày đặt lịch');
-  if (!formData.time) errors.push('Vui lòng chọn giờ đặt lịch');
+  if (!formData.bookingTimes || formData.bookingTimes.length === 0) errors.push('Vui lòng thêm ít nhất một mốc thời gian');
   if (!formData.duration || formData.duration <= 0) errors.push('Vui lòng chọn thời lượng dự kiến');
   
-  // Validate time format
-  if (formData.time && !/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/.test(formData.time)) {
-    errors.push('Giờ đặt lịch không đúng định dạng (HH:MM)');
-  }
-  
-  
-  if (formData.date && formData.time) {
-    const dateTime = new Date(`${formData.date}T${formData.time}`);
-    // Booking should be at least 1 hour in the future
-    const minBookingTime = new Date();
-    minBookingTime.setHours(minBookingTime.getHours() + 1);
-    
-    if (dateTime <= minBookingTime) {
-      errors.push('Thời gian đặt lịch phải cách hiện tại ít nhất 1 giờ');
-    }
-    
-    // Booking should be within business hours (8:00-17:00)
-    const hours = dateTime.getHours();
-    if (hours < 8 || hours >= 17) {
-      errors.push('Thời gian đặt lịch phải nằm trong giờ làm việc (8:00 - 17:00)');
-    }
+  // Validate each booking time
+  if (formData.bookingTimes && formData.bookingTimes.length > 0) {
+    formData.bookingTimes.forEach((timeStr, index) => {
+      const dateTime = new Date(timeStr);
+      const now = new Date();
+      now.setHours(now.getHours() + 1); // Booking should be at least 1 hour in the future
+      
+      if (dateTime <= now) {
+        errors.push(`Mốc thời gian ${index + 1} phải cách hiện tại ít nhất 1 giờ`);
+      }
+      
+      // Validate business hours (8:00-17:00)
+      const hours = dateTime.getHours();
+      if (hours < 8 || hours >= 17) {
+        errors.push(`Mốc thời gian ${index + 1} phải nằm trong giờ làm việc (8:00 - 17:00)`);
+      }
+    });
   }
   
   return errors;
@@ -86,7 +79,7 @@ const BookingPage: React.FC = () => {
   const { priceData, calculateServicePrice, clearPriceData } = useServicePriceCalculation();
   const { employeesData, loadSuitableEmployees } = useSuitableEmployees();
   const { 
-    createBooking, 
+    createBooking,
     getDefaultAddress, 
     getPaymentMethods, 
     isLoading: bookingLoading, 
@@ -98,13 +91,31 @@ const BookingPage: React.FC = () => {
   const [bookingData, setBookingData] = useState({
     serviceId: preselectedServiceId || '',
     address: '',
-    date: '',
-    time: '',
+    bookingTimes: [] as string[], // Mảng các mốc thời gian ISO 8601
     duration: null as number | null,
     notes: '',
     paymentMethod: '1', // Default to first payment method ID
     promoCode: ''
   });
+  
+  // State cho việc thêm thời gian mới (tạm thời)
+  const [tempDate, setTempDate] = useState('');
+  const [tempTime, setTempTime] = useState('');
+  
+  // State cho chọn nhanh theo tuần
+  const [weekStartDate, setWeekStartDate] = useState('');
+  const [selectedWeekDays, setSelectedWeekDays] = useState<number[]>([]); // 0 = CN, 1 = T2, ..., 6 = T7
+  const [weekTime, setWeekTime] = useState('09:00');
+  const [timeSelectionMode, setTimeSelectionMode] = useState<'single' | 'week' | 'monthly'>('single'); // Tab selector
+  
+  // State cho đặt định kỳ theo tháng
+  const [monthlyStartDate, setMonthlyStartDate] = useState('');
+  const [monthlyEndDate, setMonthlyEndDate] = useState('');
+  const [selectedMonthDays, setSelectedMonthDays] = useState<number[]>([]); // 1-31: ngày trong tháng
+  const [monthlyTime, setMonthlyTime] = useState('09:00');
+  const [monthlyRecurringType, setMonthlyRecurringType] = useState<'dates' | 'weekday'>('dates'); // Chọn theo ngày cụ thể hoặc thứ trong tháng
+  const [selectedMonthWeekday, setSelectedMonthWeekday] = useState<number>(1); // 1-7: T2-CN
+  const [selectedWeekOfMonth, setSelectedWeekOfMonth] = useState<number>(1); // 1-5: tuần 1-5
   
   // Category selection state
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
@@ -116,9 +127,6 @@ const BookingPage: React.FC = () => {
   const [addressSource, setAddressSource] = useState<'profile' | 'current' | 'custom'>('profile');
   const [customAddress, setCustomAddress] = useState('');
   const [currentLocationAddress, setCurrentLocationAddress] = useState('');
-  const [customTimeInput, setCustomTimeInput] = useState('');
-  const [timeInputType, setTimeInputType] = useState<'preset' | 'custom'>('preset');
-  const [quickDateOptions, setQuickDateOptions] = useState<Array<{date: string, label: string, dayOfWeek: string}>>([]);
   
   // State cho bản đồ
   const [mapCoordinates, setMapCoordinates] = useState<{lat: number, lng: number} | null>(null);
@@ -171,33 +179,6 @@ const BookingPage: React.FC = () => {
     resetCommunes,
     getFullAddress 
   } = useAddress();
-  
-  // Tạo các tùy chọn ngày nhanh (hôm nay, ngày mai, ngày kia...)
-  useEffect(() => {
-    const today = new Date();
-    const options: Array<{date: string, label: string, dayOfWeek: string}> = [];
-    
-    // Tạo 7 ngày kể từ hôm nay
-    for (let i = 0; i < 7; i++) {
-      const date = new Date();
-      date.setDate(today.getDate() + i);
-      
-      const dateStr = date.toISOString().split('T')[0];
-      let label = '';
-      
-      if (i === 0) label = 'Hôm nay';
-      else if (i === 1) label = 'Ngày mai';
-      else if (i === 2) label = 'Ngày kia';
-      else label = `${date.getDate()}/${date.getMonth() + 1}`;
-      
-      const dayOfWeekNames = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
-      const dayOfWeek = dayOfWeekNames[date.getDay()];
-      
-      options.push({ date: dateStr, label, dayOfWeek });
-    }
-    
-    setQuickDateOptions(options);
-  }, []);
 
   // Load payment methods
   useEffect(() => {
@@ -222,10 +203,323 @@ const BookingPage: React.FC = () => {
     loadPaymentMethods();
   }, []); // Only run once on mount
   
-  // Hàm chọn ngày nhanh
-  const handleQuickDateSelect = (date: string) => {
-    setBookingData(prev => ({ ...prev, date }));
+  // Hàm thêm mốc thời gian mới vào danh sách
+  const handleAddBookingTime = () => {
+    if (!tempDate || !tempTime) {
+      setErrorMessages(['Vui lòng chọn đầy đủ ngày và giờ']);
+      return;
+    }
+    
+    // Tạo datetime string ISO 8601
+    const dateTimeString = `${tempDate}T${tempTime}:00`;
+    const dateTime = new Date(dateTimeString);
+    
+    // Kiểm tra thời gian phải ở tương lai
+    const now = new Date();
+    if (dateTime <= now) {
+      setErrorMessages(['Thời gian đặt lịch phải ở tương lai']);
+      return;
+    }
+    
+    // Kiểm tra trùng lặp
+    if (bookingData.bookingTimes.includes(dateTimeString)) {
+      setErrorMessages(['Mốc thời gian này đã được thêm']);
+      return;
+    }
+    
+    // Thêm vào danh sách
+    setBookingData(prev => ({
+      ...prev,
+      bookingTimes: [...prev.bookingTimes, dateTimeString].sort()
+    }));
+    
+    // Reset form tạm thời
+    setTempDate('');
+    setTempTime('');
+    setErrorMessages([]);
   };
+  
+  // Hàm xóa mốc thời gian khỏi danh sách
+  const handleRemoveBookingTime = (timeToRemove: string) => {
+    setBookingData(prev => ({
+      ...prev,
+      bookingTimes: prev.bookingTimes.filter(t => t !== timeToRemove)
+    }));
+  };
+  
+  // Hàm format hiển thị thời gian
+  const formatBookingTime = (isoString: string): string => {
+    const date = new Date(isoString);
+    const dayOfWeek = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][date.getDay()];
+    const day = date.getDate().toString().padStart(2, '0');
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const year = date.getFullYear();
+    const hours = date.getHours().toString().padStart(2, '0');
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    
+    return `${dayOfWeek}, ${day}/${month}/${year} - ${hours}:${minutes}`;
+  };
+  
+  // Hàm toggle chọn ngày trong tuần
+  const handleToggleWeekDay = (dayIndex: number) => {
+    setSelectedWeekDays(prev => 
+      prev.includes(dayIndex) 
+        ? prev.filter(d => d !== dayIndex)
+        : [...prev, dayIndex].sort()
+    );
+  };
+  
+  // Hàm thêm các ngày trong tuần đã chọn
+  const handleAddWeekDays = () => {
+    if (!weekStartDate) {
+      setErrorMessages(['Vui lòng chọn ngày bắt đầu tuần']);
+      return;
+    }
+    
+    if (selectedWeekDays.length === 0) {
+      setErrorMessages(['Vui lòng chọn ít nhất một ngày trong tuần']);
+      return;
+    }
+    
+    const startDate = new Date(weekStartDate);
+    const newTimes: string[] = [];
+    const errors: string[] = [];
+    const now = new Date();
+    
+    // Tính ngày đầu tuần (Chủ nhật)
+    const dayOfWeek = startDate.getDay();
+    const firstDayOfWeek = new Date(startDate);
+    firstDayOfWeek.setDate(startDate.getDate() - dayOfWeek);
+    
+    selectedWeekDays.forEach(dayIndex => {
+      const targetDate = new Date(firstDayOfWeek);
+      targetDate.setDate(firstDayOfWeek.getDate() + dayIndex);
+      
+      const dateTimeString = `${targetDate.toISOString().split('T')[0]}T${weekTime}:00`;
+      const dateTime = new Date(dateTimeString);
+      
+      // Kiểm tra thời gian phải ở tương lai
+      if (dateTime <= now) {
+        errors.push(`${formatBookingTime(dateTimeString)} đã qua`);
+        return;
+      }
+      
+      // Kiểm tra trùng lặp
+      if (!bookingData.bookingTimes.includes(dateTimeString)) {
+        newTimes.push(dateTimeString);
+      }
+    });
+    
+    if (newTimes.length > 0) {
+      setBookingData(prev => ({
+        ...prev,
+        bookingTimes: [...prev.bookingTimes, ...newTimes].sort()
+      }));
+      
+      // Reset form
+      setSelectedWeekDays([]);
+      setWeekStartDate('');
+      setErrorMessages([]);
+    }
+    
+    if (errors.length > 0) {
+      setErrorMessages(errors);
+    }
+  };
+  
+  // Hàm sao chép mốc thời gian sang ngày khác
+  const handleDuplicateTime = (originalTime: string, daysToAdd: number) => {
+    const originalDate = new Date(originalTime);
+    const newDate = new Date(originalDate);
+    newDate.setDate(originalDate.getDate() + daysToAdd);
+    
+    const newTimeString = newDate.toISOString().slice(0, 19);
+    const now = new Date();
+    
+    if (newDate <= now) {
+      setErrorMessages(['Thời gian sao chép phải ở tương lai']);
+      return;
+    }
+    
+    if (bookingData.bookingTimes.includes(newTimeString)) {
+      setErrorMessages(['Mốc thời gian này đã tồn tại']);
+      return;
+    }
+    
+    setBookingData(prev => ({
+      ...prev,
+      bookingTimes: [...prev.bookingTimes, newTimeString].sort()
+    }));
+    
+    setErrorMessages([]);
+  };
+  
+  // Hàm toggle chọn ngày trong tháng
+  const handleToggleMonthDay = (day: number) => {
+    setSelectedMonthDays(prev => 
+      prev.includes(day) 
+        ? prev.filter(d => d !== day)
+        : [...prev, day].sort((a, b) => a - b)
+    );
+  };
+  
+  // Hàm thêm các ngày định kỳ theo tháng
+  const handleAddMonthlyRecurring = () => {
+    if (!monthlyStartDate) {
+      setErrorMessages(['Vui lòng chọn ngày bắt đầu']);
+      return;
+    }
+    
+    if (!monthlyEndDate) {
+      setErrorMessages(['Vui lòng chọn ngày kết thúc']);
+      return;
+    }
+    
+    const startDate = new Date(monthlyStartDate);
+    const endDate = new Date(monthlyEndDate);
+    
+    if (endDate < startDate) {
+      setErrorMessages(['Ngày kết thúc phải sau ngày bắt đầu']);
+      return;
+    }
+    
+    if (monthlyRecurringType === 'dates' && selectedMonthDays.length === 0) {
+      setErrorMessages(['Vui lòng chọn ít nhất một ngày trong tháng']);
+      return;
+    }
+    
+    const newTimes: string[] = [];
+    const errors: string[] = [];
+    const now = new Date();
+    
+    // Tính toán các tháng trong khoảng thời gian
+    let currentDate = new Date(startDate);
+    
+    while (currentDate <= endDate) {
+      if (monthlyRecurringType === 'dates') {
+        // Chọn theo ngày cụ thể trong tháng (ví dụ: ngày 1, 15, 30)
+        selectedMonthDays.forEach(day => {
+          const targetDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
+          
+          // Kiểm tra ngày có hợp lệ không (ví dụ: tháng 2 không có ngày 30)
+          if (targetDate.getMonth() === currentDate.getMonth() && targetDate >= startDate && targetDate <= endDate) {
+            const dateTimeString = `${targetDate.toISOString().split('T')[0]}T${monthlyTime}:00`;
+            const dateTime = new Date(dateTimeString);
+            
+            if (dateTime > now && !bookingData.bookingTimes.includes(dateTimeString)) {
+              newTimes.push(dateTimeString);
+            } else if (dateTime <= now) {
+              errors.push(`${formatBookingTime(dateTimeString)} đã qua`);
+            }
+          }
+        });
+      } else {
+        // Chọn theo thứ trong tháng (ví dụ: Thứ 2 tuần đầu tiên, Thứ 6 cuối tháng)
+        const targetDate = getNthWeekdayOfMonth(
+          currentDate.getFullYear(), 
+          currentDate.getMonth(), 
+          selectedMonthWeekday, 
+          selectedWeekOfMonth
+        );
+        
+        if (targetDate && targetDate >= startDate && targetDate <= endDate) {
+          const dateTimeString = `${targetDate.toISOString().split('T')[0]}T${monthlyTime}:00`;
+          const dateTime = new Date(dateTimeString);
+          
+          if (dateTime > now && !bookingData.bookingTimes.includes(dateTimeString)) {
+            newTimes.push(dateTimeString);
+          } else if (dateTime <= now) {
+            errors.push(`${formatBookingTime(dateTimeString)} đã qua`);
+          }
+        }
+      }
+      
+      // Chuyển sang tháng tiếp theo
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
+    
+    if (newTimes.length > 0) {
+      setBookingData(prev => ({
+        ...prev,
+        bookingTimes: [...prev.bookingTimes, ...newTimes].sort()
+      }));
+      
+      setErrorMessages([]);
+    } else if (errors.length === 0) {
+      setErrorMessages(['Không tìm thấy mốc thời gian hợp lệ nào']);
+    }
+    
+    if (errors.length > 0) {
+      setErrorMessages(errors);
+    }
+  };
+  
+  // Hàm helper: Tìm ngày thứ N trong tháng (ví dụ: Thứ 2 đầu tiên, Thứ 6 cuối cùng)
+  const getNthWeekdayOfMonth = (year: number, month: number, weekday: number, weekNumber: number): Date | null => {
+    // weekday: 0=CN, 1=T2, ..., 6=T7
+    // weekNumber: 1=tuần đầu, 2=tuần 2, ..., 5=tuần cuối
+    
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    
+    if (weekNumber === 5) {
+      // Tìm ngày cuối cùng của weekday trong tháng
+      let targetDate = new Date(lastDay);
+      while (targetDate.getDay() !== weekday) {
+        targetDate.setDate(targetDate.getDate() - 1);
+      }
+      return targetDate;
+    } else {
+      // Tìm ngày thứ N của weekday trong tháng
+      let targetDate = new Date(firstDay);
+      let count = 0;
+      
+      while (targetDate.getMonth() === month) {
+        if (targetDate.getDay() === weekday) {
+          count++;
+          if (count === weekNumber) {
+            return targetDate;
+          }
+        }
+        targetDate.setDate(targetDate.getDate() + 1);
+      }
+      
+      return null; // Không tìm thấy (ví dụ: tháng không có Thứ 2 thứ 5)
+    }
+  };
+  
+  // Tự động set ngày và tuần hiện tại khi component mount
+  useEffect(() => {
+    const now = new Date();
+    
+    // Set ngày hiện tại cho tempDate
+    const today = now.toISOString().split('T')[0];
+    setTempDate(today);
+    
+    // Set tuần hiện tại cho weekStartDate
+    setWeekStartDate(today);
+    
+    // Set giờ mặc định (9:00 AM)
+    const currentHour = now.getHours();
+    if (currentHour < 17) {
+      // Nếu còn trong giờ làm việc, set giờ tiếp theo
+      const nextHour = Math.max(currentHour + 1, 9);
+      setTempTime(`${nextHour.toString().padStart(2, '0')}:00`);
+      setWeekTime(`${nextHour.toString().padStart(2, '0')}:00`);
+      setMonthlyTime(`${nextHour.toString().padStart(2, '0')}:00`);
+    } else {
+      // Nếu đã hết giờ làm việc, set 9:00 AM
+      setTempTime('09:00');
+      setWeekTime('09:00');
+      setMonthlyTime('09:00');
+    }
+    
+    // Set khoảng thời gian mặc định cho monthly (tháng này + 2 tháng tiếp theo)
+    setMonthlyStartDate(today);
+    const threeMonthsLater = new Date(now);
+    threeMonthsLater.setMonth(now.getMonth() + 3);
+    setMonthlyEndDate(threeMonthsLater.toISOString().split('T')[0]);
+  }, []);
   
   // Lấy địa chỉ từ profile người dùng khi component mount
   useEffect(() => {
@@ -825,17 +1119,6 @@ const BookingPage: React.FC = () => {
   //   return parts.join(', ');
   // };
   
-  // Hàm xử lý nhập thời gian tùy chỉnh
-  const handleCustomTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setCustomTimeInput(value);
-    
-    // Cập nhật bookingData khi nhập thời gian tùy chỉnh
-    if (timeInputType === 'custom') {
-      setBookingData(prev => ({ ...prev, time: value }));
-    }
-  };
-
   // Khởi tạo và cập nhật bản đồ khi có tọa độ và khi step là 2 (trang địa điểm)
   useEffect(() => {
     // Chỉ khởi tạo bản đồ nếu có tọa độ, container đã mount, và đang ở step 2
@@ -889,21 +1172,6 @@ const BookingPage: React.FC = () => {
       }
     };
   }, [mapCoordinates, step, addressSource]);
-
-  // Hàm kiểm tra thời gian có phải là quá khứ không
-  const isTimeInPast = (time: string): boolean => {
-    if (!bookingData.date) return false;
-    
-    const today = new Date().toISOString().split('T')[0];
-    if (bookingData.date > today) return false; // Nếu không phải hôm nay, không cần kiểm tra
-    
-    const [hours, minutes] = time.split(':').map(Number);
-    const now = new Date();
-    const selectedTime = new Date();
-    selectedTime.setHours(hours, minutes, 0, 0);
-    
-    return selectedTime <= now;
-  };
 
   // Hàm chuyển đổi giữa lựa chọn preset và tùy chỉnh thời gian
   // const handleTimeInputTypeChange = (type: 'preset' | 'custom') => {
@@ -1004,12 +1272,8 @@ const BookingPage: React.FC = () => {
       validationErrors.push('Vui lòng chọn dịch vụ trước khi tìm nhân viên');
     }
     
-    if (!bookingData.date) {
-      validationErrors.push('Vui lòng chọn ngày đặt lịch trước khi tìm nhân viên');
-    }
-    
-    if (!bookingData.time) {
-      validationErrors.push('Vui lòng chọn giờ đặt lịch trước khi tìm nhân viên');
+    if (bookingData.bookingTimes.length === 0) {
+      validationErrors.push('Vui lòng thêm ít nhất một mốc thời gian trước khi tìm nhân viên');
     }
 
     if (!bookingData.duration || bookingData.duration <= 0) {
@@ -1023,8 +1287,9 @@ const BookingPage: React.FC = () => {
     }
     
     // If all validations pass, proceed to load suitable employees
-    if (bookingData.serviceId && bookingData.date && bookingData.time && bookingData.duration) {
-      const bookingDateTime = `${bookingData.date}T${bookingData.time}:00`;
+    // Sử dụng thời gian đầu tiên để tìm nhân viên
+    if (bookingData.serviceId && bookingData.bookingTimes.length > 0 && bookingData.duration) {
+      const bookingDateTime = bookingData.bookingTimes[0]; // Dùng thời gian đầu tiên
       
       // Xác định ward và city dựa trên addressSource
       let ward = '';
@@ -1095,25 +1360,6 @@ const BookingPage: React.FC = () => {
         return;
       }
 
-      // Format date and time for API (YYYY-MM-DDTHH:MM:SS format)
-      const timeWithSeconds = bookingData.time.includes(':') && bookingData.time.split(':').length === 2
-        ? `${bookingData.time}:00`
-        : bookingData.time;
-        
-      const bookingDateTime = `${bookingData.date}T${timeWithSeconds}`;
-
-      // Ensure date is in the future
-      const bookingDate = new Date(bookingDateTime);
-      
-      // Add 2 hours to current time to ensure booking meets API requirement (at least 2 hours from now)
-      const minBookingTime = new Date();
-      minBookingTime.setHours(minBookingTime.getHours() + 2);
-      
-      if (bookingDate <= minBookingTime) {
-        setErrorMessages(['Thời gian đặt lịch phải cách hiện tại ít nhất 2 giờ theo quy định']);
-        return;
-      }
-      
       // Handle address selection logic
       let addressId: string | null = null;
       let newAddress: any = null;
@@ -1125,12 +1371,12 @@ const BookingPage: React.FC = () => {
       }
 
       if (addressSource === 'profile') {
-        // Use default address from profile (đã load sẵn từ trước)
+        // Use default address from profile
         if (defaultAddressInfo?.addressId) {
           addressId = defaultAddressInfo.addressId;
           console.log('🏠 [SUCCESS] Using cached addressId:', addressId);
         } else {
-          // Fallback: nếu chưa có thì mới gọi API
+          // Fallback: fetch from API
           try {
             console.log('🏠 [DEBUG] Default address not cached, fetching from API');
             const defaultAddress = await getDefaultAddress(user.customerId);
@@ -1139,7 +1385,6 @@ const BookingPage: React.FC = () => {
               addressId = defaultAddress.addressId;
               console.log('🏠 [SUCCESS] Got addressId from API:', addressId);
               
-              // Lưu lại để dùng sau
               setDefaultAddressInfo({
                 addressId: defaultAddress.addressId,
                 ward: defaultAddress.ward || '',
@@ -1159,13 +1404,12 @@ const BookingPage: React.FC = () => {
           }
         }
       } else if (addressSource === 'current' || addressSource === 'custom') {
-        // Use new address (current location or custom input)
+        // Use new address
         let finalAddress = '';
         
         if (addressSource === 'current') {
           finalAddress = currentLocationAddress;
         } else if (addressSource === 'custom') {
-          // Use manualAddress if in manual mode, otherwise use bookingData.address (auto-formatted)
           finalAddress = isManualAddress ? manualAddress : bookingData.address;
         }
         
@@ -1177,17 +1421,13 @@ const BookingPage: React.FC = () => {
         }
 
         // Create newAddress object for API
-        // Parse address components from finalAddress if needed
         let ward = '';
         let city = '';
         
         if (addressSource === 'custom' && !isManualAddress) {
-          // Using auto-formatted address from location picker
           ward = selectedCommuneName || '';
           city = selectedProvinceName || '';
         } else {
-          // Manual address or current location - try to extract city from address
-          // Default to TP. Hồ Chí Minh if not specified
           city = 'Thành phố Hồ Chí Minh';
         }
         
@@ -1206,16 +1446,13 @@ const BookingPage: React.FC = () => {
       // Use calculated price from API if available
       const estimatedPrice = priceData?.finalPrice || (services.find(s => s.serviceId === serviceId)?.basePrice || 0);
 
-      // Convert data to match API request format based on API docs
-      const bookingRequest: CreateBookingRequest = {
-        addressId: addressId || null, // Use existing address ID or null for new address
-        // Gửi newAddress object thay vì fullAddress trực tiếp
+      // Convert data to match API request format
+      const bookingRequest = {
+        addressId: addressId || null,
         newAddress: newAddress || undefined,
-        bookingTime: bookingDateTime,
+        bookingTimes: bookingData.bookingTimes, // Mảng các mốc thời gian
         note: bookingData.notes || null,
         promoCode: bookingData.promoCode || null,
-        // Thêm title CHỈ KHI không chọn nhân viên (booking post)
-        // KHÔNG GỬI imageUrl trong JSON, sẽ gửi File riêng
         ...(selectedEmployees.length === 0 && {
           title: postTitle.trim() || null,
         }),
@@ -1228,16 +1465,15 @@ const BookingPage: React.FC = () => {
             selectedChoiceIds: selectedChoiceIds
           }
         ],
-        // Use selected employees or let system auto-assign
         assignments: selectedEmployees.length > 0 ? selectedEmployees.map(employeeId => ({
           serviceId: serviceId,
           employeeId: employeeId
         })) : undefined,
-        paymentMethodId: parseInt(bookingData.paymentMethod) || 1 // Use selected payment method ID
+        paymentMethodId: parseInt(bookingData.paymentMethod) || 1
       };
 
       // Debug: Log booking request
-      console.log('📋 [REQUEST] Sending booking request:', JSON.stringify(bookingRequest, null, 2));
+      console.log('📋 [REQUEST] Sending booking request with multiple times:', JSON.stringify(bookingRequest, null, 2));
       
       // Additional validation before sending
       if (!bookingRequest.addressId && !bookingRequest.newAddress) {
@@ -1246,33 +1482,36 @@ const BookingPage: React.FC = () => {
         return;
       }
       
-      // Call API to create booking
-      // Gửi nhiều File objects nếu có (cho cả booking thông thường và booking post)
+      // Call API to create bookings (API tự detect bookingTimes và tạo nhiều booking)
       const imageFiles = postImageFiles.length > 0 ? postImageFiles : undefined;
       const result = await createBooking(bookingRequest, imageFiles);
       
       if (result) {
-        console.log('✅ [BOOKING] Booking created successfully:', result);
+        console.log('✅ [BOOKING] Bookings created successfully:', result);
         
-        // Navigate tới trang booking success với dữ liệu
+        // Kiểm tra response structure
+        // Single booking: result.data = { bookingId, bookingCode, ... }
+        // Multiple bookings: result.data = { totalBookingsCreated, bookings: [...], ... }
+        const responseData = result.data || result;
+        const isMultiple = responseData.bookings && Array.isArray(responseData.bookings);
+        
+        // Navigate tới trang success
         navigate('/customer/booking-success', {
           state: {
-            bookingData: result
+            bookingData: isMultiple ? responseData : result,
+            isMultiple: isMultiple
           }
         });
       } else {
-        // Handle booking failure - get detailed error from hook
         const errorMsg = bookingError || 'Đặt lịch thất bại. Vui lòng thử lại sau.';
         setErrorMessages([errorMsg]);
       }
     } catch (error: any) {
       console.error('Booking submission error:', error);
       
-      // Extract more detailed error information
       let errorMessage = 'Có lỗi xảy ra';
       
       if (error.response) {
-        // The server responded with an error status code
         console.error('Server response error:', {
           status: error.response.status,
           data: error.response.data,
@@ -1280,11 +1519,9 @@ const BookingPage: React.FC = () => {
         });
         errorMessage = error.response.data?.message || `Lỗi server (${error.response.status})`;
       } else if (error.request) {
-        // The request was made but no response received
         console.error('No response received:', error.request);
         errorMessage = 'Không nhận được phản hồi từ server';
       } else {
-        // Something happened in setting up the request
         console.error('Request setup error:', error.message);
         errorMessage = error.message || 'Lỗi khi gửi yêu cầu';
       }
@@ -1308,11 +1545,6 @@ const BookingPage: React.FC = () => {
       default: return '🛠️';
     }
   };
-
-  const timeSlots = [
-    '08:00', '09:00', '10:00', '11:00', 
-    '13:00', '14:00', '15:00', '16:00', '17:00', '--:--'
-  ];
 
   const renderStepContent = () => {
     switch (step) {
@@ -1984,158 +2216,747 @@ const BookingPage: React.FC = () => {
           <div className="space-y-8">
             <div className="text-center">
               <h3 className="text-2xl font-bold text-gray-900 mb-2">Lên lịch thời gian</h3>
-              <p className="text-gray-600">Chọn ngày và giờ phù hợp để thực hiện dịch vụ</p>
+              <p className="text-gray-600">Chọn một hoặc nhiều mốc thời gian để đặt dịch vụ</p>
             </div>
 
-            <div className="space-y-8">
-              {/* Date Selection */}
-              <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 border border-blue-200">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                  </svg>
-                  Chọn ngày thực hiện
-                </h4>
-                
-                {/* Quick Date Options */}
-                <div className="mb-6">
-                  <p className="text-sm font-medium text-gray-700 mb-3">Lựa chọn nhanh:</p>
-                  <div className="grid grid-cols-4 sm:grid-cols-7 gap-3">
-                    {quickDateOptions.map((option) => (
-                      <button
-                        type="button"
-                        key={option.date}
-                        onClick={() => handleQuickDateSelect(option.date)}
-                        className={`p-3 border-2 rounded-xl cursor-pointer transition-all duration-200 hover:shadow-md transform hover:-translate-y-0.5 ${
-                          bookingData.date === option.date 
-                            ? 'border-blue-500 bg-blue-100 text-blue-700 shadow-blue-200' 
-                            : 'border-gray-200 bg-white hover:border-blue-300'
-                        }`}
-                      >
-                        <div className="text-center">
-                          <div className={`text-xs font-medium mb-1 ${
-                            bookingData.date === option.date ? 'text-blue-600' : 'text-gray-500'
-                          }`}>
-                            {option.dayOfWeek}
-                          </div>
-                          <div className={`text-sm font-semibold ${
-                            bookingData.date === option.date ? 'text-blue-700' : 'text-gray-700'
-                          }`}>
-                            {option.label}
+            <div className="space-y-6">
+              {/* Unified Time Selection with Tabs */}
+              <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden">
+                {/* Tab Header */}
+                <div className="flex border-b border-gray-200">
+                  <button
+                    type="button"
+                    onClick={() => setTimeSelectionMode('single')}
+                    className={`flex-1 px-4 py-4 text-sm font-semibold transition-all ${
+                      timeSelectionMode === 'single'
+                        ? 'bg-brand-teal/10 text-brand-teal border-b-2 border-brand-teal'
+                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span className="hidden sm:inline">Chọn từng ngày</span>
+                      <span className="sm:hidden">Từng ngày</span>
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTimeSelectionMode('week')}
+                    className={`flex-1 px-4 py-4 text-sm font-semibold transition-all relative ${
+                      timeSelectionMode === 'week'
+                        ? 'bg-brand-teal/10 text-brand-teal border-b-2 border-brand-teal'
+                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                      <span className="hidden sm:inline">Chọn theo tuần</span>
+                      <span className="sm:hidden">Theo tuần</span>
+                     
+                    </div>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTimeSelectionMode('monthly')}
+                    className={`flex-1 px-4 py-4 text-sm font-semibold transition-all relative ${
+                      timeSelectionMode === 'monthly'
+                        ? 'bg-brand-teal/10 text-brand-teal border-b-2 border-brand-teal'
+                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <div className="flex items-center justify-center">
+                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        <circle cx="12" cy="14" r="1.5" />
+                        <circle cx="16" cy="14" r="1.5" />
+                        <circle cx="8" cy="14" r="1.5" />
+                      </svg>
+                      <span className="hidden sm:inline">Định kỳ theo tháng</span>
+                      <span className="sm:hidden">Theo tháng</span>
+                    </div>
+                  </button>
+                </div>
+
+                {/* Tab Content */}
+                <div className="p-6">
+                  {timeSelectionMode === 'single' && (
+                    /* Single Date/Time Selection */
+                    <div className="space-y-4">
+                      {/* Quick Date Selection */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          ⚡ Chọn nhanh ngày
+                        </label>
+                        <div className="grid grid-cols-3 md:grid-cols-6 gap-2">
+                          {[
+                            { label: 'Hôm nay', days: 0 },
+                            { label: 'Mai', days: 1 },
+                            { label: 'Ngày kia', days: 2 },
+                            { label: '+3 ngày', days: 3 },
+                            { label: '+1 tuần', days: 7 },
+                            { label: '+2 tuần', days: 14 }
+                          ].map(({ label, days }) => {
+                            const date = new Date();
+                            date.setDate(date.getDate() + days);
+                            const dateStr = date.toISOString().split('T')[0];
+                            const isSelected = tempDate === dateStr;
+                            
+                            return (
+                              <button
+                                key={days}
+                                type="button"
+                                onClick={() => setTempDate(dateStr)}
+                                className={`p-2 rounded-lg text-xs font-semibold transition-all ${
+                                  isSelected
+                                    ? 'bg-brand-teal text-white shadow-lg scale-105'
+                                    : 'bg-brand-teal/10 text-brand-teal border border-brand-teal/30 hover:bg-brand-teal/20'
+                                }`}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Date Input */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Hoặc chọn ngày cụ thể <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="date"
+                              value={tempDate}
+                              onChange={(e) => setTempDate(e.target.value)}
+                              min={new Date().toISOString().split('T')[0]}
+                              className="w-full p-3 pl-11 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-brand-teal bg-white text-gray-900 font-medium transition-all hover:border-brand-teal/50 cursor-pointer"
+                              style={{
+                                colorScheme: 'light'
+                              }}
+                            />
+                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-teal pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
                           </div>
                         </div>
+                        
+                        {/* Time Input */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Chọn giờ <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="time"
+                              value={tempTime}
+                              onChange={(e) => setTempTime(e.target.value)}
+                              className="w-full p-3 pl-11 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-brand-teal bg-white text-gray-900 font-medium transition-all hover:border-brand-teal/50 cursor-pointer"
+                              style={{
+                                colorScheme: 'light'
+                              }}
+                            />
+                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-teal pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Quick Time Selection */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          ⚡ Chọn nhanh giờ phổ biến
+                        </label>
+                        <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+                          {['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'].map(time => {
+                            const isSelected = tempTime === time;
+                            return (
+                              <button
+                                key={time}
+                                type="button"
+                                onClick={() => setTempTime(time)}
+                                className={`p-2 rounded-lg text-sm font-semibold transition-all ${
+                                  isSelected
+                                    ? 'bg-brand-teal text-white shadow-lg scale-105'
+                                    : 'bg-brand-teal/10 text-brand-teal border border-brand-teal/30 hover:bg-brand-teal/20'
+                                }`}
+                              >
+                                {time}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                      
+                      <button
+                        type="button"
+                        onClick={handleAddBookingTime}
+                        className="w-full px-6 py-3 bg-gradient-to-r from-brand-navy to-brand-teal text-white rounded-lg hover:from-brand-navyHover hover:to-brand-teal transition-all flex items-center justify-center font-medium shadow-md"
+                      >
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Thêm mốc thời gian
                       </button>
-                    ))}
-                  </div>
-                </div>
-                
-                {/* Custom Date Input */}
-                <div>
-                  <p className="text-sm font-medium text-gray-700 mb-2">Hoặc chọn ngày khác:</p>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                      <svg className="w-5 h-5 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clipRule="evenodd" />
-                      </svg>
                     </div>
-                    <input
-                      type="date"
-                      name="date"
-                      value={bookingData.date}
-                      onChange={handleInputChange}
-                      min={new Date().toISOString().split('T')[0]}
-                      className="w-full pl-10 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all bg-white"
-                      required
-                    />
-                  </div>
+                  )}
+                  
+                  {timeSelectionMode === 'week' && (
+                    /* Week Selection Mode */
+                    <div className="space-y-4">
+                      {/* Quick Week Selection */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          ⚡ Chọn nhanh tuần
+                        </label>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          {[
+                            { label: 'Tuần này', weeks: 0 },
+                            { label: 'Tuần sau', weeks: 1 },
+                            { label: '+2 tuần', weeks: 2 },
+                            { label: '+3 tuần', weeks: 3 }
+                          ].map(({ label, weeks }) => {
+                            const date = new Date();
+                            date.setDate(date.getDate() + (weeks * 7));
+                            const dateStr = date.toISOString().split('T')[0];
+                            const isSelected = weekStartDate === dateStr;
+                            
+                            return (
+                              <button
+                                key={weeks}
+                                type="button"
+                                onClick={() => setWeekStartDate(dateStr)}
+                                className={`p-2 rounded-lg text-sm font-semibold transition-all ${
+                                  isSelected
+                                    ? 'bg-brand-teal text-white shadow-lg scale-105'
+                                    : 'bg-brand-teal/10 text-brand-teal border border-brand-teal/30 hover:bg-brand-teal/20'
+                                }`}
+                              >
+                                {label}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* Week Start Date */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Hoặc chọn tuần cụ thể <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="date"
+                            value={weekStartDate}
+                            onChange={(e) => setWeekStartDate(e.target.value)}
+                            min={new Date().toISOString().split('T')[0]}
+                            className="w-full p-3 pl-11 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-brand-teal bg-white text-gray-900 font-medium transition-all hover:border-brand-teal/50 cursor-pointer"
+                            style={{
+                              colorScheme: 'light'
+                            }}
+                          />
+                          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-teal pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                        </div>
+                      </div>
+                      
+                      {/* Quick Weekday Patterns */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          ⚡ Chọn nhanh mẫu
+                        </label>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                          {[
+                            { label: '📅 Cả tuần', days: [1, 2, 3, 4, 5, 6, 0] },
+                            { label: '💼 T2-T6', days: [1, 2, 3, 4, 5] },
+                            { label: '🎉 Cuối tuần', days: [6, 0] },
+                            { label: '⚡ T2,T4,T6', days: [1, 3, 5] }
+                          ].map(({ label, days }) => (
+                            <button
+                              key={label}
+                              type="button"
+                              onClick={() => setSelectedWeekDays(days)}
+                              className="p-2 rounded-lg text-xs font-semibold bg-brand-teal/10 text-brand-teal border border-brand-teal/30 hover:bg-brand-teal/20 transition-all"
+                            >
+                              {label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      
+                      {/* Day Selector */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Chọn các ngày trong tuần <span className="text-red-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-7 gap-2">
+                          {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map((day, index) => {
+                            // Tính ngày cụ thể cho mỗi thứ
+                            let dateInfo = '';
+                            if (weekStartDate) {
+                              const startDate = new Date(weekStartDate);
+                              const dayOfWeek = startDate.getDay();
+                              const firstDayOfWeek = new Date(startDate);
+                              firstDayOfWeek.setDate(startDate.getDate() - dayOfWeek);
+                              
+                              const targetDate = new Date(firstDayOfWeek);
+                              targetDate.setDate(firstDayOfWeek.getDate() + index);
+                              
+                              const dayNum = targetDate.getDate();
+                              const monthNum = targetDate.getMonth() + 1;
+                              dateInfo = `${dayNum}/${monthNum}`;
+                            }
+                            
+                            return (
+                              <button
+                                key={index}
+                                type="button"
+                                onClick={() => handleToggleWeekDay(index)}
+                                disabled={!weekStartDate}
+                                className={`p-3 rounded-lg font-medium text-sm transition-all ${
+                                  selectedWeekDays.includes(index)
+                                    ? 'bg-brand-teal text-white shadow-lg scale-105'
+                                    : weekStartDate
+                                    ? 'bg-white text-gray-700 border border-gray-300 hover:border-brand-teal/50 hover:bg-brand-teal/10'
+                                    : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                                }`}
+                              >
+                                <div className="flex flex-col items-center">
+                                  <span className="font-bold">{day}</span>
+                                  {dateInfo && (
+                                    <span className={`text-xs mt-1 ${
+                                      selectedWeekDays.includes(index) ? 'text-white/80' : 'text-gray-500'
+                                    }`}>
+                                      {dateInfo}
+                                    </span>
+                                  )}
+                                </div>
+                              </button>
+                            );
+                          })}
+                        </div>
+                        {!weekStartDate && (
+                          <p className="mt-2 text-sm text-amber-600">
+                            ⚠️ Vui lòng chọn tuần trước
+                          </p>
+                        )}
+                        {selectedWeekDays.length > 0 && weekStartDate && (
+                          <p className="mt-2 text-sm text-brand-teal font-medium">
+                            ✓ Đã chọn {selectedWeekDays.length} ngày: {selectedWeekDays.map(d => {
+                              const startDate = new Date(weekStartDate);
+                              const dayOfWeek = startDate.getDay();
+                              const firstDayOfWeek = new Date(startDate);
+                              firstDayOfWeek.setDate(startDate.getDate() - dayOfWeek);
+                              const targetDate = new Date(firstDayOfWeek);
+                              targetDate.setDate(firstDayOfWeek.getDate() + d);
+                              return `${['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][d]} (${targetDate.getDate()}/${targetDate.getMonth() + 1})`;
+                            }).join(', ')}
+                          </p>
+                        )}
+                      </div>
+                      
+                      {/* Time Selector for Week */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Chọn giờ chung <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="time"
+                            value={weekTime}
+                            onChange={(e) => setWeekTime(e.target.value)}
+                            className="w-full p-3 pl-11 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-brand-teal bg-white text-gray-900 font-medium transition-all hover:border-brand-teal/50 cursor-pointer"
+                            style={{
+                              colorScheme: 'light'
+                            }}
+                          />
+                          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-teal pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        
+                        {/* Quick Time Selection */}
+                        <div className="mt-2">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            ⚡ Chọn nhanh
+                          </label>
+                          <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+                            {['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'].map(time => {
+                              const isSelected = weekTime === time;
+                              return (
+                                <button
+                                  key={time}
+                                  type="button"
+                                  onClick={() => setWeekTime(time)}
+                                  className={`p-1.5 rounded-md text-xs font-semibold transition-all ${
+                                    isSelected
+                                      ? 'bg-brand-teal text-white shadow-md'
+                                      : 'bg-brand-teal/10 text-brand-teal border border-brand-teal/30 hover:bg-brand-teal/20'
+                                  }`}
+                                >
+                                  {time}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <button
+                        type="button"
+                        onClick={handleAddWeekDays}
+                        disabled={!weekStartDate || selectedWeekDays.length === 0}
+                        className="w-full px-6 py-3 bg-gradient-to-r from-brand-navy to-brand-teal text-white rounded-lg hover:shadow-lg transition-all flex items-center justify-center font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                        </svg>
+                        {selectedWeekDays.length > 0 ? `Thêm ${selectedWeekDays.length} mốc thời gian` : 'Thêm mốc thời gian'}
+                      </button>
+                    </div>
+                  )}
+                  
+                  {timeSelectionMode === 'monthly' && (
+                    /* Monthly Recurring Selection */
+                    <div className="space-y-6">
+                      {/* Date Range */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Ngày bắt đầu <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="date"
+                              value={monthlyStartDate}
+                              onChange={(e) => setMonthlyStartDate(e.target.value)}
+                              min={new Date().toISOString().split('T')[0]}
+                              className="w-full p-3 pl-11 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-brand-teal bg-white text-gray-900 font-medium transition-all hover:border-brand-teal/50 cursor-pointer"
+                              style={{
+                                colorScheme: 'light'
+                              }}
+                            />
+                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-teal pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Ngày kết thúc <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="date"
+                              value={monthlyEndDate}
+                              onChange={(e) => setMonthlyEndDate(e.target.value)}
+                              min={monthlyStartDate || new Date().toISOString().split('T')[0]}
+                              className="w-full p-3 pl-11 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-brand-teal bg-white text-gray-900 font-medium transition-all hover:border-brand-teal/50 cursor-pointer"
+                              style={{
+                                colorScheme: 'light'
+                              }}
+                            />
+                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-teal pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Recurring Type Selection */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-3">
+                          Kiểu lặp lại <span className="text-red-500">*</span>
+                        </label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setMonthlyRecurringType('dates')}
+                            className={`p-4 rounded-lg border-2 transition-all ${
+                              monthlyRecurringType === 'dates'
+                                ? 'border-brand-teal bg-brand-teal/10 text-brand-teal'
+                                : 'border-gray-300 bg-white text-gray-700 hover:border-brand-teal/30'
+                            }`}
+                          >
+                            <div className="text-center">
+                              <div className="text-2xl mb-1">📅</div>
+                              <div className="font-semibold">Theo ngày</div>
+                              <div className="text-xs mt-1 opacity-75">VD: Mỗi ngày 1, 15</div>
+                            </div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setMonthlyRecurringType('weekday')}
+                            className={`p-4 rounded-lg border-2 transition-all ${
+                              monthlyRecurringType === 'weekday'
+                                ? 'border-brand-teal bg-brand-teal/10 text-brand-teal'
+                                : 'border-gray-300 bg-white text-gray-700 hover:border-brand-teal/30'
+                            }`}
+                          >
+                            <div className="text-center">
+                              <div className="text-2xl mb-1">📆</div>
+                              <div className="font-semibold">Theo thứ</div>
+                              <div className="text-xs mt-1 opacity-75">VD: T2 tuần đầu</div>
+                            </div>
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Days Selection (for dates type) */}
+                      {monthlyRecurringType === 'dates' && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Chọn các ngày trong tháng <span className="text-red-500">*</span>
+                          </label>
+                          
+                          {/* Quick Date Patterns */}
+                          <div className="mb-3">
+                            <label className="block text-xs font-medium text-gray-600 mb-1">
+                              ⚡ Chọn nhanh mẫu
+                            </label>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                              {[
+                                { label: '📅 Đầu tháng', days: [1, 2, 3] },
+                                { label: '🌙 Giữa tháng', days: [15, 16, 17] },
+                                { label: '💰 Ngày lương', days: [1, 15] },
+                                { label: '⚡ Tuần 1x', days: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19] }
+                              ].map(({ label, days }) => (
+                                <button
+                                  key={label}
+                                  type="button"
+                                  onClick={() => setSelectedMonthDays(days)}
+                                  className="p-2 rounded-lg text-xs font-semibold bg-brand-teal/10 text-brand-teal border border-brand-teal/30 hover:bg-brand-teal/20 transition-all"
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <div className="grid grid-cols-7 gap-2">
+                            {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                              <button
+                                key={day}
+                                type="button"
+                                onClick={() => handleToggleMonthDay(day)}
+                                className={`p-2 rounded-lg font-medium text-sm transition-all ${
+                                  selectedMonthDays.includes(day)
+                                    ? 'bg-brand-teal text-white shadow-lg scale-105'
+                                    : 'bg-white text-gray-700 border border-gray-300 hover:border-brand-teal/50 hover:bg-brand-teal/10'
+                                }`}
+                              >
+                                {day}
+                              </button>
+                            ))}
+                          </div>
+                          {selectedMonthDays.length > 0 && (
+                            <p className="mt-2 text-sm text-brand-teal font-medium">
+                              ✓ Đã chọn {selectedMonthDays.length} ngày: {selectedMonthDays.join(', ')}
+                            </p>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Weekday Selection (for weekday type) */}
+                      {monthlyRecurringType === 'weekday' && (
+                        <div className="space-y-4">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Chọn thứ <span className="text-red-500">*</span>
+                            </label>
+                            <div className="grid grid-cols-7 gap-2">
+                              {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((day, index) => (
+                                <button
+                                  key={index}
+                                  type="button"
+                                  onClick={() => setSelectedMonthWeekday(index + 1)}
+                                  className={`p-3 rounded-lg font-medium text-sm transition-all ${
+                                    selectedMonthWeekday === index + 1
+                                      ? 'bg-brand-teal text-white shadow-lg scale-105'
+                                      : 'bg-white text-gray-700 border border-gray-300 hover:border-brand-teal/50 hover:bg-brand-teal/10'
+                                  }`}
+                                >
+                                  {day}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                          
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Tuần thứ mấy trong tháng <span className="text-red-500">*</span>
+                            </label>
+                            <div className="grid grid-cols-5 gap-2">
+                              {['Tuần 1', 'Tuần 2', 'Tuần 3', 'Tuần 4', 'Cuối tháng'].map((week, index) => (
+                                <button
+                                  key={index}
+                                  type="button"
+                                  onClick={() => setSelectedWeekOfMonth(index + 1)}
+                                  className={`p-3 rounded-lg font-medium text-sm transition-all ${
+                                    selectedWeekOfMonth === index + 1
+                                      ? 'bg-brand-teal text-white shadow-lg'
+                                      : 'bg-white text-gray-700 border border-gray-300 hover:border-brand-teal/50 hover:bg-brand-teal/10'
+                                  }`}
+                                >
+                                  {week}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Time Selector */}
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Chọn giờ <span className="text-red-500">*</span>
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="time"
+                            value={monthlyTime}
+                            onChange={(e) => setMonthlyTime(e.target.value)}
+                            className="w-full p-3 pl-11 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-brand-teal bg-white text-gray-900 font-medium transition-all hover:border-brand-teal/50 cursor-pointer"
+                            style={{
+                              colorScheme: 'light'
+                            }}
+                          />
+                          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-teal pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </div>
+                        
+                        {/* Quick Time Selection */}
+                        <div className="mt-2">
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            ⚡ Chọn nhanh
+                          </label>
+                          <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
+                            {['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'].map(time => {
+                              const isSelected = monthlyTime === time;
+                              return (
+                                <button
+                                  key={time}
+                                  type="button"
+                                  onClick={() => setMonthlyTime(time)}
+                                  className={`p-1.5 rounded-md text-xs font-semibold transition-all ${
+                                    isSelected
+                                      ? 'bg-brand-teal text-white shadow-md'
+                                      : 'bg-brand-teal/10 text-brand-teal border border-brand-teal/30 hover:bg-brand-teal/20'
+                                  }`}
+                                >
+                                  {time}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Add Button */}
+                      <button
+                        type="button"
+                        onClick={handleAddMonthlyRecurring}
+                        disabled={
+                          !monthlyStartDate || 
+                          !monthlyEndDate || 
+                          (monthlyRecurringType === 'dates' && selectedMonthDays.length === 0)
+                        }
+                        className="w-full px-6 py-3 bg-gradient-to-r from-brand-navy to-brand-teal text-white rounded-lg hover:shadow-lg transition-all flex items-center justify-center font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                      >
+                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Tạo lịch định kỳ
+                      </button>
+
+                      {/* Info Box */}
+                      <div className="bg-brand-teal/5 border border-brand-teal/20 rounded-lg p-4">
+                        <p className="text-sm text-brand-navy">
+                          💡 <strong>Lưu ý:</strong> Hệ thống sẽ tự động tạo các mốc thời gian theo chu kỳ bạn chọn trong khoảng thời gian đã chỉ định.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
-              {/* Time Selection */}
-              <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-xl p-6 border border-emerald-200">
-                <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
-                  <svg className="w-5 h-5 mr-2 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  Chọn giờ thực hiện
-                </h4>
-                
-                <div className="grid grid-cols-3 md:grid-cols-5 gap-3 mb-4">
-                  {timeSlots.map((time) => {
-                    const isPast = time !== '--:--' && isTimeInPast(time);
-                    const isCustomTime = time === '--:--';
-                    
-                    return (
-                      <button
-                        key={time}
-                        type="button"
-                        onClick={() => {
-                          if (isCustomTime) {
-                            setTimeInputType('custom');
-                          } else {
-                            setTimeInputType('preset');
-                            setBookingData(prev => ({ ...prev, time }));
-                          }
-                        }}
-                        disabled={isPast}
-                        className={`p-3 rounded-xl border-2 transition-all duration-200 font-medium ${
-                          bookingData.time === time && !isCustomTime
-                            ? 'border-emerald-500 bg-emerald-100 text-emerald-700 shadow-emerald-200'
-                            : isCustomTime && timeInputType === 'custom'
-                              ? 'border-emerald-500 bg-emerald-100 text-emerald-700 shadow-emerald-200'
-                              : isPast
-                                ? 'border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed'
-                                : 'border-gray-200 bg-white hover:border-emerald-300 hover:shadow-md transform hover:-translate-y-0.5'
-                        }`}
-                      >
-                        {isCustomTime ? 'Khác' : time}
-                        {isPast && <div className="text-xs mt-1 opacity-75">(Đã qua)</div>}
-                      </button>
-                    );
-                  })}
-                </div>
-                
-                {/* Custom Time Input */}
-                {timeInputType === 'custom' && (
-                  <div className="bg-white rounded-lg p-4 border border-emerald-200">
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Nhập giờ tùy chỉnh:
-                    </label>
-                    <div className="relative">
-                      <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                        <svg className="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
+              {/* Danh sách các mốc thời gian đã chọn */}
+              {bookingData.bookingTimes.length > 0 && (
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border-2 border-green-300">
+                  <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                    <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    Các mốc thời gian đã chọn ({bookingData.bookingTimes.length})
+                  </h4>
+                  
+                  <div className="space-y-3">
+                    {bookingData.bookingTimes.map((time) => (
+                      <div key={time} className="bg-white p-4 rounded-lg border-2 border-green-200 shadow-sm hover:shadow-md transition-shadow">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center flex-1">
+                            <svg className="w-5 h-5 text-green-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                            <span className="font-medium text-gray-900">{formatBookingTime(time)}</span>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 ml-4">
+                            {/* Duplicate buttons */}
+                            <div className="flex gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleDuplicateTime(time, 7)}
+                                className="px-2 py-1 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors text-xs font-medium border border-blue-200"
+                                title="Sao chép sang tuần sau"
+                              >
+                                +7 ngày
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDuplicateTime(time, 1)}
+                                className="px-2 py-1 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors text-xs font-medium border border-purple-200"
+                                title="Sao chép sang ngày mai"
+                              >
+                                +1 ngày
+                              </button>
+                            </div>
+                            
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveBookingTime(time)}
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                              title="Xóa mốc thời gian này"
+                            >
+                              <X className="w-5 h-5" />
+                            </button>
+                          </div>
+                        </div>
                       </div>
-                      <input
-                        type="time"
-                        value={customTimeInput}
-                        onChange={handleCustomTimeChange}
-                        className={`w-full pl-10 p-3 border rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all ${
-                          isTimeInPast(bookingData.time) ? 'border-red-300' : 'border-gray-300'
-                        }`}
-                        min={bookingData.date === new Date().toISOString().split('T')[0] 
-                          ? new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false }) 
-                          : undefined}
-                      />
-                    </div>
-                    {isTimeInPast(bookingData.time) ? (
-                      <p className="mt-2 text-sm text-red-600 flex items-center">
-                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        Không thể chọn thời gian trong quá khứ
-                      </p>
-                    ) : (
-                      <p className="mt-2 text-sm text-gray-500">
-                        {bookingData.date === new Date().toISOString().split('T')[0] 
-                          ? 'Không thể chọn giờ đã qua trong hôm nay' 
-                          : 'Nhập giờ theo định dạng 24 giờ (ví dụ: 14:30)'}
-                      </p>
-                    )}
+                    ))}
                   </div>
-                )}
-              </div>
+                  
+                  <div className="mt-4 p-4 bg-gradient-to-r from-green-100 to-emerald-100 border-2 border-green-300 rounded-lg">
+                    <p className="text-sm text-green-800 flex items-start">
+                      <svg className="w-5 h-5 mr-2 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>
+                        Hệ thống sẽ tạo <strong className="mx-1 text-lg">{bookingData.bookingTimes.length} booking riêng biệt</strong> với cùng thông tin dịch vụ và địa chỉ. 
+                        Mỗi booking sẽ có mã đơn hàng và thanh toán riêng.
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              )}
 
               {/* Duration and Notes */}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -2566,44 +3387,23 @@ const BookingPage: React.FC = () => {
                     
                     <div className="flex items-start">
                       <div className="w-2 h-2 bg-emerald-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Ngày thực hiện</p>
-                        <p className="text-gray-900 font-semibold">
-                          {new Date(bookingData.date).toLocaleDateString('vi-VN', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </p>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-start">
-                      <div className="w-2 h-2 bg-purple-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">Thời gian</p>
-                        <p className="text-gray-900 font-semibold">
-                          {(() => {
-                            if (!bookingData.time || !bookingData.duration) {
-                              return bookingData.time || 'Chưa chọn';
-                            }
-                            
-                            // Parse start time
-                            const [hours, minutes] = bookingData.time.split(':').map(Number);
-                            const startDate = new Date();
-                            startDate.setHours(hours, minutes, 0, 0);
-                            
-                            // Calculate end time
-                            const endDate = new Date(startDate.getTime() + bookingData.duration * 60000);
-                            
-                            // Format times
-                            const startTime = bookingData.time;
-                            const endTime = `${endDate.getHours().toString().padStart(2, '0')}:${endDate.getMinutes().toString().padStart(2, '0')}`;
-                            
-                            return `${startTime}~${endTime} (${bookingData.duration} phút)`;
-                          })()}
-                        </p>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-500 mb-2">Các mốc thời gian đã chọn</p>
+                        <div className="space-y-2">
+                          {bookingData.bookingTimes.map((time, index) => (
+                            <div key={index} className="flex items-center text-gray-900 font-semibold bg-blue-50 px-3 py-2 rounded-lg">
+                              <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                              </svg>
+                              {formatBookingTime(time)}
+                            </div>
+                          ))}
+                        </div>
+                        {bookingData.bookingTimes.length > 1 && (
+                          <p className="text-xs text-gray-500 mt-2">
+                            Tổng cộng {bookingData.bookingTimes.length} booking sẽ được tạo
+                          </p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -3012,18 +3812,15 @@ const BookingPage: React.FC = () => {
                       (addressSource === 'profile' && (!user?.customerId))
                     )) ||
                     (step === 3 && (
-                      !bookingData.date || 
-                      !bookingData.time || 
+                      bookingData.bookingTimes.length === 0 || 
                       !bookingData.duration ||
-                      bookingData.duration <= 0 ||
-                      (timeInputType === 'custom' && !customTimeInput) ||
-                      isTimeInPast(bookingData.time)
+                      bookingData.duration <= 0
                     ))
                   }
                   className="flex items-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-sm"
                 >
-                  {step === 3 && isTimeInPast(bookingData.time) && bookingData.time 
-                    ? 'Vui lòng chọn thời gian hợp lệ' 
+                  {step === 3 && bookingData.bookingTimes.length === 0
+                    ? 'Vui lòng thêm ít nhất một mốc thời gian' 
                     : 'Tiếp tục'
                   }
                   <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">

@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import { 
-  createBookingApi, 
+  createBookingApi,
   getCustomerDefaultAddressApi,
   getCustomerBookingsApi,
   updateBookingApi,
@@ -31,7 +31,10 @@ export const useBooking = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const createBooking = async (request: CreateBookingRequest, images?: File[]) => {
+  const createBooking = async (
+    request: CreateBookingRequest | (Omit<CreateBookingRequest, 'bookingTime'> & { bookingTimes: string[] }), 
+    images?: File[]
+  ) => {
     setIsLoading(true);
     setError(null);
 

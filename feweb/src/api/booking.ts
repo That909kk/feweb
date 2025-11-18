@@ -52,20 +52,19 @@ export const getCustomerDefaultAddressApi = async (customerId: string): Promise<
   }
 };
 
-// Create new booking
+// Create new booking (supports both single and multiple booking times)
 // Có thể tạo với hoặc không có employee (booking post)
-// Theo API-TestCases-Booking-CreateWithMultipleImages.md và API-Booking-Post-Feature.md
-// Hỗ trợ nhiều ảnh (0-10 ảnh)
+// Theo API-TestCases-Booking-CreateWithMultipleImages.md và API-Multiple-Bookings-Creation.md
+// Hỗ trợ nhiều ảnh (0-10 ảnh) và nhiều thời gian booking
 export const createBookingApi = async (
-  data: CreateBookingRequest,
+  data: (CreateBookingRequest | (Omit<CreateBookingRequest, 'bookingTime'> & { bookingTimes: string[] })),
   images?: File[]
-): Promise<BookingResponse> => {
+): Promise<BookingResponse | any> => {
   try {
     console.log('Creating booking with data:', JSON.stringify(data, null, 2));
     console.log('Number of images:', images?.length || 0);
     
     // Backend LUÔN yêu cầu multipart/form-data cho tất cả booking
-    // (Theo API-TestCases-Booking-CreateWithMultipleImages.md)
     const formData = new FormData();
     
     // Gửi booking data dưới dạng JSON string trong field "booking"
@@ -97,7 +96,15 @@ export const createBookingApi = async (
       });
     }
     
-    const response = await api.post<BookingResponse>('/customer/bookings', formData, {
+    // Kiểm tra nếu có bookingTimes thì dùng endpoint /multiple
+    // Nếu chỉ có bookingTime (single) thì dùng endpoint thường
+    const endpoint = 'bookingTimes' in data 
+      ? '/customer/bookings/multiple' 
+      : '/customer/bookings';
+    
+    console.log(`[API] Using endpoint: ${endpoint}`);
+    
+    const response = await api.post<BookingResponse | any>(endpoint, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
