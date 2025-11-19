@@ -314,6 +314,8 @@ export interface SuitableEmployee {
   avatar?: string;
   rating?: number;
   totalCompletedJobs?: number;
+  completedJobs?: number;
+  hasWorkedWithCustomer?: boolean;
   distanceKm?: number;
   availableFrom?: string;
   availableTo?: string;
