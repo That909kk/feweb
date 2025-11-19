@@ -57,18 +57,23 @@ const BookingSuccessPage: React.FC = () => {
     );
   }
 
-  // Extract booking info based on single or multiple
+  // Check if this is a recurring booking
+  const isRecurring = bookingData.isRecurring || false;
+  
+  // Extract booking info based on single or multiple or recurring
   const firstBooking = isMultiple && bookingData.bookings?.length > 0 
     ? bookingData.bookings[0] 
     : bookingData;
   
   
-  const displayAmount = isMultiple
-    ? bookingData.formattedTotalAmount
-    : (bookingData.formattedTotalAmount || new Intl.NumberFormat('vi-VN', {
-        style: 'currency',
-        currency: 'VND'
-      }).format(bookingData.totalPrice || bookingData.amount || 0));
+  const displayAmount = isRecurring
+    ? 'Thanh toán theo từng lần'
+    : (isMultiple
+      ? bookingData.formattedTotalAmount
+      : (bookingData.formattedTotalAmount || new Intl.NumberFormat('vi-VN', {
+          style: 'currency',
+          currency: 'VND'
+        }).format(bookingData.totalPrice || bookingData.amount || 0)));
 
   // Lấy danh sách nhân viên từ assignments trong bookingDetails
   const assignedEmployees = firstBooking?.bookingDetails?.flatMap((detail: any) => 
@@ -164,7 +169,10 @@ const BookingSuccessPage: React.FC = () => {
   // Kiểm tra trạng thái thanh toán
   const paymentStatus = firstBooking?.paymentInfo?.paymentStatus || firstBooking?.payment?.paymentStatus || 'PENDING';
   const isPaid = paymentStatus === 'PAID' || paymentStatus === 'COMPLETED';
-  const paymentMethod = firstBooking?.paymentInfo?.paymentMethod || firstBooking?.payment?.paymentMethod || '';
+  const paymentMethodFromState = location.state?.paymentMethod;
+  const paymentMethod = isRecurring 
+    ? (paymentMethodFromState === 'cash' ? 'Tiền mặt' : paymentMethodFromState)
+    : (firstBooking?.paymentInfo?.paymentMethod || firstBooking?.payment?.paymentMethod || '');
   const isCashPayment = paymentMethod.toUpperCase().includes('CASH') || paymentMethod.toUpperCase().includes('TIỀN MẶT');
 
   // Debug log
@@ -216,7 +224,12 @@ const BookingSuccessPage: React.FC = () => {
             {isPaid ? 'Thanh toán thành công!' : 'Đặt lịch thành công!'}
           </h1>
           <p className="mb-4 text-lg text-emerald-50">
-            {isMultiple ? (
+            {isRecurring ? (
+              <>
+                <span className="font-mono font-semibold text-white">{bookingData.title || 'Lịch định kỳ'}</span> đã được tạo<br/>
+                <span className="text-sm">Tổng {bookingData.totalBookingsToBeCreated || 0} booking sẽ được tạo, {bookingData.totalGeneratedBookings || 0} booking đầu tiên đã sẵn sàng</span>
+              </>
+            ) : isMultiple ? (
               <>Đã tạo <span className="font-mono font-semibold text-white">{bookingData.totalBookingsCreated || 0} đơn hàng</span> thành công</>
             ) : (
               <>Đơn hàng <span className="font-mono font-semibold text-white">{bookingData.bookingCode || firstBooking?.bookingCode || 'N/A'}</span> đã được tạo</>
@@ -251,23 +264,29 @@ const BookingSuccessPage: React.FC = () => {
         <MetricCard
           icon={Clock}
           label="Trạng thái đơn"
-          value={vietnameseStatus}
-          accent={statusAccent}
-          trendLabel="Sẽ được xử lý trong vòng 24h"
+          value={isRecurring ? bookingData.statusDisplay || 'ACTIVE' : vietnameseStatus}
+          accent={isRecurring ? 'teal' : statusAccent}
+          trendLabel={isRecurring ? 'Sẽ được xử lý tự động theo lịch' : 'Sẽ được xử lý trong vòng 24h'}
         />
           <MetricCard
           icon={Calendar}
-          label={isMultiple ? "Thời gian đầu tiên" : "Thời gian thực hiện"}
-          value={firstBooking?.bookingTime ? new Date(firstBooking.bookingTime).toLocaleDateString('vi-VN', { 
-            day: '2-digit', 
-            month: '2-digit',
-            year: 'numeric'
-          }) : 'N/A'}
+          label={isRecurring ? "Khoảng thời gian" : (isMultiple ? "Thời gian đầu tiên" : "Thời gian thực hiện")}
+          value={isRecurring 
+            ? `${new Date(bookingData.startDate).toLocaleDateString('vi-VN')} - ${new Date(bookingData.endDate).toLocaleDateString('vi-VN')}`
+            : (firstBooking?.bookingTime ? new Date(firstBooking.bookingTime).toLocaleDateString('vi-VN', { 
+                day: '2-digit', 
+                month: '2-digit',
+                year: 'numeric'
+              }) : 'N/A')
+          }
           accent="teal"
-          trendLabel={firstBooking?.bookingTime ? `${new Date(firstBooking.bookingTime).toLocaleTimeString('vi-VN', {
-            hour: '2-digit',
-            minute: '2-digit'
-          })} - ${estimatedDuration}` : 'N/A'}
+          trendLabel={isRecurring
+            ? `${bookingData.recurrenceDaysDisplay} - ${bookingData.bookingTime?.substring(0, 5) || ''}`
+            : (firstBooking?.bookingTime ? `${new Date(firstBooking.bookingTime).toLocaleTimeString('vi-VN', {
+                hour: '2-digit',
+                minute: '2-digit'
+              })} - ${estimatedDuration}` : 'N/A')
+          }
         />
         <MetricCard
           icon={CreditCard}
@@ -323,7 +342,10 @@ const BookingSuccessPage: React.FC = () => {
         className="mt-6"
       >
         <div className="space-y-6">
-          {(firstBooking?.bookingDetails || firstBooking?.serviceDetails)?.map((serviceDetail: any, index: number) => (
+          {(isRecurring 
+            ? bookingData.service ? [{ service: bookingData.service, quantity: 1, formattedDuration: bookingData.service?.estimatedDurationHours ? `${bookingData.service.estimatedDurationHours}h` : '2h', formattedSubTotal: bookingData.service?.formattedPricePerUnit || 'Thanh toán theo từng lần', selectedChoices: [] }] : []
+            : (firstBooking?.bookingDetails || firstBooking?.serviceDetails)
+          )?.map((serviceDetail: any, index: number) => (
             <div key={index} className="rounded-2xl border border-brand-outline/20 bg-gradient-to-r from-white to-slate-50/50 p-6 shadow-sm">
               <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-teal/10">
@@ -389,50 +411,96 @@ const BookingSuccessPage: React.FC = () => {
                   <Clock className="h-5 w-5 text-blue-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-brand-navy">Thời gian thực hiện</h3>
-                  <p className="text-sm text-brand-text/70">Dự kiến: {bookingData.estimatedDuration}</p>
+                  <h3 className="font-semibold text-brand-navy">
+                    {isRecurring ? 'Lịch định kỳ' : 'Thời gian thực hiện'}
+                  </h3>
+                  <p className="text-sm text-brand-text/70">
+                    {isRecurring ? bookingData.recurrenceTypeDisplay : `Dự kiến: ${bookingData.estimatedDuration || estimatedDuration}`}
+                  </p>
                 </div>
               </div>
               
-              <div className="space-y-4">
-                {/* Ngày thực hiện */}
-                <div className="text-lg font-semibold text-brand-navy">
-                  {new Date(firstBooking.bookingTime).toLocaleDateString('vi-VN', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
-                </div>
-                
-                {/* Khung thời gian - Hiển thị thời gian bắt đầu và dự kiến kết thúc */}
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="rounded-xl bg-white p-3 shadow-sm">
-                    <div className="text-xs font-medium text-brand-text/70 mb-1">Bắt đầu</div>
-                    <div className="text-lg font-bold text-blue-600">
-                      {new Date(firstBooking.bookingTime).toLocaleTimeString('vi-VN', {
-                        hour: '2-digit',
-                        minute: '2-digit'
-                      })}
+              {isRecurring ? (
+                /* Recurring booking time info */
+                <div className="space-y-4">
+                  {/* Date range */}
+                  <div className="text-lg font-semibold text-brand-navy">
+                    {new Date(bookingData.startDate).toLocaleDateString('vi-VN', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })} - {new Date(bookingData.endDate).toLocaleDateString('vi-VN', { 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </div>
+                  
+                  {/* Recurrence pattern */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-xl bg-white p-3 shadow-sm">
+                      <div className="text-xs font-medium text-brand-text/70 mb-1">Lặp lại vào</div>
+                      <div className="text-base font-bold text-blue-600">
+                        {bookingData.recurrenceDaysDisplay}
+                      </div>
+                    </div>
+                    
+                    <div className="rounded-xl bg-white p-3 shadow-sm">
+                      <div className="text-xs font-medium text-brand-text/70 mb-1">Giờ thực hiện</div>
+                      <div className="text-lg font-bold text-emerald-600">
+                        {bookingData.bookingTime?.substring(0, 5) || 'N/A'}
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="rounded-xl bg-white p-3 shadow-sm">
-                    <div className="text-xs font-medium text-brand-text/70 mb-1">Dự kiến kết thúc</div>
-                    <div className="text-lg font-bold text-emerald-600">
-                      {firstBooking?.bookingTime && estimatedDuration 
-                        ? formatEndTime(firstBooking.bookingTime, estimatedDuration)
-                        : 'N/A'}
-                    </div>
+                  {/* Summary badge */}
+                  <div className="inline-flex items-center gap-2 rounded-full bg-purple-100 px-3 py-1 text-sm font-medium text-purple-700">
+                    <Calendar className="h-4 w-4" />
+                    {bookingData.totalGeneratedBookings || 0} booking đã tạo, {bookingData.totalBookingsToBeCreated || 0} booking sẽ tạo tổng cộng
                   </div>
                 </div>
-                
-                {/* Duration badge */}
-                <div className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
-                  <Clock className="h-4 w-4" />
-                  Thời lượng: {estimatedDuration}
+              ) : (
+                /* Single booking time info */
+                <div className="space-y-4">
+                  {/* Ngày thực hiện */}
+                  <div className="text-lg font-semibold text-brand-navy">
+                    {firstBooking?.bookingTime ? new Date(firstBooking.bookingTime).toLocaleDateString('vi-VN', { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    }) : 'N/A'}
+                  </div>
+                  
+                  {/* Khung thời gian - Hiển thị thời gian bắt đầu và dự kiến kết thúc */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="rounded-xl bg-white p-3 shadow-sm">
+                      <div className="text-xs font-medium text-brand-text/70 mb-1">Bắt đầu</div>
+                      <div className="text-lg font-bold text-blue-600">
+                        {firstBooking?.bookingTime ? new Date(firstBooking.bookingTime).toLocaleTimeString('vi-VN', {
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        }) : 'N/A'}
+                      </div>
+                    </div>
+                    
+                    <div className="rounded-xl bg-white p-3 shadow-sm">
+                      <div className="text-xs font-medium text-brand-text/70 mb-1">Dự kiến kết thúc</div>
+                      <div className="text-lg font-bold text-emerald-600">
+                        {firstBooking?.bookingTime && estimatedDuration 
+                          ? formatEndTime(firstBooking.bookingTime, estimatedDuration)
+                          : 'N/A'}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  {/* Duration badge */}
+                  <div className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
+                    <Clock className="h-4 w-4" />
+                    Thời lượng: {estimatedDuration}
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
 
             {/* Customer Note - Only show if note exists */}
@@ -461,18 +529,23 @@ const BookingSuccessPage: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-brand-navy">Địa chỉ khách hàng</h3>
-                  {firstBooking?.address?.isDefault && (
+                  {(isRecurring ? bookingData.address?.isDefault : firstBooking?.address?.isDefault) && (
                     <span className="text-xs text-emerald-600 font-medium">Địa chỉ mặc định</span>
                   )}
                 </div>
               </div>
               <div className="space-y-1">
                 <div className="font-medium text-brand-navy">
-                  {firstBooking?.address?.fullAddress || 'Chưa có thông tin địa chỉ'}
+                  {isRecurring 
+                    ? (bookingData.address?.fullAddress || 'Chưa có thông tin địa chỉ')
+                    : (firstBooking?.address?.fullAddress || 'Chưa có thông tin địa chỉ')
+                  }
                 </div>
-                {firstBooking?.address && (
+                {(isRecurring ? bookingData.address : firstBooking?.address) && (
                   <div className="text-sm text-brand-text/70">
-                    {[firstBooking.address.ward, firstBooking.address.district, firstBooking.address.city]
+                    {[(isRecurring ? bookingData.address : firstBooking.address).ward, 
+                      (isRecurring ? bookingData.address : firstBooking.address).district, 
+                      (isRecurring ? bookingData.address : firstBooking.address).city]
                       .filter(Boolean)
                       .join(', ')}
                   </div>
@@ -659,22 +732,37 @@ const BookingSuccessPage: React.FC = () => {
           <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/50 p-6">
             <h3 className="mb-4 font-semibold text-brand-navy">Chi tiết dịch vụ</h3>
             <div className="space-y-3">
-              {(firstBooking?.bookingDetails || firstBooking?.serviceDetails)?.map((serviceDetail: any, index: number) => (
-                <div key={index}>
-                  <div className="flex items-center justify-between py-2">
-                    <span className="font-medium text-brand-navy">
-                      {serviceDetail.service.name} × {serviceDetail.quantity}
-                    </span>
-                    <span className="font-semibold text-brand-navy">{serviceDetail.formattedSubTotal}</span>
-                  </div>
-                  {serviceDetail.selectedChoices?.map((choice: any, choiceIndex: number) => (
-                    <div key={choiceIndex} className="flex items-center justify-between py-1 pl-4 text-sm text-brand-text/70">
-                      <span>+ {choice.choiceName}</span>
-                      <span>{choice.formattedPriceAdjustment}</span>
+              {isRecurring ? (
+                // Recurring booking service details
+                bookingData.recurringBookingDetails?.map((serviceDetail: any, index: number) => (
+                  <div key={index}>
+                    <div className="flex items-center justify-between py-2">
+                      <span className="font-medium text-brand-navy">
+                        {serviceDetail.service.name} × 1
+                      </span>
+                      <span className="font-semibold text-brand-navy">{serviceDetail.formattedSubTotal}</span>
                     </div>
-                  ))}
-                </div>
-              ))}
+                  </div>
+                ))
+              ) : (
+                // Single/multiple booking service details
+                (firstBooking?.bookingDetails || firstBooking?.serviceDetails)?.map((serviceDetail: any, index: number) => (
+                  <div key={index}>
+                    <div className="flex items-center justify-between py-2">
+                      <span className="font-medium text-brand-navy">
+                        {serviceDetail.service.name} × {serviceDetail.quantity}
+                      </span>
+                      <span className="font-semibold text-brand-navy">{serviceDetail.formattedSubTotal}</span>
+                    </div>
+                    {serviceDetail.selectedChoices?.map((choice: any, choiceIndex: number) => (
+                      <div key={choiceIndex} className="flex items-center justify-between py-1 pl-4 text-sm text-brand-text/70">
+                        <span>+ {choice.choiceName}</span>
+                        <span>{choice.formattedPriceAdjustment}</span>
+                      </div>
+                    ))}
+                  </div>
+                ))
+              )}
               
               <div className="border-t border-brand-outline/20 pt-4">
                 <div className="flex items-center justify-between">
@@ -690,31 +778,49 @@ const BookingSuccessPage: React.FC = () => {
             <div className="rounded-xl border border-brand-outline/20 bg-white p-4">
               <div className="text-sm font-medium text-brand-text/70">Phương thức thanh toán</div>
               <div className="mt-1 font-semibold text-brand-navy">
-                {(firstBooking?.payment?.paymentMethod || firstBooking?.paymentInfo?.paymentMethod || firstBooking?.paymentInfo?.methodName || 'N/A')}
+                {isRecurring ? (
+                  paymentMethod || 'Thanh toán theo từng lần'
+                ) : (
+                  firstBooking?.payment?.paymentMethod || firstBooking?.paymentInfo?.paymentMethod || firstBooking?.paymentInfo?.methodName || 'N/A'
+                )}
               </div>
             </div>
             <div className="rounded-xl border border-brand-outline/20 bg-white p-4">
               <div className="text-sm font-medium text-brand-text/70">Mã giao dịch</div>
               <div className="mt-1 font-mono text-sm text-brand-navy">
-                {(firstBooking?.payment?.transactionCode || firstBooking?.paymentInfo?.transactionCode || 'N/A')}
+                {isRecurring ? (
+                  bookingData.recurringBookingId || 'N/A'
+                ) : (
+                  firstBooking?.payment?.transactionCode || firstBooking?.paymentInfo?.transactionCode || 'N/A'
+                )}
               </div>
             </div>
             <div className="rounded-xl border border-brand-outline/20 bg-white p-4">
               <div className="text-sm font-medium text-brand-text/70">Trạng thái thanh toán</div>
               <div className="mt-1">
                 <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                  (firstBooking?.payment?.paymentStatus || firstBooking?.paymentInfo?.paymentStatus) === 'PENDING' 
-                    ? 'border border-amber-200 bg-amber-50 text-amber-700' 
-                    : 'border border-emerald-200 bg-emerald-50 text-emerald-700'
+                  isRecurring
+                    ? 'border border-blue-200 bg-blue-50 text-blue-700'
+                    : (firstBooking?.payment?.paymentStatus || firstBooking?.paymentInfo?.paymentStatus) === 'PENDING' 
+                      ? 'border border-amber-200 bg-amber-50 text-amber-700' 
+                      : 'border border-emerald-200 bg-emerald-50 text-emerald-700'
                 }`}>
-                  {(firstBooking?.payment?.paymentStatus || firstBooking?.paymentInfo?.paymentStatus) === 'PENDING' ? 'Chờ thanh toán' : 'Đã thanh toán'}
+                  {isRecurring 
+                    ? 'Thanh toán theo từng lần' 
+                    : (firstBooking?.payment?.paymentStatus || firstBooking?.paymentInfo?.paymentStatus) === 'PENDING' 
+                      ? 'Chờ thanh toán' 
+                      : 'Đã thanh toán'
+                  }
                 </span>
               </div>
             </div>
             <div className="rounded-xl border border-brand-outline/20 bg-white p-4">
               <div className="text-sm font-medium text-brand-text/70">Ngày tạo đơn</div>
               <div className="mt-1 text-sm text-brand-navy">
-                {new Date(firstBooking.createdAt).toLocaleString('vi-VN')}
+                {isRecurring 
+                  ? (bookingData.createdAt ? new Date(bookingData.createdAt).toLocaleString('vi-VN') : 'N/A')
+                  : (firstBooking?.createdAt ? new Date(firstBooking.createdAt).toLocaleString('vi-VN') : 'N/A')
+                }
               </div>
             </div>
           </div>

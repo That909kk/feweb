@@ -13,6 +13,7 @@ import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import { useServices, useServiceOptions, useServicePriceCalculation, useSuitableEmployees } from '../../hooks/useServices';
 import { useBooking } from '../../hooks/useBooking';
+import { useRecurringBooking } from '../../hooks/useRecurringBooking';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCategories } from '../../hooks/useCategories';
 import { useAddress } from '../../hooks/useAddress';
@@ -85,6 +86,10 @@ const BookingPage: React.FC = () => {
     isLoading: bookingLoading, 
     error: bookingError 
   } = useBooking();
+  const { 
+    createRecurringBooking,
+    isLoading: recurringBookingLoading
+  } = useRecurringBooking();
   const preselectedServiceId = searchParams.get('service');
   
   const [step, setStep] = useState(1);
@@ -98,24 +103,25 @@ const BookingPage: React.FC = () => {
     promoCode: ''
   });
   
+  // State cho đặt lịch định kỳ
+  const [isRecurringBooking, setIsRecurringBooking] = useState(false);
+  const [recurringTitle, setRecurringTitle] = useState('');
+  const [recurringStartDate, setRecurringStartDate] = useState('');
+  const [recurringEndDate, setRecurringEndDate] = useState('');
+  
   // State cho việc thêm thời gian mới (tạm thời)
   const [tempDate, setTempDate] = useState('');
   const [tempTime, setTempTime] = useState('');
   
   // State cho chọn nhanh theo tuần
-  const [weekStartDate, setWeekStartDate] = useState('');
   const [selectedWeekDays, setSelectedWeekDays] = useState<number[]>([]); // 0 = CN, 1 = T2, ..., 6 = T7
   const [weekTime, setWeekTime] = useState('09:00');
-  const [timeSelectionMode, setTimeSelectionMode] = useState<'single' | 'week' | 'monthly'>('single'); // Tab selector
+  const [timeSelectionMode, setTimeSelectionMode] = useState<'single' | 'recurring'>('single'); // Tab selector
   
-  // State cho đặt định kỳ theo tháng
-  const [monthlyStartDate, setMonthlyStartDate] = useState('');
-  const [monthlyEndDate, setMonthlyEndDate] = useState('');
-  const [selectedMonthDays, setSelectedMonthDays] = useState<number[]>([]); // 1-31: ngày trong tháng
+  // State cho monthly recurring (vẫn giữ để hỗ trợ cả WEEKLY và MONTHLY mode)
   const [monthlyTime, setMonthlyTime] = useState('09:00');
-  const [monthlyRecurringType, setMonthlyRecurringType] = useState<'dates' | 'weekday'>('dates'); // Chọn theo ngày cụ thể hoặc thứ trong tháng
-  const [selectedMonthWeekday, setSelectedMonthWeekday] = useState<number>(1); // 1-7: T2-CN
-  const [selectedWeekOfMonth, setSelectedWeekOfMonth] = useState<number>(1); // 1-5: tuần 1-5
+  const [monthlyRecurringType] = useState<'dates' | 'weekday'>('weekday'); // Mặc định WEEKLY
+  const [selectedMonthDays] = useState<number[]>([]); // Cho MONTHLY mode (nếu cần sau này)
   
   // Category selection state
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
@@ -140,7 +146,7 @@ const BookingPage: React.FC = () => {
   // State for booking flow
   const [selectedChoiceIds, setSelectedChoiceIds] = useState<number[]>([]);
   const [selectedEmployees, setSelectedEmployees] = useState<string[]>([]);
-  const [showEmployeeSelection, setShowEmployeeSelection] = useState<boolean>(false);
+  const [showEmployeeSelection, setShowEmployeeSelection] = useState<boolean>(true);
   const [employeeSelectionErrors, setEmployeeSelectionErrors] = useState<string[]>([]);
   const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(false);
   const [showPromoCodeInput, setShowPromoCodeInput] = useState<boolean>(false);
@@ -202,6 +208,16 @@ const BookingPage: React.FC = () => {
 
     loadPaymentMethods();
   }, []); // Only run once on mount
+  
+  // Auto-fill recurring title when switching to recurring mode or selecting service
+  useEffect(() => {
+    if (isRecurringBooking && !recurringTitle && bookingData.serviceId) {
+      const service = services.find(s => s.serviceId === parseInt(bookingData.serviceId));
+      if (service) {
+        setRecurringTitle(`${service.name} định kỳ`);
+      }
+    }
+  }, [isRecurringBooking, bookingData.serviceId, recurringTitle, services]);
   
   // Hàm thêm mốc thời gian mới vào danh sách
   const handleAddBookingTime = () => {
@@ -269,64 +285,6 @@ const BookingPage: React.FC = () => {
     );
   };
   
-  // Hàm thêm các ngày trong tuần đã chọn
-  const handleAddWeekDays = () => {
-    if (!weekStartDate) {
-      setErrorMessages(['Vui lòng chọn ngày bắt đầu tuần']);
-      return;
-    }
-    
-    if (selectedWeekDays.length === 0) {
-      setErrorMessages(['Vui lòng chọn ít nhất một ngày trong tuần']);
-      return;
-    }
-    
-    const startDate = new Date(weekStartDate);
-    const newTimes: string[] = [];
-    const errors: string[] = [];
-    const now = new Date();
-    
-    // Tính ngày đầu tuần (Chủ nhật)
-    const dayOfWeek = startDate.getDay();
-    const firstDayOfWeek = new Date(startDate);
-    firstDayOfWeek.setDate(startDate.getDate() - dayOfWeek);
-    
-    selectedWeekDays.forEach(dayIndex => {
-      const targetDate = new Date(firstDayOfWeek);
-      targetDate.setDate(firstDayOfWeek.getDate() + dayIndex);
-      
-      const dateTimeString = `${targetDate.toISOString().split('T')[0]}T${weekTime}:00`;
-      const dateTime = new Date(dateTimeString);
-      
-      // Kiểm tra thời gian phải ở tương lai
-      if (dateTime <= now) {
-        errors.push(`${formatBookingTime(dateTimeString)} đã qua`);
-        return;
-      }
-      
-      // Kiểm tra trùng lặp
-      if (!bookingData.bookingTimes.includes(dateTimeString)) {
-        newTimes.push(dateTimeString);
-      }
-    });
-    
-    if (newTimes.length > 0) {
-      setBookingData(prev => ({
-        ...prev,
-        bookingTimes: [...prev.bookingTimes, ...newTimes].sort()
-      }));
-      
-      // Reset form
-      setSelectedWeekDays([]);
-      setWeekStartDate('');
-      setErrorMessages([]);
-    }
-    
-    if (errors.length > 0) {
-      setErrorMessages(errors);
-    }
-  };
-  
   // Hàm sao chép mốc thời gian sang ngày khác
   const handleDuplicateTime = (originalTime: string, daysToAdd: number) => {
     const originalDate = new Date(originalTime);
@@ -354,140 +312,6 @@ const BookingPage: React.FC = () => {
     setErrorMessages([]);
   };
   
-  // Hàm toggle chọn ngày trong tháng
-  const handleToggleMonthDay = (day: number) => {
-    setSelectedMonthDays(prev => 
-      prev.includes(day) 
-        ? prev.filter(d => d !== day)
-        : [...prev, day].sort((a, b) => a - b)
-    );
-  };
-  
-  // Hàm thêm các ngày định kỳ theo tháng
-  const handleAddMonthlyRecurring = () => {
-    if (!monthlyStartDate) {
-      setErrorMessages(['Vui lòng chọn ngày bắt đầu']);
-      return;
-    }
-    
-    if (!monthlyEndDate) {
-      setErrorMessages(['Vui lòng chọn ngày kết thúc']);
-      return;
-    }
-    
-    const startDate = new Date(monthlyStartDate);
-    const endDate = new Date(monthlyEndDate);
-    
-    if (endDate < startDate) {
-      setErrorMessages(['Ngày kết thúc phải sau ngày bắt đầu']);
-      return;
-    }
-    
-    if (monthlyRecurringType === 'dates' && selectedMonthDays.length === 0) {
-      setErrorMessages(['Vui lòng chọn ít nhất một ngày trong tháng']);
-      return;
-    }
-    
-    const newTimes: string[] = [];
-    const errors: string[] = [];
-    const now = new Date();
-    
-    // Tính toán các tháng trong khoảng thời gian
-    let currentDate = new Date(startDate);
-    
-    while (currentDate <= endDate) {
-      if (monthlyRecurringType === 'dates') {
-        // Chọn theo ngày cụ thể trong tháng (ví dụ: ngày 1, 15, 30)
-        selectedMonthDays.forEach(day => {
-          const targetDate = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-          
-          // Kiểm tra ngày có hợp lệ không (ví dụ: tháng 2 không có ngày 30)
-          if (targetDate.getMonth() === currentDate.getMonth() && targetDate >= startDate && targetDate <= endDate) {
-            const dateTimeString = `${targetDate.toISOString().split('T')[0]}T${monthlyTime}:00`;
-            const dateTime = new Date(dateTimeString);
-            
-            if (dateTime > now && !bookingData.bookingTimes.includes(dateTimeString)) {
-              newTimes.push(dateTimeString);
-            } else if (dateTime <= now) {
-              errors.push(`${formatBookingTime(dateTimeString)} đã qua`);
-            }
-          }
-        });
-      } else {
-        // Chọn theo thứ trong tháng (ví dụ: Thứ 2 tuần đầu tiên, Thứ 6 cuối tháng)
-        const targetDate = getNthWeekdayOfMonth(
-          currentDate.getFullYear(), 
-          currentDate.getMonth(), 
-          selectedMonthWeekday, 
-          selectedWeekOfMonth
-        );
-        
-        if (targetDate && targetDate >= startDate && targetDate <= endDate) {
-          const dateTimeString = `${targetDate.toISOString().split('T')[0]}T${monthlyTime}:00`;
-          const dateTime = new Date(dateTimeString);
-          
-          if (dateTime > now && !bookingData.bookingTimes.includes(dateTimeString)) {
-            newTimes.push(dateTimeString);
-          } else if (dateTime <= now) {
-            errors.push(`${formatBookingTime(dateTimeString)} đã qua`);
-          }
-        }
-      }
-      
-      // Chuyển sang tháng tiếp theo
-      currentDate.setMonth(currentDate.getMonth() + 1);
-    }
-    
-    if (newTimes.length > 0) {
-      setBookingData(prev => ({
-        ...prev,
-        bookingTimes: [...prev.bookingTimes, ...newTimes].sort()
-      }));
-      
-      setErrorMessages([]);
-    } else if (errors.length === 0) {
-      setErrorMessages(['Không tìm thấy mốc thời gian hợp lệ nào']);
-    }
-    
-    if (errors.length > 0) {
-      setErrorMessages(errors);
-    }
-  };
-  
-  // Hàm helper: Tìm ngày thứ N trong tháng (ví dụ: Thứ 2 đầu tiên, Thứ 6 cuối cùng)
-  const getNthWeekdayOfMonth = (year: number, month: number, weekday: number, weekNumber: number): Date | null => {
-    // weekday: 0=CN, 1=T2, ..., 6=T7
-    // weekNumber: 1=tuần đầu, 2=tuần 2, ..., 5=tuần cuối
-    
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    
-    if (weekNumber === 5) {
-      // Tìm ngày cuối cùng của weekday trong tháng
-      let targetDate = new Date(lastDay);
-      while (targetDate.getDay() !== weekday) {
-        targetDate.setDate(targetDate.getDate() - 1);
-      }
-      return targetDate;
-    } else {
-      // Tìm ngày thứ N của weekday trong tháng
-      let targetDate = new Date(firstDay);
-      let count = 0;
-      
-      while (targetDate.getMonth() === month) {
-        if (targetDate.getDay() === weekday) {
-          count++;
-          if (count === weekNumber) {
-            return targetDate;
-          }
-        }
-        targetDate.setDate(targetDate.getDate() + 1);
-      }
-      
-      return null; // Không tìm thấy (ví dụ: tháng không có Thứ 2 thứ 5)
-    }
-  };
-  
   // Tự động set ngày và tuần hiện tại khi component mount
   useEffect(() => {
     const now = new Date();
@@ -495,9 +319,6 @@ const BookingPage: React.FC = () => {
     // Set ngày hiện tại cho tempDate
     const today = now.toISOString().split('T')[0];
     setTempDate(today);
-    
-    // Set tuần hiện tại cho weekStartDate
-    setWeekStartDate(today);
     
     // Set giờ mặc định (9:00 AM)
     const currentHour = now.getHours();
@@ -513,12 +334,6 @@ const BookingPage: React.FC = () => {
       setWeekTime('09:00');
       setMonthlyTime('09:00');
     }
-    
-    // Set khoảng thời gian mặc định cho monthly (tháng này + 2 tháng tiếp theo)
-    setMonthlyStartDate(today);
-    const threeMonthsLater = new Date(now);
-    threeMonthsLater.setMonth(now.getMonth() + 3);
-    setMonthlyEndDate(threeMonthsLater.toISOString().split('T')[0]);
   }, []);
   
   // Lấy địa chỉ từ profile người dùng khi component mount
@@ -1340,7 +1155,208 @@ const BookingPage: React.FC = () => {
     }
   };
 
+  const handleRecurringBookingSubmit = async () => {
+    try {
+      setErrorMessages([]);
+      
+      // Validate form data
+      if (!bookingData.serviceId) {
+        setErrorMessages(['Vui lòng chọn dịch vụ']);
+        return;
+      }
+      
+      if (!recurringTitle.trim()) {
+        setErrorMessages(['Vui lòng nhập tiêu đề cho lịch định kỳ']);
+        return;
+      }
+      
+      if (!recurringStartDate) {
+        setErrorMessages(['Vui lòng chọn ngày bắt đầu']);
+        return;
+      }
+      
+      if (!recurringEndDate) {
+        setErrorMessages(['Vui lòng chọn ngày kết thúc']);
+        return;
+      }
+      
+      if (new Date(recurringEndDate) <= new Date(recurringStartDate)) {
+        setErrorMessages(['Ngày kết thúc phải sau ngày bắt đầu']);
+        return;
+      }
+      
+      // Validate recurrence days - always WEEKLY for now
+      let recurrenceDays: number[] = [];
+      let recurrenceType: 'WEEKLY' | 'MONTHLY' = monthlyRecurringType === 'dates' ? 'MONTHLY' : 'WEEKLY';
+      
+      if (monthlyRecurringType === 'dates') {
+        // Monthly - specific dates
+        recurrenceDays = selectedMonthDays;
+        
+        if (recurrenceDays.length === 0) {
+          setErrorMessages(['Vui lòng chọn ít nhất một ngày trong tháng']);
+          return;
+        }
+      } else {
+        // Weekly
+        recurrenceDays = selectedWeekDays.map(d => d === 0 ? 7 : d); // Convert 0 (Sunday) to 7
+        
+        if (recurrenceDays.length === 0) {
+          setErrorMessages(['Vui lòng chọn ít nhất một ngày trong tuần']);
+          return;
+        }
+      }
+      
+      // Get booking time (HH:mm:ss format)
+      const bookingTime = monthlyRecurringType === 'dates' ? monthlyTime : weekTime;
+      if (!bookingTime) {
+        setErrorMessages(['Vui lòng chọn giờ đặt lịch']);
+        return;
+      }
+      
+      // Handle address
+      if (!user?.customerId) {
+        setErrorMessages(['Lỗi xác thực người dùng. Vui lòng đăng nhập lại.']);
+        return;
+      }
+      
+      let addressId: string | undefined = undefined;
+      let newAddress: any = undefined;
+      
+      if (addressSource === 'profile') {
+        if (defaultAddressInfo?.addressId) {
+          addressId = defaultAddressInfo.addressId;
+        } else {
+          const defaultAddress = await getDefaultAddress(user.customerId);
+          if (defaultAddress?.addressId) {
+            addressId = defaultAddress.addressId;
+          } else {
+            setErrorMessages(['Không thể lấy địa chỉ mặc định']);
+            return;
+          }
+        }
+      } else {
+        let finalAddress = '';
+        if (addressSource === 'current') {
+          finalAddress = currentLocationAddress;
+        } else if (addressSource === 'custom') {
+          finalAddress = isManualAddress ? manualAddress : bookingData.address;
+        }
+        
+        if (!finalAddress?.trim()) {
+          setErrorMessages(['Vui lòng nhập địa chỉ']);
+          return;
+        }
+        
+        const finalCoordinates = addressSource === 'current' ? mapCoordinates : null;
+        
+        newAddress = {
+          customerId: user.customerId,
+          fullAddress: finalAddress,
+          ward: addressSource === 'custom' && !isManualAddress ? selectedCommuneName : '',
+          city: addressSource === 'custom' && !isManualAddress ? selectedProvinceName : 'Thành phố Hồ Chí Minh',
+          latitude: finalCoordinates?.lat || 0,
+          longitude: finalCoordinates?.lng || 0
+        };
+      }
+      
+      const serviceId = parseInt(bookingData.serviceId);
+      
+      // Create recurring booking request
+      const recurringRequest = {
+        addressId,
+        newAddress,
+        recurrenceType,
+        recurrenceDays,
+        bookingTime: `${bookingTime}:00`,
+        startDate: recurringStartDate,
+        endDate: recurringEndDate,
+        note: bookingData.notes || undefined,
+        title: recurringTitle.trim(),
+        promoCode: bookingData.promoCode || null,
+        bookingDetails: [
+          {
+            serviceId,
+            quantity: 1,
+            selectedChoices: selectedChoiceIds
+          }
+        ]
+      };
+      
+      console.log('📅 [RECURRING BOOKING] Submitting:', recurringRequest);
+      
+      const result = await createRecurringBooking(user.customerId, recurringRequest);
+      
+      if (result) {
+        console.log('✅ [RECURRING BOOKING] Created successfully:', result);
+        
+        // Extract recurring booking info
+        const { recurringBooking, generatedBookingIds, totalBookingsToBeCreated } = result;
+        
+        // Check payment method
+        const selectedPaymentMethodId = parseInt(bookingData.paymentMethod);
+        const isCashPayment = selectedPaymentMethodId === 1; // 1 = Cash (Tiền mặt)
+        
+        if (isCashPayment) {
+          // For cash payment, go directly to success page with full recurring booking info
+          navigate('/customer/booking-success', {
+            state: {
+              bookingData: {
+                isRecurring: true,
+                recurringBookingId: recurringBooking.recurringBookingId,
+                title: recurringBooking.title,
+                recurrenceType: recurringBooking.recurrenceType,
+                recurrenceTypeDisplay: recurringBooking.recurrenceTypeDisplay,
+                recurrenceDays: recurringBooking.recurrenceDays,
+                recurrenceDaysDisplay: recurringBooking.recurrenceDaysDisplay,
+                bookingTime: recurringBooking.bookingTime,
+                startDate: recurringBooking.startDate,
+                endDate: recurringBooking.endDate,
+                address: recurringBooking.address,
+                service: recurringBooking.recurringBookingDetails[0]?.service,
+                recurringBookingDetails: recurringBooking.recurringBookingDetails,
+                totalGeneratedBookings: recurringBooking.totalGeneratedBookings,
+                upcomingBookings: recurringBooking.upcomingBookings,
+                totalBookingsToBeCreated: totalBookingsToBeCreated,
+                generatedBookingIds: generatedBookingIds,
+                status: recurringBooking.status,
+                statusDisplay: recurringBooking.statusDisplay,
+                createdAt: recurringBooking.createdAt
+              },
+              paymentMethod: 'cash',
+              message: result.message
+            }
+          });
+        } else {
+          // For online payment, go to payment page
+          navigate('/customer/payment', {
+            state: {
+              bookingData: {
+                isRecurring: true,
+                recurringBookingId: recurringBooking.recurringBookingId,
+                totalBookingsToBeCreated: totalBookingsToBeCreated,
+                generatedBookingIds: generatedBookingIds,
+                recurringBooking: recurringBooking
+              },
+              paymentMethods: paymentMethods,
+              selectedMethodId: bookingData.paymentMethod
+            }
+          });
+        }
+      }
+    } catch (error: any) {
+      console.error('❌ [RECURRING BOOKING ERROR]:', error);
+      const errorMessage = error.message || 'Không thể tạo lịch định kỳ. Vui lòng thử lại.';
+      setErrorMessages([errorMessage]);
+    }
+  };
+
   const handleSubmit = async () => {
+    // Check if this is a recurring booking
+    if (isRecurringBooking) {
+      return handleRecurringBookingSubmit();
+    }
+    
     try {
       // Clear previous errors and validate form data
       setErrorMessages([]);
@@ -2227,7 +2243,10 @@ const BookingPage: React.FC = () => {
                 <div className="flex border-b border-gray-200">
                   <button
                     type="button"
-                    onClick={() => setTimeSelectionMode('single')}
+                    onClick={() => {
+                      setTimeSelectionMode('single');
+                      setIsRecurringBooking(false);
+                    }}
                     className={`flex-1 px-4 py-4 text-sm font-semibold transition-all ${
                       timeSelectionMode === 'single'
                         ? 'bg-brand-teal/10 text-brand-teal border-b-2 border-brand-teal'
@@ -2244,40 +2263,22 @@ const BookingPage: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setTimeSelectionMode('week')}
+                    onClick={() => {
+                      setTimeSelectionMode('recurring');
+                      setIsRecurringBooking(true);
+                    }}
                     className={`flex-1 px-4 py-4 text-sm font-semibold transition-all relative ${
-                      timeSelectionMode === 'week'
+                      timeSelectionMode === 'recurring'
                         ? 'bg-brand-teal/10 text-brand-teal border-b-2 border-brand-teal'
                         : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
                     }`}
                   >
                     <div className="flex items-center justify-center">
                       <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                       </svg>
-                      <span className="hidden sm:inline">Chọn theo tuần</span>
-                      <span className="sm:hidden">Theo tuần</span>
-                     
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTimeSelectionMode('monthly')}
-                    className={`flex-1 px-4 py-4 text-sm font-semibold transition-all relative ${
-                      timeSelectionMode === 'monthly'
-                        ? 'bg-brand-teal/10 text-brand-teal border-b-2 border-brand-teal'
-                        : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
-                    }`}
-                  >
-                    <div className="flex items-center justify-center">
-                      <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                        <circle cx="12" cy="14" r="1.5" />
-                        <circle cx="16" cy="14" r="1.5" />
-                        <circle cx="8" cy="14" r="1.5" />
-                      </svg>
-                      <span className="hidden sm:inline">Định kỳ theo tháng</span>
-                      <span className="sm:hidden">Theo tháng</span>
+                      <span className="hidden sm:inline">Đặt lịch định kỳ</span>
+                      <span className="sm:hidden">Định kỳ</span>
                     </div>
                   </button>
                 </div>
@@ -2408,63 +2409,79 @@ const BookingPage: React.FC = () => {
                     </div>
                   )}
                   
-                  {timeSelectionMode === 'week' && (
-                    /* Week Selection Mode */
-                    <div className="space-y-4">
-                      {/* Quick Week Selection */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          ⚡ Chọn nhanh tuần
-                        </label>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                          {[
-                            { label: 'Tuần này', weeks: 0 },
-                            { label: 'Tuần sau', weeks: 1 },
-                            { label: '+2 tuần', weeks: 2 },
-                            { label: '+3 tuần', weeks: 3 }
-                          ].map(({ label, weeks }) => {
-                            const date = new Date();
-                            date.setDate(date.getDate() + (weeks * 7));
-                            const dateStr = date.toISOString().split('T')[0];
-                            const isSelected = weekStartDate === dateStr;
-                            
-                            return (
-                              <button
-                                key={weeks}
-                                type="button"
-                                onClick={() => setWeekStartDate(dateStr)}
-                                className={`p-2 rounded-lg text-sm font-semibold transition-all ${
-                                  isSelected
-                                    ? 'bg-brand-teal text-white shadow-lg scale-105'
-                                    : 'bg-brand-teal/10 text-brand-teal border border-brand-teal/30 hover:bg-brand-teal/20'
-                                }`}
-                              >
-                                {label}
-                              </button>
-                            );
-                          })}
+                  {/* Recurring Booking Mode */}
+                  {timeSelectionMode === 'recurring' && (
+                    <div className="space-y-6">
+                      {/* Info Banner */}
+                      <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-xl p-5">
+                        <div className="flex items-start">
+                          <svg className="w-6 h-6 text-purple-600 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                          </svg>
+                          <div>
+                            <h4 className="font-bold text-purple-900 mb-1">Đặt lịch định kỳ tự động</h4>
+                            <p className="text-sm text-purple-700">
+                              Hệ thống sẽ tự động tạo các booking theo lịch trình bạn thiết lập. Các booking mới sẽ được tạo hàng ngày lúc 2:00 AM.
+                            </p>
+                          </div>
                         </div>
                       </div>
-
-                      {/* Week Start Date */}
+                      
+                      {/* Recurring Title */}
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Hoặc chọn tuần cụ thể <span className="text-red-500">*</span>
+                          Tiêu đề lịch định kỳ <span className="text-red-500">*</span>
                         </label>
-                        <div className="relative">
-                          <input
-                            type="date"
-                            value={weekStartDate}
-                            onChange={(e) => setWeekStartDate(e.target.value)}
-                            min={new Date().toISOString().split('T')[0]}
-                            className="w-full p-3 pl-11 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-brand-teal bg-white text-gray-900 font-medium transition-all hover:border-brand-teal/50 cursor-pointer"
-                            style={{
-                              colorScheme: 'light'
-                            }}
-                          />
-                          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-teal pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
+                        <input
+                          type="text"
+                          value={recurringTitle}
+                          onChange={(e) => setRecurringTitle(e.target.value)}
+                          placeholder="VD: Dọn dẹp hàng tuần, Vệ sinh định kỳ..."
+                          className="w-full p-3 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-brand-teal"
+                        />
+                      </div>
+                      
+                      {/* Date Range for Recurring */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Ngày bắt đầu <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="date"
+                              value={recurringStartDate}
+                              onChange={(e) => setRecurringStartDate(e.target.value)}
+                              min={new Date().toISOString().split('T')[0]}
+                              className="w-full p-3 pl-11 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-brand-teal bg-white text-gray-900 font-medium transition-all hover:border-brand-teal/50 cursor-pointer"
+                              style={{
+                                colorScheme: 'light'
+                              }}
+                            />
+                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-teal pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            Ngày kết thúc <span className="text-red-500">*</span>
+                          </label>
+                          <div className="relative">
+                            <input
+                              type="date"
+                              value={recurringEndDate}
+                              onChange={(e) => setRecurringEndDate(e.target.value)}
+                              min={recurringStartDate || new Date().toISOString().split('T')[0]}
+                              className="w-full p-3 pl-11 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-brand-teal bg-white text-gray-900 font-medium transition-all hover:border-brand-teal/50 cursor-pointer"
+                              style={{
+                                colorScheme: 'light'
+                              }}
+                            />
+                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-teal pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                            </svg>
+                          </div>
                         </div>
                       </div>
                       
@@ -2499,66 +2516,27 @@ const BookingPage: React.FC = () => {
                         </label>
                         <div className="grid grid-cols-7 gap-2">
                           {['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'].map((day, index) => {
-                            // Tính ngày cụ thể cho mỗi thứ
-                            let dateInfo = '';
-                            if (weekStartDate) {
-                              const startDate = new Date(weekStartDate);
-                              const dayOfWeek = startDate.getDay();
-                              const firstDayOfWeek = new Date(startDate);
-                              firstDayOfWeek.setDate(startDate.getDate() - dayOfWeek);
-                              
-                              const targetDate = new Date(firstDayOfWeek);
-                              targetDate.setDate(firstDayOfWeek.getDate() + index);
-                              
-                              const dayNum = targetDate.getDate();
-                              const monthNum = targetDate.getMonth() + 1;
-                              dateInfo = `${dayNum}/${monthNum}`;
-                            }
-                            
                             return (
                               <button
                                 key={index}
                                 type="button"
                                 onClick={() => handleToggleWeekDay(index)}
-                                disabled={!weekStartDate}
                                 className={`p-3 rounded-lg font-medium text-sm transition-all ${
                                   selectedWeekDays.includes(index)
                                     ? 'bg-brand-teal text-white shadow-lg scale-105'
-                                    : weekStartDate
-                                    ? 'bg-white text-gray-700 border border-gray-300 hover:border-brand-teal/50 hover:bg-brand-teal/10'
-                                    : 'bg-gray-100 text-gray-400 border border-gray-200 cursor-not-allowed'
+                                    : 'bg-white text-gray-700 border border-gray-300 hover:border-brand-teal/50 hover:bg-brand-teal/10'
                                 }`}
                               >
-                                <div className="flex flex-col items-center">
-                                  <span className="font-bold">{day}</span>
-                                  {dateInfo && (
-                                    <span className={`text-xs mt-1 ${
-                                      selectedWeekDays.includes(index) ? 'text-white/80' : 'text-gray-500'
-                                    }`}>
-                                      {dateInfo}
-                                    </span>
-                                  )}
-                                </div>
+                                <span className="font-bold">{day}</span>
                               </button>
                             );
                           })}
                         </div>
-                        {!weekStartDate && (
-                          <p className="mt-2 text-sm text-amber-600">
-                            ⚠️ Vui lòng chọn tuần trước
-                          </p>
-                        )}
-                        {selectedWeekDays.length > 0 && weekStartDate && (
+                        {selectedWeekDays.length > 0 && (
                           <p className="mt-2 text-sm text-brand-teal font-medium">
-                            ✓ Đã chọn {selectedWeekDays.length} ngày: {selectedWeekDays.map(d => {
-                              const startDate = new Date(weekStartDate);
-                              const dayOfWeek = startDate.getDay();
-                              const firstDayOfWeek = new Date(startDate);
-                              firstDayOfWeek.setDate(startDate.getDate() - dayOfWeek);
-                              const targetDate = new Date(firstDayOfWeek);
-                              targetDate.setDate(firstDayOfWeek.getDate() + d);
-                              return `${['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'][d]} (${targetDate.getDate()}/${targetDate.getMonth() + 1})`;
-                            }).join(', ')}
+                            ✓ Đã chọn {selectedWeekDays.length} ngày: {selectedWeekDays.map(d => 
+                              ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][d]
+                            ).join(', ')}
                           </p>
                         )}
                       </div>
@@ -2610,287 +2588,61 @@ const BookingPage: React.FC = () => {
                         </div>
                       </div>
                       
-                      <button
-                        type="button"
-                        onClick={handleAddWeekDays}
-                        disabled={!weekStartDate || selectedWeekDays.length === 0}
-                        className="w-full px-6 py-3 bg-gradient-to-r from-brand-navy to-brand-teal text-white rounded-lg hover:shadow-lg transition-all flex items-center justify-center font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                        </svg>
-                        {selectedWeekDays.length > 0 ? `Thêm ${selectedWeekDays.length} mốc thời gian` : 'Thêm mốc thời gian'}
-                      </button>
-                    </div>
-                  )}
-                  
-                  {timeSelectionMode === 'monthly' && (
-                    /* Monthly Recurring Selection */
-                    <div className="space-y-6">
-                      {/* Date Range */}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Ngày bắt đầu <span className="text-red-500">*</span>
-                          </label>
-                          <div className="relative">
-                            <input
-                              type="date"
-                              value={monthlyStartDate}
-                              onChange={(e) => setMonthlyStartDate(e.target.value)}
-                              min={new Date().toISOString().split('T')[0]}
-                              className="w-full p-3 pl-11 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-brand-teal bg-white text-gray-900 font-medium transition-all hover:border-brand-teal/50 cursor-pointer"
-                              style={{
-                                colorScheme: 'light'
-                              }}
-                            />
-                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-teal pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                          </div>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Ngày kết thúc <span className="text-red-500">*</span>
-                          </label>
-                          <div className="relative">
-                            <input
-                              type="date"
-                              value={monthlyEndDate}
-                              onChange={(e) => setMonthlyEndDate(e.target.value)}
-                              min={monthlyStartDate || new Date().toISOString().split('T')[0]}
-                              className="w-full p-3 pl-11 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-brand-teal bg-white text-gray-900 font-medium transition-all hover:border-brand-teal/50 cursor-pointer"
-                              style={{
-                                colorScheme: 'light'
-                              }}
-                            />
-                            <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-teal pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Recurring Type Selection */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-3">
-                          Kiểu lặp lại <span className="text-red-500">*</span>
-                        </label>
-                        <div className="grid grid-cols-2 gap-3">
-                          <button
-                            type="button"
-                            onClick={() => setMonthlyRecurringType('dates')}
-                            className={`p-4 rounded-lg border-2 transition-all ${
-                              monthlyRecurringType === 'dates'
-                                ? 'border-brand-teal bg-brand-teal/10 text-brand-teal'
-                                : 'border-gray-300 bg-white text-gray-700 hover:border-brand-teal/30'
-                            }`}
-                          >
-                            <div className="text-center">
-                              <div className="text-2xl mb-1">📅</div>
-                              <div className="font-semibold">Theo ngày</div>
-                              <div className="text-xs mt-1 opacity-75">VD: Mỗi ngày 1, 15</div>
-                            </div>
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setMonthlyRecurringType('weekday')}
-                            className={`p-4 rounded-lg border-2 transition-all ${
-                              monthlyRecurringType === 'weekday'
-                                ? 'border-brand-teal bg-brand-teal/10 text-brand-teal'
-                                : 'border-gray-300 bg-white text-gray-700 hover:border-brand-teal/30'
-                            }`}
-                          >
-                            <div className="text-center">
-                              <div className="text-2xl mb-1">📆</div>
-                              <div className="font-semibold">Theo thứ</div>
-                              <div className="text-xs mt-1 opacity-75">VD: T2 tuần đầu</div>
-                            </div>
-                          </button>
-                        </div>
-                      </div>
-
-                      {/* Days Selection (for dates type) */}
-                      {monthlyRecurringType === 'dates' && (
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">
-                            Chọn các ngày trong tháng <span className="text-red-500">*</span>
-                          </label>
+                      {/* Summary Info Box */}
+                      <div className="bg-purple-50 border-2 border-purple-300 rounded-xl p-5">
+                        <h5 className="font-semibold text-purple-900 mb-3 flex items-center">
+                          <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                          </svg>
+                          📋 Tóm tắt lịch định kỳ
+                        </h5>
+                        <div className="space-y-2 text-sm">
+                          {recurringTitle ? (
+                            <p className="text-purple-800">
+                              <span className="font-medium">Tiêu đề:</span> {recurringTitle}
+                            </p>
+                          ) : (
+                            <p className="text-purple-600 italic">• Chưa nhập tiêu đề</p>
+                          )}
                           
-                          {/* Quick Date Patterns */}
-                          <div className="mb-3">
-                            <label className="block text-xs font-medium text-gray-600 mb-1">
-                              ⚡ Chọn nhanh mẫu
-                            </label>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                              {[
-                                { label: '📅 Đầu tháng', days: [1, 2, 3] },
-                                { label: '🌙 Giữa tháng', days: [15, 16, 17] },
-                                { label: '💰 Ngày lương', days: [1, 15] },
-                                { label: '⚡ Tuần 1x', days: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19] }
-                              ].map(({ label, days }) => (
-                                <button
-                                  key={label}
-                                  type="button"
-                                  onClick={() => setSelectedMonthDays(days)}
-                                  className="p-2 rounded-lg text-xs font-semibold bg-brand-teal/10 text-brand-teal border border-brand-teal/30 hover:bg-brand-teal/20 transition-all"
-                                >
-                                  {label}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
+                          {recurringStartDate && recurringEndDate ? (
+                            <p className="text-purple-800">
+                              <span className="font-medium">Khoảng thời gian:</span> {new Date(recurringStartDate).toLocaleDateString('vi-VN')} - {new Date(recurringEndDate).toLocaleDateString('vi-VN')}
+                            </p>
+                          ) : (
+                            <p className="text-purple-600 italic">• Chưa chọn khoảng thời gian</p>
+                          )}
                           
-                          <div className="grid grid-cols-7 gap-2">
-                            {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
-                              <button
-                                key={day}
-                                type="button"
-                                onClick={() => handleToggleMonthDay(day)}
-                                className={`p-2 rounded-lg font-medium text-sm transition-all ${
-                                  selectedMonthDays.includes(day)
-                                    ? 'bg-brand-teal text-white shadow-lg scale-105'
-                                    : 'bg-white text-gray-700 border border-gray-300 hover:border-brand-teal/50 hover:bg-brand-teal/10'
-                                }`}
-                              >
-                                {day}
-                              </button>
-                            ))}
-                          </div>
-                          {selectedMonthDays.length > 0 && (
-                            <p className="mt-2 text-sm text-brand-teal font-medium">
-                              ✓ Đã chọn {selectedMonthDays.length} ngày: {selectedMonthDays.join(', ')}
+                          {selectedWeekDays.length > 0 ? (
+                            <p className="text-purple-800">
+                              <span className="font-medium">Các ngày:</span> {selectedWeekDays.map(d => 
+                                ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][d]
+                              ).join(', ')}
+                            </p>
+                          ) : (
+                            <p className="text-purple-600 italic">• Chưa chọn ngày trong tuần</p>
+                          )}
+                          
+                          {weekTime && (
+                            <p className="text-purple-800">
+                              <span className="font-medium">Giờ:</span> {weekTime}
                             </p>
                           )}
-                        </div>
-                      )}
-
-                      {/* Weekday Selection (for weekday type) */}
-                      {monthlyRecurringType === 'weekday' && (
-                        <div className="space-y-4">
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Chọn thứ <span className="text-red-500">*</span>
-                            </label>
-                            <div className="grid grid-cols-7 gap-2">
-                              {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((day, index) => (
-                                <button
-                                  key={index}
-                                  type="button"
-                                  onClick={() => setSelectedMonthWeekday(index + 1)}
-                                  className={`p-3 rounded-lg font-medium text-sm transition-all ${
-                                    selectedMonthWeekday === index + 1
-                                      ? 'bg-brand-teal text-white shadow-lg scale-105'
-                                      : 'bg-white text-gray-700 border border-gray-300 hover:border-brand-teal/50 hover:bg-brand-teal/10'
-                                  }`}
-                                >
-                                  {day}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
                           
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">
-                              Tuần thứ mấy trong tháng <span className="text-red-500">*</span>
-                            </label>
-                            <div className="grid grid-cols-5 gap-2">
-                              {['Tuần 1', 'Tuần 2', 'Tuần 3', 'Tuần 4', 'Cuối tháng'].map((week, index) => (
-                                <button
-                                  key={index}
-                                  type="button"
-                                  onClick={() => setSelectedWeekOfMonth(index + 1)}
-                                  className={`p-3 rounded-lg font-medium text-sm transition-all ${
-                                    selectedWeekOfMonth === index + 1
-                                      ? 'bg-brand-teal text-white shadow-lg'
-                                      : 'bg-white text-gray-700 border border-gray-300 hover:border-brand-teal/50 hover:bg-brand-teal/10'
-                                  }`}
-                                >
-                                  {week}
-                                </button>
-                              ))}
-                            </div>
+                          <div className="mt-3 pt-3 border-t border-purple-200">
+                            <p className="text-purple-700 text-xs">
+                              💡 <strong>Lưu ý:</strong> Nhấn "Tiếp tục" bên dưới để xem lại toàn bộ thông tin trước khi tạo lịch định kỳ.
+                            </p>
                           </div>
                         </div>
-                      )}
-
-                      {/* Time Selector */}
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-2">
-                          Chọn giờ <span className="text-red-500">*</span>
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="time"
-                            value={monthlyTime}
-                            onChange={(e) => setMonthlyTime(e.target.value)}
-                            className="w-full p-3 pl-11 border-2 border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-teal focus:border-brand-teal bg-white text-gray-900 font-medium transition-all hover:border-brand-teal/50 cursor-pointer"
-                            style={{
-                              colorScheme: 'light'
-                            }}
-                          />
-                          <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-teal pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                          </svg>
-                        </div>
-                        
-                        {/* Quick Time Selection */}
-                        <div className="mt-2">
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
-                            ⚡ Chọn nhanh
-                          </label>
-                          <div className="grid grid-cols-4 md:grid-cols-8 gap-2">
-                            {['08:00', '09:00', '10:00', '11:00', '13:00', '14:00', '15:00', '16:00'].map(time => {
-                              const isSelected = monthlyTime === time;
-                              return (
-                                <button
-                                  key={time}
-                                  type="button"
-                                  onClick={() => setMonthlyTime(time)}
-                                  className={`p-1.5 rounded-md text-xs font-semibold transition-all ${
-                                    isSelected
-                                      ? 'bg-brand-teal text-white shadow-md'
-                                      : 'bg-brand-teal/10 text-brand-teal border border-brand-teal/30 hover:bg-brand-teal/20'
-                                  }`}
-                                >
-                                  {time}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Add Button */}
-                      <button
-                        type="button"
-                        onClick={handleAddMonthlyRecurring}
-                        disabled={
-                          !monthlyStartDate || 
-                          !monthlyEndDate || 
-                          (monthlyRecurringType === 'dates' && selectedMonthDays.length === 0)
-                        }
-                        className="w-full px-6 py-3 bg-gradient-to-r from-brand-navy to-brand-teal text-white rounded-lg hover:shadow-lg transition-all flex items-center justify-center font-medium shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        Tạo lịch định kỳ
-                      </button>
-
-                      {/* Info Box */}
-                      <div className="bg-brand-teal/5 border border-brand-teal/20 rounded-lg p-4">
-                        <p className="text-sm text-brand-navy">
-                          💡 <strong>Lưu ý:</strong> Hệ thống sẽ tự động tạo các mốc thời gian theo chu kỳ bạn chọn trong khoảng thời gian đã chỉ định.
-                        </p>
                       </div>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Danh sách các mốc thời gian đã chọn */}
-              {bookingData.bookingTimes.length > 0 && (
+              {/* Danh sách các mốc thời gian đã chọn - Only show for non-recurring mode */}
+              {!isRecurringBooking && bookingData.bookingTimes.length > 0 && (
                 <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border-2 border-green-300">
                   <h4 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
                     <svg className="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -3307,7 +3059,17 @@ const BookingPage: React.FC = () => {
                               </div>
                               <div className="flex-1 min-w-0">
                                 <div className="flex items-start justify-between mb-2">
-                                  <h5 className="font-semibold text-gray-900 truncate">{employee.fullName}</h5>
+                                  <div className="flex items-center gap-2">
+                                    <h5 className="font-semibold text-gray-900 truncate">{employee.fullName}</h5>
+                                    {employee.hasWorkedWithCustomer && (
+                                      <span className="inline-flex items-center px-2 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                                        <svg className="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                          <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                        </svg>
+                                        Đã từng phục vụ
+                                      </span>
+                                    )}
+                                  </div>
                                   {selectedEmployees.includes(employee.employeeId) && (
                                     <CheckCircle className="w-5 h-5 text-blue-600 flex-shrink-0 ml-2" />
                                   )}
@@ -3320,7 +3082,7 @@ const BookingPage: React.FC = () => {
                                     </svg>
                                     <span className="text-sm text-gray-700">{employee.rating || 'Mới'}</span>
                                   </div>
-                                  <span className="text-sm text-green-600 font-medium">{employee.totalCompletedJobs || 0} việc</span>
+                                  <span className="text-sm text-green-600 font-medium">{employee.completedJobs || employee.totalCompletedJobs || 0} việc hoàn thành</span>
                                 </div>
                                 {employee.primarySkills && employee.primarySkills.length > 0 && (
                                   <div className="flex flex-wrap gap-1">
@@ -3389,21 +3151,84 @@ const BookingPage: React.FC = () => {
                     <div className="flex items-start">
                       <div className="w-2 h-2 bg-emerald-500 rounded-full mt-2 mr-3 flex-shrink-0"></div>
                       <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-500 mb-2">Các mốc thời gian đã chọn</p>
-                        <div className="space-y-2">
-                          {bookingData.bookingTimes.map((time, index) => (
-                            <div key={index} className="flex items-center text-gray-900 font-semibold bg-blue-50 px-3 py-2 rounded-lg">
-                              <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                              </svg>
-                              {formatBookingTime(time)}
+                        {isRecurringBooking ? (
+                          /* Recurring Booking Info */
+                          <>
+                            <p className="text-sm font-medium text-gray-500 mb-2">Lịch định kỳ</p>
+                            <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4 space-y-2">
+                              <div className="flex items-start">
+                                <svg className="w-4 h-4 mr-2 text-purple-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                </svg>
+                                <div>
+                                  <p className="text-xs text-gray-600">Tiêu đề</p>
+                                  <p className="text-sm font-semibold text-gray-900">{recurringTitle}</p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-start">
+                                <svg className="w-4 h-4 mr-2 text-purple-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                <div>
+                                  <p className="text-xs text-gray-600">Khoảng thời gian</p>
+                                  <p className="text-sm font-semibold text-gray-900">
+                                    {new Date(recurringStartDate).toLocaleDateString('vi-VN')} - {new Date(recurringEndDate).toLocaleDateString('vi-VN')}
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-start">
+                                <svg className="w-4 h-4 mr-2 text-purple-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                                </svg>
+                                <div>
+                                  <p className="text-xs text-gray-600">Lặp lại vào</p>
+                                  <p className="text-sm font-semibold text-gray-900">
+                                    {selectedWeekDays.map(d => 
+                                      ['Chủ Nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][d]
+                                    ).join(', ')}
+                                  </p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-start">
+                                <svg className="w-4 h-4 mr-2 text-purple-600 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <div>
+                                  <p className="text-xs text-gray-600">Giờ</p>
+                                  <p className="text-sm font-semibold text-gray-900">{weekTime}</p>
+                                </div>
+                              </div>
+                              
+                              <div className="mt-3 pt-3 border-t border-purple-200">
+                                <p className="text-xs text-purple-700">
+                                  <strong>Lưu ý:</strong> Hệ thống sẽ tự động tạo các booking theo lịch trình đã thiết lập. Các booking mới sẽ được tạo hàng ngày lúc 2:00 AM.
+                                </p>
+                              </div>
                             </div>
-                          ))}
-                        </div>
-                        {bookingData.bookingTimes.length > 1 && (
-                          <p className="text-xs text-gray-500 mt-2">
-                            Tổng cộng {bookingData.bookingTimes.length} booking sẽ được tạo
-                          </p>
+                          </>
+                        ) : (
+                          /* Single Booking Info */
+                          <>
+                            <p className="text-sm font-medium text-gray-500 mb-2">Các mốc thời gian đã chọn</p>
+                            <div className="space-y-2">
+                              {bookingData.bookingTimes.map((time, index) => (
+                                <div key={index} className="flex items-center text-gray-900 font-semibold bg-blue-50 px-3 py-2 rounded-lg">
+                                  <svg className="w-4 h-4 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                  </svg>
+                                  {formatBookingTime(time)}
+                                </div>
+                              ))}
+                            </div>
+                            {bookingData.bookingTimes.length > 1 && (
+                              <p className="text-xs text-gray-500 mt-2">
+                                Tổng cộng {bookingData.bookingTimes.length} booking sẽ được tạo
+                              </p>
+                            )}
+                          </>
                         )}
                       </div>
                     </div>
@@ -3490,7 +3315,17 @@ const BookingPage: React.FC = () => {
                                     </div>
                                     <div className="flex-1 min-w-0">
                                       <div className="flex items-start justify-between mb-1">
-                                        <h6 className="font-semibold text-gray-900 text-sm">{employee.fullName}</h6>
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <h6 className="font-semibold text-gray-900 text-sm">{employee.fullName}</h6>
+                                          {employee.hasWorkedWithCustomer && (
+                                            <span className="inline-flex items-center px-1.5 py-0.5 bg-green-100 text-green-700 text-xs font-medium rounded-full">
+                                              <svg className="w-3 h-3 mr-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                                              </svg>
+                                              Quen
+                                            </span>
+                                          )}
+                                        </div>
                                         <CheckCircle className="w-4 h-4 text-blue-600 flex-shrink-0 ml-2" />
                                       </div>
                                       <p className="text-xs text-gray-600 mb-2">TP. Hồ Chí Minh</p>
@@ -3501,7 +3336,7 @@ const BookingPage: React.FC = () => {
                                           </svg>
                                           <span className="text-xs text-gray-700">{employee.rating || 'Mới'}</span>
                                         </div>
-                                        <span className="text-xs text-green-600 font-medium">{employee.totalCompletedJobs || 0} việc</span>
+                                        <span className="text-xs text-green-600 font-medium">{employee.completedJobs || employee.totalCompletedJobs || 0} việc hoàn thành</span>
                                       </div>
                                       {employee.primarySkills && employee.primarySkills.length > 0 && (
                                         <div className="flex flex-wrap gap-1">
@@ -3813,9 +3648,9 @@ const BookingPage: React.FC = () => {
                       (addressSource === 'profile' && (!user?.customerId))
                     )) ||
                     (step === 3 && (
-                      bookingData.bookingTimes.length === 0 || 
-                      !bookingData.duration ||
-                      bookingData.duration <= 0
+                      isRecurringBooking 
+                        ? (!recurringTitle.trim() || !recurringStartDate || !recurringEndDate || selectedWeekDays.length === 0 || !weekTime) // Recurring mode validation
+                        : (bookingData.bookingTimes.length === 0 || !bookingData.duration || bookingData.duration <= 0) // Single mode validation
                     ))
                   }
                   className="flex items-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-sm"
@@ -3831,10 +3666,10 @@ const BookingPage: React.FC = () => {
               ) : (
                 <button
                   onClick={handleSubmit}
-                  disabled={bookingLoading}
+                  disabled={bookingLoading || recurringBookingLoading}
                   className="flex items-center px-8 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 font-semibold shadow-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {bookingLoading ? (
+                  {(bookingLoading || recurringBookingLoading) ? (
                     <>
                       <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
                       Đang xử lý...
