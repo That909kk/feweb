@@ -162,20 +162,16 @@ const CustomerDashboard: React.FC = () => {
 
     setIsLoadingBookings(true);
     try {
-      const response = await getCustomerBookings(user.id);
-      // Handle paginated response with content array
-      if (response && typeof response === 'object' && 'content' in response) {
-        const content = (response as any).content;
-        if (Array.isArray(content)) {
-          setRecentBookings(content as CustomerBooking[]);
-        } else {
-          setRecentBookings([]);
-        }
-      } else if (Array.isArray(response)) {
-        setRecentBookings(response as CustomerBooking[]);
-      } else {
-        setRecentBookings([]);
-      }
+      // Load first page with 10 items
+      const response = await getCustomerBookings(user.id, {
+        page: 0,
+        size: 10,
+        sort: 'createdAt',
+        direction: 'DESC'
+      });
+      
+      // Response now has pagination structure with content array
+      setRecentBookings(response.content as CustomerBooking[]);
     } catch (error) {
       console.error('Load customer bookings error:', error);
       setRecentBookings([]);

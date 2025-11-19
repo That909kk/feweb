@@ -126,10 +126,26 @@ export const useBooking = () => {
         sort?: string;
         direction?: 'ASC' | 'DESC';
       }
-    ): Promise<any[]> => {
+    ): Promise<{
+      content: any[];
+      totalPages: number;
+      totalElements: number;
+      currentPage: number;
+      pageSize: number;
+      first: boolean;
+      last: boolean;
+    }> => {
       if (!customerId) {
         setError('Thiếu thông tin khách hàng');
-        return [];
+        return {
+          content: [],
+          totalPages: 0,
+          totalElements: 0,
+          currentPage: 0,
+          pageSize: 10,
+          first: true,
+          last: true
+        };
       }
 
       setIsLoading(true);
@@ -139,20 +155,67 @@ export const useBooking = () => {
         const response = await getCustomerBookingsApi(customerId, params);
 
         if (!response) {
-          return [];
+          return {
+            content: [],
+            totalPages: 0,
+            totalElements: 0,
+            currentPage: 0,
+            pageSize: 10,
+            first: true,
+            last: true
+          };
         }
 
         const data = response.data as any;
 
-        if (Array.isArray(data)) {
-          return data;
+        // If response has pagination structure with page object
+        if (data?.content && Array.isArray(data.content) && data.page) {
+          return {
+            content: data.content,
+            totalPages: data.page.totalPages || 0,
+            totalElements: data.page.totalElements || 0,
+            currentPage: data.page.number || 0,
+            pageSize: data.page.size || 10,
+            first: data.page.number === 0,
+            last: data.page.number >= (data.page.totalPages - 1)
+          };
         }
 
+        // If response has pagination structure (old format)
         if (data?.content && Array.isArray(data.content)) {
-          return data.content;
+          return {
+            content: data.content,
+            totalPages: data.totalPages || 0,
+            totalElements: data.totalElements || 0,
+            currentPage: data.number || 0,
+            pageSize: data.size || 10,
+            first: data.first !== undefined ? data.first : true,
+            last: data.last !== undefined ? data.last : true
+          };
         }
 
-        return [];
+        // If response is just an array (fallback)
+        if (Array.isArray(data)) {
+          return {
+            content: data,
+            totalPages: 1,
+            totalElements: data.length,
+            currentPage: 0,
+            pageSize: data.length,
+            first: true,
+            last: true
+          };
+        }
+
+        return {
+          content: [],
+          totalPages: 0,
+          totalElements: 0,
+          currentPage: 0,
+          pageSize: 10,
+          first: true,
+          last: true
+        };
       } catch (err: any) {
         const errorMessage =
           err?.response?.data?.message ||
@@ -160,7 +223,15 @@ export const useBooking = () => {
           'Không thể tải danh sách đơn dịch vụ';
         setError(errorMessage);
         console.error('Get customer bookings error:', err);
-        return [];
+        return {
+          content: [],
+          totalPages: 0,
+          totalElements: 0,
+          currentPage: 0,
+          pageSize: 10,
+          first: true,
+          last: true
+        };
       } finally {
         setIsLoading(false);
       }

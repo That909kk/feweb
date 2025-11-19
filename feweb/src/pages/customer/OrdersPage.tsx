@@ -17,7 +17,7 @@ import {
 import { DashboardLayout } from '../../layouts';
 import { useAuth } from '../../contexts/AuthContext';
 import { useBooking } from '../../hooks/useBooking';
-import { MetricCard, SectionCard } from '../../shared/components';
+import { MetricCard, SectionCard, Pagination } from '../../shared/components';
 import { 
   getReviewCriteriaApi, 
   createReviewApi, 
@@ -144,6 +144,44 @@ const OrdersPage: React.FC = () => {
   const [showCancelDialog, setShowCancelDialog] = useState(false);
   const [bookingToCancel, setBookingToCancel] = useState<BookingItem | null>(null);
   
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalElements, setTotalElements] = useState(0);
+  const [pageSize] = useState(10);
+  
+  // Date filter state - default to current week (Monday to Sunday)
+  const getWeekRange = () => {
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+    
+    // Calculate Monday of current week
+    const monday = new Date(today);
+    const daysFromMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1; // If Sunday, go back 6 days
+    monday.setDate(today.getDate() - daysFromMonday);
+    
+    // Calculate Sunday of current week
+    const sunday = new Date(monday);
+    sunday.setDate(monday.getDate() + 6);
+    
+    // Format as yyyy-MM-dd
+    const formatDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+    
+    return {
+      monday: formatDate(monday),
+      sunday: formatDate(sunday)
+    };
+  };
+  
+  const weekRange = getWeekRange();
+  const [fromDate, setFromDate] = useState<string>(weekRange.monday);
+  const [toDate, setToDate] = useState<string>(weekRange.sunday);
+  
   // State for convert to post feature
   const [showConvertDialog, setShowConvertDialog] = useState(false);
   const [postTitle, setPostTitle] = useState('');
@@ -158,41 +196,72 @@ const OrdersPage: React.FC = () => {
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
 
-  const loadBookings = async () => {
+  const loadBookings = async (page: number = 0, applyDateFilter: boolean = true) => {
     if (!user?.id) {
       console.log('[OrdersPage] No user ID, skipping load bookings');
       return;
     }
-    console.log('[OrdersPage] Loading bookings for user:', user.id);
+    console.log('[OrdersPage] Loading bookings for user:', user.id, 'page:', page);
     setIsLoading(true);
     setError(null);
     try {
-      const response = await getCustomerBookings(user.id);
+      // Build params with date filters
+      const params: any = {
+        page,
+        size: pageSize,
+        sort: 'createdAt',
+        direction: 'DESC'
+      };
+      
+      // Add date filters if provided
+      if (applyDateFilter && fromDate) {
+        // Convert to ISO 8601 format: yyyy-MM-dd'T'HH:mm:ss
+        params.fromDate = fromDate + 'T00:00:00';
+      }
+      if (applyDateFilter && toDate) {
+        params.toDate = toDate + 'T23:59:59';
+      }
+      
+      const response = await getCustomerBookings(user.id, params);
       console.log('[OrdersPage] Got bookings response:', response);
       
-      // Handle paginated response with content array
-      if (response && typeof response === 'object' && 'content' in response) {
-        const content = (response as any).content;
-        if (Array.isArray(content)) {
-          console.log('[OrdersPage] Setting bookings from content, count:', content.length);
-          setBookings(content as BookingItem[]);
-        } else {
-          console.log('[OrdersPage] Content is not array, setting empty');
-          setBookings([]);
-        }
-      } else if (Array.isArray(response)) {
-        console.log('[OrdersPage] Setting bookings from array response, count:', response.length);
-        setBookings(response as BookingItem[]);
-      } else {
-        console.log('[OrdersPage] Response format unknown, setting empty');
-        setBookings([]);
-      }
+      // Update pagination state
+      setBookings(response.content || []);
+      setTotalPages(response.totalPages || 0);
+      setTotalElements(response.totalElements || 0);
+      setCurrentPage(response.currentPage || 0);
+      
+      console.log('[OrdersPage] Setting bookings, count:', response.content?.length, 
+                  'totalPages:', response.totalPages, 'currentPage:', response.currentPage);
     } catch (err: any) {
       console.error('[OrdersPage] Failed to load bookings:', err);
       setError('Không thể tải danh sách đơn dịch vụ. Vui lòng thử lại sau.');
       setBookings([]);
+      setTotalPages(0);
+      setTotalElements(0);
     } finally {
       setIsLoading(false);
+    }
+  };
+  
+  const handleApplyDateFilter = () => {
+    setCurrentPage(0);
+    loadBookings(0, true);
+  };
+  
+  const handleClearDateFilter = () => {
+    setFromDate('');
+    setToDate('');
+    setCurrentPage(0);
+    loadBookings(0, false);
+  };
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      setCurrentPage(newPage);
+      loadBookings(newPage);
+      // Scroll to top of bookings list
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
@@ -256,6 +325,7 @@ const OrdersPage: React.FC = () => {
   };
 
   const metrics = useMemo(() => {
+    // Calculate metrics based on current page bookings only
     const total = bookings.length;
     const completed = bookings.filter(item => normalizeStatus(item.status) === 'COMPLETED').length;
     const awaiting = bookings.filter(item => normalizeStatus(item.status) === 'AWAITING_EMPLOYEE').length;
@@ -808,7 +878,10 @@ const OrdersPage: React.FC = () => {
       description="Theo dõi trạng thái đặt lịch, chủ động trao đổi và quản lý trải nghiệm chăm sóc ngôi nhà của bạn."
       actions={
         <button
-          onClick={loadBookings}
+          onClick={() => {
+            setCurrentPage(0);
+            loadBookings(0);
+          }}
           disabled={isLoading}
           className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-sky-600 shadow-lg shadow-sky-100 transition hover:-translate-y-0.5 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
         >
@@ -823,37 +896,102 @@ const OrdersPage: React.FC = () => {
           label="Tổng đơn đã đặt"
           value={`${metrics.total}`}
           accent="navy"
-          trendLabel="Lịch trình được cập nhật liên tục."
+          trendLabel={`Trong ${bookings.length} đơn hiện tại (Tổng: ${totalElements})`}
         />
         <MetricCard
           icon={CheckCircle2}
           label="Đơn hoàn tất"
           value={`${metrics.completed}`}
           accent="teal"
-          trendLabel="Cảm ơn bạn đã tin dùng dịch vụ của Home Mate."
+          trendLabel={`Trong ${bookings.length} đơn hiện tại`}
         />
         <MetricCard
           icon={MessageCircle}
           label="Chờ phân công"
           value={`${metrics.awaiting}`}
           accent="amber"
-          trendLabel="Chúng tôi sẽ sắp xếp nhân viên sớm nhất."
+          trendLabel={`Trong ${bookings.length} đơn hiện tại`}
         />
       </div>
 
       <SectionCard
-        title="Quản lý trạng thái"
-        description="Bộ lọc giúp bạn xem nhanh các đơn theo trạng thái xử lý."
+        title="Quản lý đơn dịch vụ"
+        description="Lọc và xem danh sách đơn dịch vụ theo trạng thái và thời gian."
         headerSpacing="compact"
       >
+        {/* Date Filter */}
+        <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+            <div className="flex-1">
+              <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                Từ ngày
+              </label>
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="mb-1.5 block text-xs font-semibold text-slate-700">
+                Đến ngày
+              </label>
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+              />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleApplyDateFilter}
+                disabled={isLoading || (!fromDate && !toDate)}
+                className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-200 transition hover:-translate-y-0.5 hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <CalendarClock className="h-4 w-4" />
+                Lọc
+              </button>
+              {(fromDate || toDate) && (
+                <button
+                  onClick={handleClearDateFilter}
+                  disabled={isLoading}
+                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <X className="h-4 w-4" />
+                  Xóa
+                </button>
+              )}
+            </div>
+          </div>
+          {(fromDate || toDate) && (
+            <div className="mt-3 text-xs text-slate-600">
+              {fromDate && toDate ? (
+                <>Hiển thị đơn từ <strong>{new Date(fromDate).toLocaleDateString('vi-VN')}</strong> đến <strong>{new Date(toDate).toLocaleDateString('vi-VN')}</strong></>
+              ) : fromDate ? (
+                <>Hiển thị đơn từ <strong>{new Date(fromDate).toLocaleDateString('vi-VN')}</strong> trở đi</>
+              ) : (
+                <>Hiển thị đơn đến <strong>{new Date(toDate).toLocaleDateString('vi-VN')}</strong></>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Status Filter */}
         <div className="mb-6 flex w-full gap-2 overflow-x-auto pb-1">
           {filterOrder.map(filterKey => {
             const palette = statusConfig[filterKey];
             const isActive = selectedFilter === filterKey;
             const count =
               filterKey === 'ALL'
-                ? bookings.length
+                ? totalElements // Use total from API for ALL filter
                 : bookings.filter(item => normalizeStatus(item.status) === filterKey).length;
+            
+            // Show "trang này" only when we have pagination and not showing all
+            const countLabel = filterKey === 'ALL' || totalPages <= 1
+              ? `Có ${count} đơn`
+              : `${count} đơn (trang này)`;
 
             return (
               <button
@@ -867,7 +1005,7 @@ const OrdersPage: React.FC = () => {
                 )}
               >
                 <span className="text-sm font-semibold">{palette.label}</span>
-                <span className="mt-1 text-xs text-slate-400">Có {count} đơn</span>
+                <span className="mt-1 text-xs text-slate-400">{countLabel}</span>
               </button>
             );
           })}
@@ -1103,6 +1241,17 @@ const OrdersPage: React.FC = () => {
             })}
           </div>
         )}
+
+        {/* Pagination Controls */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalElements={totalElements}
+          pageSize={pageSize}
+          onPageChange={handlePageChange}
+          isLoading={isLoading}
+          itemsOnCurrentPage={filteredBookings.length}
+        />
       </SectionCard>
 
       {renderDetailSheet()}
