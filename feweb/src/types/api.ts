@@ -575,7 +575,6 @@ export interface PaymentMethod {
 export interface CreatePaymentRequest {
   bookingId: string;
   methodId: number;
-  amount: number;
 }
 
 export interface PaymentDetail {

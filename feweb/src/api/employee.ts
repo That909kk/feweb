@@ -377,22 +377,41 @@ export const acceptAssignmentApi = async (
 };
 
 // Get employee statistics
+// NOTE: This endpoint doesn't exist in API documentation - commented out
+// export const getEmployeeStatisticsApi = async (employeeId: string): Promise<ApiResponse<{
+//   completed: number;
+//   upcoming: number;
+//   totalEarnings: number;
+// }>> => {
+//   try {
+//     const response = await api.get<ApiResponse<{
+//       completed: number;
+//       upcoming: number;
+//       totalEarnings: number;
+//     }>>(`/employee/${employeeId}/statistics`);
+//     return response.data;
+//   } catch (error) {
+//     console.error(`Error fetching statistics for employee ${employeeId}:`, error);
+//     throw error;
+//   }
+// };
+
+// Mock function to return default statistics until real endpoint is available
 export const getEmployeeStatisticsApi = async (employeeId: string): Promise<ApiResponse<{
   completed: number;
   upcoming: number;
   totalEarnings: number;
 }>> => {
-  try {
-    const response = await api.get<ApiResponse<{
-      completed: number;
-      upcoming: number;
-      totalEarnings: number;
-    }>>(`/employee/${employeeId}/statistics`);
-    return response.data;
-  } catch (error) {
-    console.error(`Error fetching statistics for employee ${employeeId}:`, error);
-    throw error;
-  }
+  console.log(`[API] Statistics endpoint not available for employee ${employeeId}, returning defaults`);
+  return {
+    success: true,
+    message: 'Statistics not available',
+    data: {
+      completed: 0,
+      upcoming: 0,
+      totalEarnings: 0
+    }
+  };
 };
 
 // Cancel assignment

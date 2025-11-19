@@ -1,10 +1,12 @@
 import React from 'react';
+import { useParams } from 'react-router-dom';
 import { DashboardLayout } from '../../layouts';
 import { useAuth } from '../../contexts/AuthContext';
 import { ChatContainer } from '../../components/chat';
 
 const ChatPage: React.FC = () => {
   const { user } = useAuth();
+  const { conversationId } = useParams<{ conversationId?: string }>();
 
   // Debug: Kiểm tra IDs
   React.useEffect(() => {
@@ -13,10 +15,11 @@ const ChatPage: React.FC = () => {
         accountId: user.accountId,
         customerId: user.customerId,
         username: user.username,
-        role: user.role
+        role: user.role,
+        conversationId: conversationId
       });
     }
-  }, [user]);
+  }, [user, conversationId]);
 
   return (
     <DashboardLayout
@@ -29,6 +32,7 @@ const ChatPage: React.FC = () => {
           <ChatContainer 
             senderId={user.customerId} 
             accountId={user.accountId}
+            initialConversationId={conversationId}
           />
         ) : (
           <div className="flex items-center justify-center h-full">

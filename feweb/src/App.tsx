@@ -10,6 +10,9 @@ import RegisterPage from './pages/RegisterPage';
 // Customer pages
 import CustomerDashboard from './pages/customer/Dashboard';
 import BookingPage from './pages/customer/BookingPage';
+import PaymentPage from './pages/customer/PaymentPage';
+import PaymentCallbackPage from './pages/customer/PaymentCallbackPage';
+import VNPayResultPage from './pages/customer/VNPayResultPage';
 import BookingSuccessPage from './pages/customer/BookingSuccessPage';
 import OrdersPage from './pages/customer/OrdersPage';
 import ChatPage from './pages/customer/ChatPage';
@@ -64,6 +67,21 @@ function App() {
                 <BookingPage />
               </ProtectedRoute>
             } />
+            <Route path="/customer/payment" element={
+              <ProtectedRoute requiredRole="CUSTOMER">
+                <PaymentPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/customer/payment-callback" element={
+              <ProtectedRoute requiredRole="CUSTOMER">
+                <PaymentCallbackPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/payment/vnpay-result" element={
+              <ProtectedRoute requiredRole="CUSTOMER">
+                <VNPayResultPage />
+              </ProtectedRoute>
+            } />
             <Route path="/customer/booking-success" element={
               <ProtectedRoute requiredRole="CUSTOMER">
                 <BookingSuccessPage />
@@ -75,6 +93,11 @@ function App() {
               </ProtectedRoute>
             } />
             <Route path="/customer/chat" element={
+              <ProtectedRoute requiredRole="CUSTOMER">
+                <ChatPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/customer/chat/:conversationId" element={
               <ProtectedRoute requiredRole="CUSTOMER">
                 <ChatPage />
               </ProtectedRoute>

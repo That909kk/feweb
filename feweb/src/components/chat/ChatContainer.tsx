@@ -3,26 +3,54 @@ import type { Conversation } from '../../types/chat';
 import { ConversationList } from './ConversationList';
 import { ChatWindow } from './ChatWindow';
 import { webSocketService } from '../../services/websocket';
+import { getConversationByIdApi } from '../../api/chat';
 import { MessageCircle } from 'lucide-react';
 
 interface ChatContainerProps {
   senderId: string; // customerId (for CUSTOMER) or employeeId (for EMPLOYEE) - dùng cho GET conversations
   accountId: string; // accountId - dùng cho send message và mark-read
+  initialConversationId?: string; // conversationId để tự động mở conversation khi vào trang
 }
 
 export const ChatContainer: React.FC<ChatContainerProps> = ({
   senderId,
-  accountId
+  accountId,
+  initialConversationId
 }) => {
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
   const [wsError, setWsError] = useState<string | null>(null);
+  const [isLoadingInitialConversation, setIsLoadingInitialConversation] = useState(false);
 
   // Debug: Log senderId and accountId
   useEffect(() => {
     console.log('🔍 [ChatContainer] senderId (for conversations):', senderId);
     console.log('🔍 [ChatContainer] accountId (for messages):', accountId);
-  }, [senderId, accountId]);
+    console.log('🔍 [ChatContainer] initialConversationId:', initialConversationId);
+  }, [senderId, accountId, initialConversationId]);
+
+  // Load initial conversation if conversationId is provided
+  useEffect(() => {
+    const loadInitialConversation = async () => {
+      if (initialConversationId && !selectedConversation) {
+        setIsLoadingInitialConversation(true);
+        try {
+          console.log('[ChatContainer] Loading initial conversation:', initialConversationId);
+          const response = await getConversationByIdApi(initialConversationId);
+          if (response.success && response.data) {
+            setSelectedConversation(response.data);
+            console.log('[ChatContainer] ✅ Initial conversation loaded:', response.data);
+          }
+        } catch (error) {
+          console.error('[ChatContainer] ❌ Error loading initial conversation:', error);
+        } finally {
+          setIsLoadingInitialConversation(false);
+        }
+      }
+    };
+
+    loadInitialConversation();
+  }, [initialConversationId, selectedConversation]);
 
   const connectWebSocket = useCallback(async () => {
     try {
@@ -107,7 +135,14 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
         <div className={`flex-1 ${
           selectedConversation ? 'flex' : 'hidden lg:flex'
         } flex-col`}>
-          {selectedConversation ? (
+          {isLoadingInitialConversation ? (
+            <div className="flex items-center justify-center h-full">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-gray-600">Đang tải cuộc trò chuyện...</p>
+              </div>
+            </div>
+          ) : selectedConversation ? (
             <ChatWindow
               conversation={selectedConversation}
               currentAccountId={accountId}

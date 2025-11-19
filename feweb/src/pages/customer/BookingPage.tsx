@@ -1495,11 +1495,12 @@ const BookingPage: React.FC = () => {
         const responseData = result.data || result;
         const isMultiple = responseData.bookings && Array.isArray(responseData.bookings);
         
-        // Navigate tới trang success
-        navigate('/customer/booking-success', {
+        // Navigate tới trang payment để thanh toán
+        navigate('/customer/payment', {
           state: {
             bookingData: isMultiple ? responseData : result,
-            isMultiple: isMultiple
+            paymentMethods: paymentMethods,
+            selectedMethodId: bookingData.paymentMethod
           }
         });
       } else {

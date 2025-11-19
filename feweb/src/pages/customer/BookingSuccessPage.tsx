@@ -12,12 +12,13 @@ import {
   Star,
   ArrowRight,
   MessageCircle,
-  Eye
+  Eye,
+  Loader2
 } from 'lucide-react';
 import { DashboardLayout } from '../../layouts';
 import { SectionCard, MetricCard } from '../../shared/components';
 import { getBookingStatusInVietnamese, getBookingStatusAccent, formatEndTime } from '../../shared/utils/bookingUtils';
-import { getOrCreateConversationApi } from '../../api/chat';
+import { createConversationApi, getConversationByBookingApi } from '../../api/chat';
 import { useAuth } from '../../contexts/AuthContext';
 
 const BookingSuccessPage: React.FC = () => {
@@ -30,10 +31,30 @@ const BookingSuccessPage: React.FC = () => {
   const [isCreatingConversation, setIsCreatingConversation] = useState(false);
   const [_conversationError, setConversationError] = useState<string | null>(null); // Reserved for future error display
 
-  // Nếu không có dữ liệu booking, redirect về dashboard
+  // Nếu không có dữ liệu booking, redirect về dashboard sau 1 giây (cho phép debug)
+  useEffect(() => {
+    if (!bookingData) {
+      console.error('❌ BookingSuccessPage: No bookingData found in location.state');
+      console.log('Location state:', location.state);
+      const timer = setTimeout(() => {
+        navigate('/customer/orders');
+      }, 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [bookingData, navigate, location.state]);
+
+  // Hiển thị loading nếu chưa có dữ liệu
   if (!bookingData) {
-    navigate('/customer');
-    return null;
+    return (
+      <DashboardLayout role="CUSTOMER" title="Đang tải...">
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <Loader2 className="w-16 h-16 text-blue-600 animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">Đang tải thông tin đơn hàng...</p>
+          </div>
+        </div>
+      </DashboardLayout>
+    );
   }
 
   // Extract booking info based on single or multiple
@@ -41,26 +62,33 @@ const BookingSuccessPage: React.FC = () => {
     ? bookingData.bookings[0] 
     : bookingData;
   
-  const displayCode = isMultiple 
-    ? `${bookingData.totalBookingsCreated} bookings` 
-    : bookingData.bookingCode;
   
   const displayAmount = isMultiple
     ? bookingData.formattedTotalAmount
-    : bookingData.formattedTotalAmount;
+    : (bookingData.formattedTotalAmount || new Intl.NumberFormat('vi-VN', {
+        style: 'currency',
+        currency: 'VND'
+      }).format(bookingData.totalPrice || bookingData.amount || 0));
 
-  // Tự động tạo conversation khi có nhân viên được phân công
-  // Luồng: Sau khi xác nhận đặt lịch thành công -> gọi API get-or-create conversation -> hiển thị trang thành công
+  // Lấy danh sách nhân viên từ assignments trong bookingDetails
+  const assignedEmployees = firstBooking?.bookingDetails?.flatMap((detail: any) => 
+    detail.assignments?.map((assignment: any) => assignment.employee) || []
+  ).filter(Boolean) || [];
+
+  // Tự động tạo conversation khi booking thành công và có nhân viên được phân công
+  // Luồng: Kiểm tra conversation đã tồn tại -> Nếu chưa thì tạo mới với bookingId
   useEffect(() => {
     const createConversation = async () => {
       // Chỉ tạo conversation nếu:
       // 1. Có nhân viên được phân công
       // 2. Có customerId từ user context
-      // 3. Chưa tạo conversation (conversationId === null)
-      // 4. Không đang trong quá trình tạo
+      // 3. Có bookingId
+      // 4. Chưa tạo conversation (conversationId === null)
+      // 5. Không đang trong quá trình tạo
       if (
-        firstBooking.assignedEmployees?.length > 0 &&
+        assignedEmployees.length > 0 &&
         user?.customerId &&
+        firstBooking.bookingId &&
         !conversationId &&
         !isCreatingConversation
       ) {
@@ -69,35 +97,51 @@ const BookingSuccessPage: React.FC = () => {
         
         try {
           // Lấy employeeId của nhân viên đầu tiên được phân công
-          const firstEmployee = firstBooking.assignedEmployees[0];
+          const firstEmployee = assignedEmployees[0];
           const employeeId = firstEmployee.employeeId;
 
-          console.log('[BookingSuccess] 🔄 Creating/Getting conversation:', {
+          console.log('[BookingSuccess] 🔄 Creating conversation with bookingId:', {
             customerId: user.customerId,
-            employeeId: employeeId
+            employeeId: employeeId,
+            bookingId: firstBooking.bookingId
           });
 
-          // Gọi API GET /api/v1/conversations/get-or-create
-          const response = await getOrCreateConversationApi({
+          // Gọi API POST /api/v1/conversations với bookingId bắt buộc
+          const response = await createConversationApi({
             customerId: user.customerId,
-            employeeId: employeeId
+            employeeId: employeeId,
+            bookingId: firstBooking.bookingId
           });
 
           if (response.success && response.data) {
             setConversationId(response.data.conversationId);
-            console.log('[BookingSuccess] ✅ Conversation ready:', {
+            console.log('[BookingSuccess] ✅ Conversation created:', {
               conversationId: response.data.conversationId,
-              isNewConversation: !response.data.lastMessage,
+              bookingId: firstBooking.bookingId,
               employeeName: response.data.employeeName
             });
           } else {
             console.warn('[BookingSuccess] ⚠️ API returned success but no data');
           }
         } catch (error: any) {
-          console.error('[BookingSuccess] ❌ Error creating conversation:', error);
-          setConversationError(error?.response?.data?.message || 'Không thể tạo cuộc hội thoại');
-          // Không hiển thị lỗi cho user, chỉ log để debug
-          // Người dùng vẫn có thể chat sau thông qua trang chat list
+          // Nếu conversation đã tồn tại cho booking này, thử lấy nó
+          if (error?.response?.status === 400 || error?.response?.data?.message?.includes('already exists')) {
+            console.log('[BookingSuccess] Conversation already exists, fetching it...');
+            try {
+              const existingConv = await getConversationByBookingApi(firstBooking.bookingId);
+              if (existingConv.success && existingConv.data) {
+                setConversationId(existingConv.data.conversationId);
+                console.log('[BookingSuccess] ✅ Existing conversation found:', {
+                  conversationId: existingConv.data.conversationId
+                });
+              }
+            } catch (fetchError) {
+              console.error('[BookingSuccess] ❌ Error fetching existing conversation:', fetchError);
+            }
+          } else {
+            console.error('[BookingSuccess] ❌ Error creating conversation:', error);
+            setConversationError(error?.response?.data?.message || 'Không thể tạo cuộc hội thoại');
+          }
         } finally {
           setIsCreatingConversation(false);
         }
@@ -106,19 +150,42 @@ const BookingSuccessPage: React.FC = () => {
 
     createConversation();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [firstBooking.assignedEmployees, user?.customerId]);
+  }, [assignedEmployees.length, user?.customerId, firstBooking?.bookingId]);
 
   // Lấy trạng thái tiếng Việt và accent color
-  const vietnameseStatus = getBookingStatusInVietnamese(firstBooking.status);
-  const statusAccent = getBookingStatusAccent(firstBooking.status);
+  const vietnameseStatus = getBookingStatusInVietnamese(firstBooking?.status || 'PENDING');
+  const statusAccent = getBookingStatusAccent(firstBooking?.status || 'PENDING');
+
+  // Tính tổng thời lượng từ bookingDetails
+  const estimatedDuration = firstBooking?.bookingDetails?.length > 0
+    ? firstBooking.bookingDetails[0].duration || firstBooking.bookingDetails[0].formattedDuration || '2 giờ'
+    : '2 giờ';
+
+  // Kiểm tra trạng thái thanh toán
+  const paymentStatus = firstBooking?.paymentInfo?.paymentStatus || firstBooking?.payment?.paymentStatus || 'PENDING';
+  const isPaid = paymentStatus === 'PAID' || paymentStatus === 'COMPLETED';
+  const paymentMethod = firstBooking?.paymentInfo?.paymentMethod || firstBooking?.payment?.paymentMethod || '';
+  const isCashPayment = paymentMethod.toUpperCase().includes('CASH') || paymentMethod.toUpperCase().includes('TIỀN MẶT');
+
+  // Debug log
+  console.log('🔍 BookingSuccess Debug:', {
+    bookingData,
+    firstBooking,
+    address: firstBooking?.address,
+    displayAmount,
+    paymentStatus,
+    isPaid,
+    paymentMethod,
+    isCashPayment
+  });
 
   return (
     <DashboardLayout
       role="CUSTOMER"
-      title="Đặt lịch thành công!"
+      title={isPaid ? "Thanh toán thành công!" : "Đặt lịch thành công!"}
       description={isMultiple 
-        ? `Đã tạo ${bookingData.totalBookingsCreated} đơn hàng thành công. Chúng tôi sẽ liên hệ sớm nhất.`
-        : `Đơn hàng ${bookingData.bookingCode} đã được tạo thành công. Chúng tôi sẽ liên hệ sớm nhất.`
+        ? `Đã tạo ${bookingData.totalBookingsCreated || 0} đơn hàng thành công. ${isCashPayment ? 'Vui lòng thanh toán trực tiếp cho nhân viên sau khi hoàn thành công việc.' : 'Chúng tôi sẽ liên hệ sớm nhất.'}`
+        : `Đơn hàng ${bookingData.bookingCode || firstBooking?.bookingCode || 'N/A'} đã được tạo thành công. ${isCashPayment ? 'Vui lòng thanh toán trực tiếp cho nhân viên sau khi hoàn thành công việc.' : 'Chúng tôi sẽ liên hệ sớm nhất.'}`
       }
       actions={
         <div className="flex gap-3">
@@ -145,21 +212,30 @@ const BookingSuccessPage: React.FC = () => {
           <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
             <CheckCircle className="h-10 w-10 text-white drop-shadow-sm" />
           </div>
-          <h1 className="mb-3 text-3xl font-bold">Đặt lịch thành công!</h1>
+          <h1 className="mb-3 text-3xl font-bold">
+            {isPaid ? 'Thanh toán thành công!' : 'Đặt lịch thành công!'}
+          </h1>
           <p className="mb-4 text-lg text-emerald-50">
             {isMultiple ? (
-              <>Đã tạo <span className="font-mono font-semibold text-white">{bookingData.totalBookingsCreated} đơn hàng</span> thành công</>
+              <>Đã tạo <span className="font-mono font-semibold text-white">{bookingData.totalBookingsCreated || 0} đơn hàng</span> thành công</>
             ) : (
-              <>Đơn hàng <span className="font-mono font-semibold text-white">{bookingData.bookingCode}</span> đã được tạo</>
+              <>Đơn hàng <span className="font-mono font-semibold text-white">{bookingData.bookingCode || firstBooking?.bookingCode || 'N/A'}</span> đã được tạo</>
             )}
           </p>
           <div className="rounded-2xl bg-white/15 px-6 py-3 backdrop-blur-sm">
-            <div className="text-sm text-emerald-50">Tổng thanh toán</div>
+            <div className="text-sm text-emerald-50">
+              {isCashPayment ? 'Tổng tiền cần thanh toán' : (isPaid ? 'Đã thanh toán' : 'Tổng thanh toán')}
+            </div>
             <div className="text-2xl font-bold">{displayAmount}</div>
+            {!isPaid && isCashPayment && (
+              <div className="mt-2 text-sm text-yellow-200 font-medium">
+                💵 Thanh toán trực tiếp cho nhân viên sau khi hoàn thành
+              </div>
+            )}
           </div>
           
           {/* Chat Ready Notification - Only show when conversation is ready */}
-          {conversationId && firstBooking.assignedEmployees?.length > 0 && (
+          {conversationId && assignedEmployees.length > 0 && (
             <div className="mt-4 animate-fade-in rounded-full bg-white/20 px-5 py-2 backdrop-blur-sm">
               <div className="flex items-center gap-2 text-sm font-medium text-white">
                 <MessageCircle className="h-4 w-4" />
@@ -179,26 +255,26 @@ const BookingSuccessPage: React.FC = () => {
           accent={statusAccent}
           trendLabel="Sẽ được xử lý trong vòng 24h"
         />
-        <MetricCard
+          <MetricCard
           icon={Calendar}
           label={isMultiple ? "Thời gian đầu tiên" : "Thời gian thực hiện"}
-          value={new Date(firstBooking.bookingTime).toLocaleDateString('vi-VN', { 
+          value={firstBooking?.bookingTime ? new Date(firstBooking.bookingTime).toLocaleDateString('vi-VN', { 
             day: '2-digit', 
             month: '2-digit',
             year: 'numeric'
-          })}
+          }) : 'N/A'}
           accent="teal"
-          trendLabel={`${new Date(firstBooking.bookingTime).toLocaleTimeString('vi-VN', {
+          trendLabel={firstBooking?.bookingTime ? `${new Date(firstBooking.bookingTime).toLocaleTimeString('vi-VN', {
             hour: '2-digit',
             minute: '2-digit'
-          })} - ${firstBooking.estimatedDuration}`}
+          })} - ${estimatedDuration}` : 'N/A'}
         />
         <MetricCard
           icon={CreditCard}
           label="Thanh toán"
-          value={firstBooking.paymentInfo?.paymentStatus === 'PENDING' ? 'Chờ thanh toán' : 'Đã thanh toán'}
-          accent={firstBooking.paymentInfo?.paymentStatus === 'PENDING' ? 'amber' : 'teal'}
-          trendLabel={firstBooking.paymentInfo?.paymentMethod || firstBooking.paymentInfo?.methodName || 'N/A'}
+          value={isPaid ? 'Đã thanh toán' : (isCashPayment ? 'Thanh toán khi hoàn thành' : 'Chờ thanh toán')}
+          accent={isPaid || isCashPayment ? 'teal' : 'amber'}
+          trendLabel={paymentMethod || 'N/A'}
         />
       </div>
 
@@ -247,7 +323,7 @@ const BookingSuccessPage: React.FC = () => {
         className="mt-6"
       >
         <div className="space-y-6">
-          {firstBooking.serviceDetails?.map((serviceDetail: any, index: number) => (
+          {(firstBooking?.bookingDetails || firstBooking?.serviceDetails)?.map((serviceDetail: any, index: number) => (
             <div key={index} className="rounded-2xl border border-brand-outline/20 bg-gradient-to-r from-white to-slate-50/50 p-6 shadow-sm">
               <div className="flex items-start gap-4">
                 <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-teal/10">
@@ -344,7 +420,9 @@ const BookingSuccessPage: React.FC = () => {
                   <div className="rounded-xl bg-white p-3 shadow-sm">
                     <div className="text-xs font-medium text-brand-text/70 mb-1">Dự kiến kết thúc</div>
                     <div className="text-lg font-bold text-emerald-600">
-                      {formatEndTime(firstBooking.bookingTime, firstBooking.estimatedDuration)}
+                      {firstBooking?.bookingTime && estimatedDuration 
+                        ? formatEndTime(firstBooking.bookingTime, estimatedDuration)
+                        : 'N/A'}
                     </div>
                   </div>
                 </div>
@@ -352,7 +430,7 @@ const BookingSuccessPage: React.FC = () => {
                 {/* Duration badge */}
                 <div className="inline-flex items-center gap-2 rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700">
                   <Clock className="h-4 w-4" />
-                  Thời lượng: {firstBooking.estimatedDuration}
+                  Thời lượng: {estimatedDuration}
                 </div>
               </div>
             </div>
@@ -383,29 +461,35 @@ const BookingSuccessPage: React.FC = () => {
                 </div>
                 <div>
                   <h3 className="font-semibold text-brand-navy">Địa chỉ khách hàng</h3>
-                  {firstBooking.customerInfo.isDefault && (
+                  {firstBooking?.address?.isDefault && (
                     <span className="text-xs text-emerald-600 font-medium">Địa chỉ mặc định</span>
                   )}
                 </div>
               </div>
               <div className="space-y-1">
-                <div className="font-medium text-brand-navy">{firstBooking.customerInfo.fullAddress}</div>
-                <div className="text-sm text-brand-text/70">
-                  {firstBooking.customerInfo.ward}, {firstBooking.customerInfo.district}, {firstBooking.customerInfo.city}
+                <div className="font-medium text-brand-navy">
+                  {firstBooking?.address?.fullAddress || 'Chưa có thông tin địa chỉ'}
                 </div>
+                {firstBooking?.address && (
+                  <div className="text-sm text-brand-text/70">
+                    {[firstBooking.address.ward, firstBooking.address.district, firstBooking.address.city]
+                      .filter(Boolean)
+                      .join(', ')}
+                  </div>
+                )}
               </div>
             </div>
           </div>
         </SectionCard>
 
         {/* Employee Assignment */}
-        {firstBooking.assignedEmployees?.length > 0 ? (
+        {assignedEmployees.length > 0 ? (
           <SectionCard
-            title={`Nhân viên phân công (${firstBooking.totalEmployees})`}
+            title={`Nhân viên phân công (${assignedEmployees.length})`}
             description="Đội ngũ chuyên nghiệp sẽ thực hiện dịch vụ cho bạn."
           >
             <div className="space-y-4">
-              {firstBooking.assignedEmployees.map((employee: any, index: number) => (
+              {assignedEmployees.map((employee: any, index: number) => (
                 <div key={index} className="flex items-center gap-4 rounded-2xl border border-brand-outline/20 bg-gradient-to-r from-white to-slate-50/50 p-4">
                   <img 
                     src={employee.avatar} 
@@ -430,6 +514,29 @@ const BookingSuccessPage: React.FC = () => {
                   </div>
                 </div>
               ))}
+              
+              {/* Chat Button - Hiển thị khi đã có conversation */}
+              {conversationId && (
+                <div className="pt-2">
+                  <button
+                    onClick={() => navigate(`/customer/chat/${conversationId}`)}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-teal to-teal-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-teal/20 transition hover:-translate-y-0.5 hover:shadow-xl hover:shadow-brand-teal/30"
+                  >
+                    <MessageCircle className="h-5 w-5" />
+                    Nhắn tin với nhân viên
+                  </button>
+                </div>
+              )}
+              
+              {/* Loading indicator khi đang tạo conversation */}
+              {isCreatingConversation && (
+                <div className="pt-2">
+                  <div className="w-full flex items-center justify-center gap-2 rounded-xl bg-gray-100 px-6 py-3 text-sm font-medium text-gray-500">
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-gray-300 border-t-brand-teal"></div>
+                    Đang thiết lập cuộc trò chuyện...
+                  </div>
+                </div>
+              )}
             </div>
           </SectionCard>
         ) : (
@@ -552,7 +659,7 @@ const BookingSuccessPage: React.FC = () => {
           <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/50 p-6">
             <h3 className="mb-4 font-semibold text-brand-navy">Chi tiết dịch vụ</h3>
             <div className="space-y-3">
-              {firstBooking.serviceDetails?.map((serviceDetail: any, index: number) => (
+              {(firstBooking?.bookingDetails || firstBooking?.serviceDetails)?.map((serviceDetail: any, index: number) => (
                 <div key={index}>
                   <div className="flex items-center justify-between py-2">
                     <span className="font-medium text-brand-navy">
@@ -582,21 +689,25 @@ const BookingSuccessPage: React.FC = () => {
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
             <div className="rounded-xl border border-brand-outline/20 bg-white p-4">
               <div className="text-sm font-medium text-brand-text/70">Phương thức thanh toán</div>
-              <div className="mt-1 font-semibold text-brand-navy">{firstBooking.paymentInfo?.paymentMethod || firstBooking.paymentInfo?.methodName || 'N/A'}</div>
+              <div className="mt-1 font-semibold text-brand-navy">
+                {(firstBooking?.payment?.paymentMethod || firstBooking?.paymentInfo?.paymentMethod || firstBooking?.paymentInfo?.methodName || 'N/A')}
+              </div>
             </div>
             <div className="rounded-xl border border-brand-outline/20 bg-white p-4">
               <div className="text-sm font-medium text-brand-text/70">Mã giao dịch</div>
-              <div className="mt-1 font-mono text-sm text-brand-navy">{firstBooking.paymentInfo?.transactionCode || 'N/A'}</div>
+              <div className="mt-1 font-mono text-sm text-brand-navy">
+                {(firstBooking?.payment?.transactionCode || firstBooking?.paymentInfo?.transactionCode || 'N/A')}
+              </div>
             </div>
             <div className="rounded-xl border border-brand-outline/20 bg-white p-4">
               <div className="text-sm font-medium text-brand-text/70">Trạng thái thanh toán</div>
               <div className="mt-1">
                 <span className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                  firstBooking.paymentInfo?.paymentStatus === 'PENDING' 
+                  (firstBooking?.payment?.paymentStatus || firstBooking?.paymentInfo?.paymentStatus) === 'PENDING' 
                     ? 'border border-amber-200 bg-amber-50 text-amber-700' 
                     : 'border border-emerald-200 bg-emerald-50 text-emerald-700'
                 }`}>
-                  {firstBooking.paymentInfo?.paymentStatus === 'PENDING' ? 'Chờ thanh toán' : 'Đã thanh toán'}
+                  {(firstBooking?.payment?.paymentStatus || firstBooking?.paymentInfo?.paymentStatus) === 'PENDING' ? 'Chờ thanh toán' : 'Đã thanh toán'}
                 </span>
               </div>
             </div>
@@ -658,7 +769,7 @@ const BookingSuccessPage: React.FC = () => {
               <p className="text-sm text-brand-text/70">
                 {isCreatingConversation 
                   ? 'Đang tạo cuộc hội thoại' 
-                  : bookingData.assignedEmployees?.length > 0 
+                  : assignedEmployees.length > 0 
                     ? conversationId 
                       ? 'Chat với nhân viên' 
                       : 'Nhấn để bắt đầu chat'

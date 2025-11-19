@@ -94,3 +94,39 @@ export const getPaymentHistoryApi = async (
   );
   return response.data;
 };
+
+// VNPay Payment APIs
+export interface CreateVNPayPaymentRequest {
+  bookingId: string;
+  amount: number;
+  orderInfo?: string;
+  orderType?: string;
+  locale?: string;
+  bankCode?: string;
+}
+
+export interface VNPayPaymentResponse {
+  success: boolean;
+  message: string;
+  data: {
+    paymentUrl: string;
+  };
+}
+
+// Create VNPay payment URL
+export const createVNPayPaymentApi = async (data: CreateVNPayPaymentRequest): Promise<VNPayPaymentResponse> => {
+  const response = await api.post<VNPayPaymentResponse>('/payment/vnpay/create', data);
+  return response.data;
+};
+
+// Get VNPay payment status by booking ID
+export const getVNPayPaymentStatusApi = async (bookingId: string): Promise<ApiResponse<{
+  bookingId: string;
+  status: string;
+}>> => {
+  const response = await api.get<ApiResponse<{
+    bookingId: string;
+    status: string;
+  }>>(`/payment/vnpay/status/${bookingId}`);
+  return response.data;
+};

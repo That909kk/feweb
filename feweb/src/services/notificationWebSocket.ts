@@ -7,13 +7,13 @@
 import SockJS from 'sockjs-client';
 import { Client, type IFrame, type IMessage } from '@stomp/stompjs';
 
-const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'http://localhost:8080';
+const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'http://localhost:8080/ws';
 const WS_ENDPOINT = '/notifications';
 
 // Log WebSocket configuration
 console.log('[NotificationWS Config] WS_BASE_URL from env:', import.meta.env.VITE_WS_BASE_URL);
 console.log('[NotificationWS Config] Final WS_BASE_URL:', WS_BASE_URL);
-console.log('[NotificationWS Config] Full WebSocket URL:', `${WS_BASE_URL}/ws${WS_ENDPOINT}`);
+console.log('[NotificationWS Config] Full WebSocket URL:', `${WS_BASE_URL}${WS_ENDPOINT}`);
 
 export type UserRole = 'CUSTOMER' | 'EMPLOYEE' | 'ADMIN';
 
@@ -76,12 +76,12 @@ class NotificationWebSocketService {
       this.currentAccountId = accountId;
       this.currentRole = role;
       
-      console.log(`[NotificationWS] Connecting to: ${WS_BASE_URL}/ws${WS_ENDPOINT}`);
+      console.log(`[NotificationWS] Connecting to: ${WS_BASE_URL}${WS_ENDPOINT}`);
       console.log(`[NotificationWS] Account: ${accountId}, Role: ${role}`);
 
       try {
         // Tạo SockJS socket
-        const socket = new SockJS(`${WS_BASE_URL}/ws${WS_ENDPOINT}`);
+        const socket = new SockJS(`${WS_BASE_URL}${WS_ENDPOINT}`);
 
         // Tạo STOMP client
         this.client = new Client({
