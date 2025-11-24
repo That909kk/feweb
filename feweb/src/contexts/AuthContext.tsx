@@ -175,7 +175,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error(response.message || 'Không thể lấy thông tin vai trò');
       }
     } catch (error: any) {
-      const errorMessage = error?.response?.data?.message || error.message || 'Không thể lấy thông tin vai trò';
+      // Lấy thông báo lỗi từ API response theo đúng format trong tài liệu
+      let errorMessage = 'Không thể lấy thông tin vai trò';
+      
+      if (error?.response?.data?.message) {
+        // Sử dụng message từ API response
+        errorMessage = error.response.data.message;
+      } else if (error.message && !error.message.includes('Network Error')) {
+        errorMessage = error.message;
+      }
+      
       console.error('❌ Get roles error:', errorMessage);
       setError(errorMessage);
       throw new Error(errorMessage);

@@ -46,7 +46,9 @@ const LoginPage = () => {
         setShowRoleSelection(true);
       }
     } catch (err: any) {
-      setLoginError(err.message || 'Đăng nhập thất bại');
+      // Hiển thị thông báo lỗi từ API theo đúng tài liệu
+      const errorMessage = err?.message || 'Đăng nhập thất bại';
+      setLoginError(errorMessage);
     }
   };
 

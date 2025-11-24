@@ -147,11 +147,13 @@ const AuthPage: React.FC = () => {
           setMode('selectRole');
         }
       } else {
-        setError('Tên đăng nhập hoặc mật khẩu không đúng');
+        setError('Không tìm thấy vai trò nào');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('❌ [DEBUG] Lỗi đăng nhập:', err);
-      setError('Đã xảy ra lỗi. Vui lòng thử lại.');
+      // Hiển thị thông báo lỗi từ API theo đúng tài liệu
+      const errorMessage = err?.message || 'Đã xảy ra lỗi. Vui lòng thử lại.';
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

@@ -76,8 +76,12 @@ api.interceptors.response.use(
   async (error: AxiosError<ApiResponse>) => {
     const originalRequest = error.config;
     
+    // Các endpoint authentication không cần xử lý đặc biệt
+    const authEndpoints = ['/auth/register', '/auth/login', '/auth/get-role'];
+    const isAuthEndpoint = authEndpoints.some(endpoint => originalRequest?.url?.includes(endpoint));
+    
     // Xử lý lỗi 401 (Unauthorized) - Token expired
-    if (error.response?.status === 401 && originalRequest) {
+    if (error.response?.status === 401 && originalRequest && !isAuthEndpoint) {
       const refreshToken = localStorage.getItem('refreshToken');
       
       // Nếu có refresh token, thử refresh
@@ -132,18 +136,22 @@ api.interceptors.response.use(
       const status = error.response.status;
       const data = error.response.data as any;
       
+      // Log error message từ API
+      if (data?.message) {
+        console.error(`API Error [${status}]:`, data.message);
+      }
+      
       switch (status) {
         case 400:
-          // Bad Request - validation errors, missing Authorization header
-          if (data?.message?.includes('Authorization header is required')) {
-            // Token missing or invalid - logout user
+          // Bad Request - validation errors
+          // Nếu không phải auth endpoint, xử lý Authorization header
+          if (!isAuthEndpoint && data?.message?.includes('Authorization header is required')) {
             localStorage.removeItem('accessToken');
             localStorage.removeItem('refreshToken');
             localStorage.removeItem('user');
             localStorage.removeItem('selectedRole');
             window.location.href = '/auth';
           }
-          console.error('Validation error:', error.response.data.message);
           break;
           
         case 403:
