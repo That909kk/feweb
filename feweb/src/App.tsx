@@ -10,6 +10,7 @@ import RegisterPage from './pages/RegisterPage';
 // Customer pages
 import CustomerDashboard from './pages/customer/Dashboard';
 import BookingPage from './pages/customer/BookingPage';
+import VoiceBookingPage from './pages/customer/VoiceBookingPage';
 import RecurringBookingsPage from './pages/customer/RecurringBookingsPage';
 import PaymentPage from './pages/customer/PaymentPage';
 import PaymentCallbackPage from './pages/customer/PaymentCallbackPage';
@@ -66,6 +67,11 @@ function App() {
             <Route path="/customer/booking" element={
               <ProtectedRoute requiredRole="CUSTOMER">
                 <BookingPage />
+              </ProtectedRoute>
+            } />
+            <Route path="/customer/voice-booking" element={
+              <ProtectedRoute requiredRole="CUSTOMER">
+                <VoiceBookingPage />
               </ProtectedRoute>
             } />
             <Route path="/customer/recurring-bookings" element={

@@ -312,8 +312,8 @@ const Navigation: React.FC<NavigationProps> = ({ role, collapsed, onNavigate }) 
               <div className="rounded-3xl border border-brand-outline/40 bg-white/70 p-4 text-xs text-brand-text/70 shadow-inner">
                 <p className="font-semibold text-brand-navy">Trung tâm hỗ trợ</p>
                 <p className="mt-2">
-                  Cần hỗ trợ? Gọi <span className="font-semibold text-brand-teal">1900-9999</span> hoặc
-                  gửi email tới <span className="font-semibold text-brand-teal">support@giadung360.vn</span>.
+                  Cần hỗ trợ? Gọi <span className="font-semibold text-brand-teal">082-537-1577</span> hoặc
+                  gửi email tới <span className="font-semibold text-brand-teal">mthat456@gmail.com</span>.
                 </p>
               </div>
               
