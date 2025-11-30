@@ -21,15 +21,43 @@ export interface NotificationWebSocketDTO {
   notificationId: string;
   accountId: string;
   targetRole: UserRole;  // Role this notification is intended for
-  type: string;  // BOOKING_CREATED, BOOKING_CONFIRMED, ASSIGNMENT_CREATED, etc.
+  type: NotificationType;  // BOOKING_CREATED, BOOKING_CONFIRMED, ASSIGNMENT_CREATED, etc.
   title: string;
   message: string;
   relatedId: string;  // bookingId, assignmentId, etc.
-  relatedType: string;  // BOOKING, ASSIGNMENT, PAYMENT, etc.
-  priority: 'NORMAL' | 'HIGH' | 'URGENT';
+  relatedType: RelatedType;  // BOOKING, ASSIGNMENT, PAYMENT, etc.
+  priority: NotificationPriority;
   actionUrl: string;  // Deep link to relevant page
   createdAt: string;  // ISO 8601 timestamp
+  unreadCount: number;  // Tổng thông báo chưa đọc của accountId (backend tính sẵn)
 }
+
+// Notification types theo document
+export type NotificationType = 
+  | 'BOOKING_CREATED'
+  | 'BOOKING_CONFIRMED'
+  | 'BOOKING_CANCELLED'
+  | 'BOOKING_COMPLETED'
+  | 'ASSIGNMENT_CREATED'
+  | 'ASSIGNMENT_CANCELLED'
+  | 'ASSIGNMENT_CRISIS'
+  | 'PAYMENT_SUCCESS'
+  | 'PAYMENT_FAILED'
+  | 'REVIEW_RECEIVED'
+  | 'SYSTEM_ANNOUNCEMENT'
+  | 'BOOKING_VERIFIED'
+  | string;
+
+export type RelatedType = 
+  | 'BOOKING'
+  | 'ASSIGNMENT'
+  | 'PAYMENT'
+  | 'REVIEW'
+  | 'PROMOTION'
+  | 'SYSTEM'
+  | string;
+
+export type NotificationPriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
 
 type NotificationHandler = (notification: NotificationWebSocketDTO) => void;
 type ConnectionHandler = () => void;

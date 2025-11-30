@@ -13,3 +13,5 @@ export * from './useCustomer';
 export * from './useEmployeeProfile';
 export * from './useAddress';
 export * from './useWebSocketNotifications';
+export * from './useBookingRealtime';
+export * from './useAvailableBookings';

@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Realtime Booking & Notification Tester</title>
+  <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/stompjs@2.3.3/lib/stomp.min.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 16px; }
+    fieldset { margin-bottom: 12px; }
+    label { display: block; margin-top: 6px; }
+    #log { border: 1px solid #ccc; padding: 8px; height: 260px; overflow: auto; background: #fafafa; }
+    button { margin-top: 8px; }
+    input[type="text"] { width: 100%; }
+  </style>
+</head>
+<body>
+  <h2>Realtime Booking & Notification Tester</h2>
+  <p>Quick page to subscribe to notification and booking topics without coding. Works with SockJS STOMP endpoints in this service.</p>
+
+  <fieldset>
+    <legend>Connection</legend>
+    <label>WebSocket endpoint (SockJS):
+      <input id="endpoint" type="text" value="http://localhost/ws/notifications" />
+    </label>
+    <label>Authorization (Bearer token):
+      <input id="token" type="text" placeholder="Bearer eyJ..." />
+    </label>
+    <button id="connectBtn">Connect</button>
+    <button id="disconnectBtn" disabled>Disconnect</button>
+    <span id="status">Disconnected</span>
+  </fieldset>
+
+  <fieldset>
+    <legend>Subscribe</legend>
+    <label>Account ID:
+      <input id="accountId" type="text" placeholder="a1000001-0000-0000-0000-000000000001" />
+    </label>
+    <label>Role (CUSTOMER|EMPLOYEE|ADMIN):
+      <input id="role" type="text" value="CUSTOMER" />
+    </label>
+    <button id="subNotifBtn" disabled>Subscribe Notifications</button>
+    <label>Booking ID:
+      <input id="bookingId" type="text" placeholder="b0000001-0000-0000-0000-000000000054" />
+    </label>
+    <button id="subStatusBtn" disabled>Subscribe Booking Status</button>
+    <button id="subAssignBtn" disabled>Subscribe Assignment Progress</button>
+  </fieldset>
+
+  <fieldset>
+    <legend>Log</legend>
+    <div id="log"></div>
+    <button id="clearLog">Clear log</button>
+  </fieldset>
+
+  <script>
+    let stompClient = null;
+
+    function log(msg, data) {
+      const el = document.getElementById("log");
+      const time = new Date().toISOString();
+      const line = document.createElement("div");
+      line.textContent = `[${time}] ${msg}${data ? " " + JSON.stringify(data) : ""}`;
+      el.appendChild(line);
+      el.scrollTop = el.scrollHeight;
+    }
+
+    function setConnected(connected) {
+      document.getElementById("connectBtn").disabled = connected;
+      document.getElementById("disconnectBtn").disabled = !connected;
+      document.getElementById("subNotifBtn").disabled = !connected;
+      document.getElementById("subStatusBtn").disabled = !connected;
+      document.getElementById("subAssignBtn").disabled = !connected;
+      document.getElementById("status").textContent = connected ? "Connected" : "Disconnected";
+    }
+
+    document.getElementById("connectBtn").onclick = () => {
+      const endpoint = document.getElementById("endpoint").value.trim();
+      const token = document.getElementById("token").value.trim();
+      const headers = {};
+      if (token) headers["Authorization"] = token;
+
+      const socket = new SockJS(endpoint);
+      stompClient = Stomp.over(socket);
+      stompClient.connect(headers, () => {
+        log("Connected");
+        setConnected(true);
+      }, (err) => {
+        log("Connection error", err);
+        setConnected(false);
+      });
+    };
+
+    document.getElementById("disconnectBtn").onclick = () => {
+      if (stompClient) {
+        stompClient.disconnect(() => log("Disconnected"));
+      }
+      setConnected(false);
+    };
+
+    document.getElementById("subNotifBtn").onclick = () => {
+      const accountId = document.getElementById("accountId").value.trim();
+      const role = document.getElementById("role").value.trim() || "CUSTOMER";
+      if (!accountId) return alert("Please enter accountId");
+      const dest = `/user/${accountId}/${role.toUpperCase()}/queue/notifications`;
+      stompClient.subscribe(dest, (frame) => {
+        log(`Notification from ${dest}`, JSON.parse(frame.body));
+      });
+      log("Subscribed", { dest });
+    };
+
+    document.getElementById("subStatusBtn").onclick = () => {
+      const bookingId = document.getElementById("bookingId").value.trim();
+      if (!bookingId) return alert("Please enter bookingId");
+      const dest = `/topic/bookings/${bookingId}/status`;
+      stompClient.subscribe(dest, (frame) => {
+        log(`Status from ${dest}`, JSON.parse(frame.body));
+      });
+      log("Subscribed", { dest });
+    };
+
+    document.getElementById("subAssignBtn").onclick = () => {
+      const bookingId = document.getElementById("bookingId").value.trim();
+      if (!bookingId) return alert("Please enter bookingId");
+      const dest = `/topic/bookings/${bookingId}/assignments`;
+      stompClient.subscribe(dest, (frame) => {
+        log(`Assignment from ${dest}`, JSON.parse(frame.body));
+      });
+      log("Subscribed", { dest });
+    };
+
+    document.getElementById("clearLog").onclick = () => {
+      document.getElementById("log").innerHTML = "";
+    };
+  </script>
+</body>
+</html>

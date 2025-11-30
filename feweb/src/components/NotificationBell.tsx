@@ -32,34 +32,79 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) =
   // Determine current role from user
   const currentRole: UserRole | null = user?.role as UserRole || null;
   
+  // Ref để theo dõi trạng thái isOpen trong callback
+  const isOpenRef = useRef(isOpen);
+  useEffect(() => {
+    isOpenRef.current = isOpen;
+  }, [isOpen]);
+
   // Show toast for new notifications
   const showNotificationToast = useCallback((notification: NotificationWebSocketDTO) => {
-    console.log('[NotificationBell] New notification toast:', notification.title);
+    console.log('[NotificationBell] New notification from WS:', notification);
     
-    // Add to toast notifications
+    // Add to toast notifications for showing popup
     setToastNotifications(prev => [...prev, notification]);
     
-    // Update the unread count and reload notifications list
-    loadUnreadCount();
+    // Chuyển đổi WS notification thành format Notification để thêm vào danh sách
+    const newNotification: Notification = {
+      notificationId: notification.notificationId,
+      accountId: notification.accountId,
+      targetRole: notification.targetRole,
+      type: notification.type as Notification['type'],
+      title: notification.title,
+      message: notification.message,
+      relatedId: notification.relatedId || null,
+      relatedType: (notification.relatedType as Notification['relatedType']) || null,
+      isRead: false,
+      readAt: null,
+      priority: notification.priority,
+      actionUrl: notification.actionUrl || null,
+      createdAt: notification.createdAt
+    };
     
-    // If dropdown is open, reload notifications
-    if (isOpen) {
-      loadNotifications(0);
+    // Thêm notification mới vào đầu danh sách (nếu chưa có)
+    setNotifications(prev => {
+      const exists = prev.some(n => n.notificationId === notification.notificationId);
+      if (exists) return prev;
+      return [newNotification, ...prev];
+    });
+    
+    // Cập nhật unread count từ WS payload nếu có
+    if (typeof notification.unreadCount === 'number') {
+      setUnreadCount(notification.unreadCount);
     }
-  }, [isOpen]);
+  }, []);
 
   // Remove toast notification
   const removeToastNotification = useCallback((notificationId: string) => {
     setToastNotifications(prev => prev.filter(n => n.notificationId !== notificationId));
   }, []);
 
+  // Handler khi unread count thay đổi từ WebSocket
+  const handleUnreadCountChange = useCallback((count: number) => {
+    console.log('[NotificationBell] Unread count updated from WS:', count);
+    setUnreadCount(count);
+  }, []);
+
   // WebSocket notifications (role-based)
-  const { connected: wsConnected } = useWebSocketNotifications({
-    accountId: user?.id,
+  // Sử dụng accountId thay vì user.id vì WebSocket cần accountId để định tuyến đúng queue
+  const { 
+    connected: wsConnected,
+    unreadCount: wsUnreadCount,
+  } = useWebSocketNotifications({
+    accountId: user?.accountId,
     role: currentRole,
-    enabled: !!user?.id && !!currentRole,
-    onNotification: showNotificationToast
+    enabled: !!user?.accountId && !!currentRole,
+    onNotification: showNotificationToast,
+    onUnreadCountChange: handleUnreadCountChange
   });
+
+  // Sync unread count khi WebSocket cập nhật
+  useEffect(() => {
+    if (wsUnreadCount > 0) {
+      setUnreadCount(wsUnreadCount);
+    }
+  }, [wsUnreadCount]);
 
   // Load unread count
   const loadUnreadCount = async () => {

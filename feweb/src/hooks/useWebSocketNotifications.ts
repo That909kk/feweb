@@ -1,26 +1,52 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { 
   notificationWebSocketService, 
   type NotificationWebSocketDTO,
   type UserRole 
 } from '../services/notificationWebSocket';
+import { getUnreadNotificationCountApi } from '../api/notification';
 
 interface UseWebSocketNotificationsOptions {
   accountId: string | null | undefined;
   role: UserRole | null | undefined;
   enabled?: boolean;
   onNotification?: (notification: NotificationWebSocketDTO) => void;
+  /**
+   * Callback khi unread count thay đổi (từ WS payload hoặc REST fallback)
+   */
+  onUnreadCountChange?: (count: number) => void;
 }
 
 export const useWebSocketNotifications = ({
   accountId,
   role,
   enabled = true,
-  onNotification
+  onNotification,
+  onUnreadCountChange
 }: UseWebSocketNotificationsOptions) => {
   const [notifications, setNotifications] = useState<NotificationWebSocketDTO[]>([]);
   const [connected, setConnected] = useState(false);
   const [error, setError] = useState<Error | null>(null);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
+  
+  // Ref để track callback thay đổi mà không trigger re-render
+  const onUnreadCountChangeRef = useRef(onUnreadCountChange);
+  useEffect(() => {
+    onUnreadCountChangeRef.current = onUnreadCountChange;
+  }, [onUnreadCountChange]);
+
+  // Fetch unread count từ REST API (fallback khi mất WS hoặc init)
+  const fetchUnreadCount = useCallback(async () => {
+    try {
+      const response = await getUnreadNotificationCountApi();
+      if (response.success) {
+        setUnreadCount(response.count);
+        onUnreadCountChangeRef.current?.(response.count);
+      }
+    } catch (err) {
+      console.error('[useWebSocketNotifications] Error fetching unread count:', err);
+    }
+  }, []);
 
   // Handler cho notifications mới
   const handleNotification = useCallback((notification: NotificationWebSocketDTO) => {
@@ -28,6 +54,15 @@ export const useWebSocketNotifications = ({
     
     // Thêm vào danh sách notifications
     setNotifications(prev => [notification, ...prev]);
+    
+    // Cập nhật unread count từ WS payload (backend đã tính sẵn)
+    if (typeof notification.unreadCount === 'number') {
+      setUnreadCount(notification.unreadCount);
+      onUnreadCountChangeRef.current?.(notification.unreadCount);
+    } else {
+      // Fallback: fetch từ REST nếu WS không có unreadCount
+      fetchUnreadCount();
+    }
     
     // Gọi callback nếu có
     if (onNotification) {
@@ -38,7 +73,7 @@ export const useWebSocketNotifications = ({
     if (notification.priority === 'URGENT') {
       playNotificationSound();
     }
-  }, [onNotification]);
+  }, [onNotification, fetchUnreadCount]);
 
   // Play notification sound
   const playNotificationSound = useCallback(() => {
@@ -108,6 +143,8 @@ export const useWebSocketNotifications = ({
     const handleDisconnected = () => {
       console.log('[useWebSocketNotifications] Connection lost');
       setConnected(false);
+      // Fallback: fetch unread count qua REST khi mất WS
+      fetchUnreadCount();
     };
 
     const handleError = (err: any) => {
@@ -130,7 +167,9 @@ export const useWebSocketNotifications = ({
     notifications,
     connected,
     error,
+    unreadCount,
     clearNotifications,
-    removeNotification
+    removeNotification,
+    fetchUnreadCount
   };
 };
