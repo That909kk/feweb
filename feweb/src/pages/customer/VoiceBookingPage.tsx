@@ -192,8 +192,8 @@ const VoiceBookingPage: React.FC = () => {
       speech: event.speech
     });
     
-    // Add AI response message
-    if (textToShow) {
+    // Add AI response message (không thêm cho COMPLETED vì sẽ xử lý riêng trong handleConfirm)
+    if (textToShow && event.status !== 'COMPLETED') {
       const messageId = `ai-ws-${Date.now()}`;
       const aiMessage: Message = {
         id: messageId,
@@ -205,7 +205,7 @@ const VoiceBookingPage: React.FC = () => {
       
       setMessages(prev => [...prev, aiMessage]);
       
-      // Auto-play speech nếu có audio
+      // Auto-play speech nếu có audio (không phát cho COMPLETED)
       if (audioToPlay) {
         setTimeout(() => {
           playAudio(audioToPlay, messageId);
@@ -224,6 +224,7 @@ const VoiceBookingPage: React.FC = () => {
     
     // Update preview if available - hiển popup khi AWAITING_CONFIRMATION
     if (event.preview) {
+      console.log('[VoiceBooking] Preview data:', JSON.stringify(event.preview, null, 2));
       setPreview(event.preview);
     }
     
@@ -301,8 +302,8 @@ const VoiceBookingPage: React.FC = () => {
         speech: currentResponse.speech
       });
       
-      // Add AI message
-      if (textToShow) {
+      // Add AI message (không thêm cho COMPLETED vì sẽ xử lý riêng trong handleConfirm)
+      if (textToShow && currentResponse.status !== 'COMPLETED') {
         const messageId = `ai-${Date.now()}`;
         const aiMessage: Message = {
           id: messageId,
@@ -314,7 +315,7 @@ const VoiceBookingPage: React.FC = () => {
         
         setMessages(prev => [...prev, aiMessage]);
 
-        // Auto-play speech nếu có audio
+        // Auto-play speech nếu có audio (không phát cho COMPLETED)
         if (audioToPlay) {
           setTimeout(() => {
             playAudio(audioToPlay, messageId);
@@ -360,16 +361,17 @@ const VoiceBookingPage: React.FC = () => {
 
   // Auto show preview popup when AWAITING_CONFIRMATION và không có audio đang phát
   useEffect(() => {
-    if (status === 'AWAITING_CONFIRMATION' && preview && !showPreview && !isPlayingAudio) {
+    // Không hiện preview nếu đang hiện success modal
+    if (status === 'AWAITING_CONFIRMATION' && preview && !showPreview && !isPlayingAudio && !showSuccessModal) {
       // Delay một chút để đảm bảo audio đã xử lý xong
       const timer = setTimeout(() => {
-        if (!isPlayingAudio) {
+        if (!isPlayingAudio && !showSuccessModal) {
           setShowPreview(true);
         }
       }, 500);
       return () => clearTimeout(timer);
     }
-  }, [status, preview, showPreview, isPlayingAudio]);
+  }, [status, preview, showPreview, isPlayingAudio, showSuccessModal]);
 
   // Recording timer
   useEffect(() => {
@@ -622,61 +624,54 @@ const VoiceBookingPage: React.FC = () => {
       if (response?.status === 'COMPLETED') {
         setShowPreview(false);
         setConfirmingBooking(false);
+        setPreview(null); // Clear preview để không trigger auto-show
+        setStatus('COMPLETED'); // Update status
         
         const confirmedBookingId = response.bookingId;
+        console.log('[VoiceBooking] Confirmed bookingId:', confirmedBookingId);
+        
         if (confirmedBookingId) {
           setBookingId(confirmedBookingId);
           
           // Fetch chi tiết booking từ API
           setLoadingBookingDetails(true);
           try {
+            console.log('[VoiceBooking] Calling getBookingByIdApi with:', confirmedBookingId);
             const bookingDetails = await getBookingByIdApi(confirmedBookingId);
             console.log('[VoiceBooking] Fetched booking details:', bookingDetails);
+            console.log('[VoiceBooking] bookingDetails.data:', bookingDetails?.data);
             if (bookingDetails?.data) {
               setConfirmedBookingDetails(bookingDetails.data);
+              console.log('[VoiceBooking] Set confirmedBookingDetails successfully');
+            } else {
+              console.warn('[VoiceBooking] No data in bookingDetails response');
             }
           } catch (fetchError) {
-            console.error('Error fetching booking details:', fetchError);
+            console.error('[VoiceBooking] Error fetching booking details:', fetchError);
             // Vẫn hiện success modal dù không lấy được chi tiết
           } finally {
             setLoadingBookingDetails(false);
           }
-        }
-        
-        // Xử lý speech nếu có (TTS thông báo thành công)
-        let audioToPlay = '';
-        let textToShow = '';
-        
-        if (response.speech?.message?.audioUrl) {
-          textToShow = response.speech.message.text || 'Đặt lịch thành công!';
-          audioToPlay = response.speech.message.audioUrl;
         } else {
-          textToShow = response.message || 'Đặt lịch thành công!';
+          console.warn('[VoiceBooking] No bookingId in confirm response');
         }
         
-        // Add success message to chat
+        // Message tiếng Việt cho thành công (không phát audio vì API trả về tiếng Anh)
+        const textToShow = 'Đặt lịch thành công! Cảm ơn bạn đã tin tưởng đặt dịch vụ tại Home Mate.';
+        
+        // Add success message to chat (không có audio)
         const messageId = `ai-success-${Date.now()}`;
         const successMessage: Message = {
           id: messageId,
           role: 'assistant',
           content: textToShow,
-          timestamp: new Date(),
-          audioUrl: audioToPlay || undefined
+          timestamp: new Date()
+          // Không thêm audioUrl để không phát audio tiếng Anh
         };
         setMessages(prev => [...prev, successMessage]);
         
-        // Hiện success modal ngay (không cần đợi audio)
+        // Hiện success modal ngay
         setShowSuccessModal(true);
-        
-        // Play audio nếu có
-        if (audioToPlay) {
-          try {
-            const audio = new Audio(audioToPlay);
-            await audio.play();
-          } catch {
-            // Ignore audio play error
-          }
-        }
       }
     } catch (err) {
       console.error('Error confirming booking:', err);
@@ -1087,7 +1082,23 @@ const VoiceBookingPage: React.FC = () => {
                         <div className="flex-1 min-w-0">
                           <p className="text-[10px] font-medium text-brand-text/50 uppercase tracking-wider">Địa chỉ</p>
                           <p className="text-sm font-semibold text-brand-navy break-words">
-                            {[preview.address, preview.ward, preview.city].filter(Boolean).join(', ') || 'Chưa có địa chỉ'}
+                            {(() => {
+                              // Xử lý address có thể là string hoặc object
+                              let addressStr = '';
+                              if (typeof preview.address === 'string') {
+                                addressStr = preview.address;
+                              } else if (preview.address && typeof preview.address === 'object') {
+                                const addr = preview.address as any;
+                                addressStr = addr.fullAddress || addr.address || addr.street || '';
+                              }
+                              
+                              // Nếu address đã chứa ward/city thì không cần thêm
+                              if (addressStr && (addressStr.includes(preview.ward || '') || addressStr.includes(preview.city || ''))) {
+                                return addressStr || 'Chưa có địa chỉ';
+                              }
+                              
+                              return [addressStr, preview.ward, preview.city].filter(Boolean).join(', ') || 'Chưa có địa chỉ';
+                            })()}
                           </p>
                         </div>
                       </div>
@@ -1272,52 +1283,90 @@ const VoiceBookingPage: React.FC = () => {
                               {/* address có thể là string hoặc object */}
                               {typeof confirmedBookingDetails.address === 'string' 
                                 ? confirmedBookingDetails.address 
-                                : (confirmedBookingDetails.address as any)?.fullAddress || ''}
-                              {confirmedBookingDetails.customerInfo?.ward && `, ${confirmedBookingDetails.customerInfo.ward}`}
-                              {confirmedBookingDetails.customerInfo?.district && `, ${confirmedBookingDetails.customerInfo.district}`}
-                              {confirmedBookingDetails.customerInfo?.city && `, ${confirmedBookingDetails.customerInfo.city}`}
+                                : (confirmedBookingDetails.address as any)?.fullAddress || 
+                                  [
+                                    (confirmedBookingDetails.address as any)?.ward,
+                                    (confirmedBookingDetails.address as any)?.city
+                                  ].filter(Boolean).join(', ') || 'Chưa có địa chỉ'}
                             </p>
                           </div>
                         </div>
                       </div>
 
-                      {/* Dịch vụ */}
-                      {confirmedBookingDetails.serviceDetails && confirmedBookingDetails.serviceDetails.length > 0 && (
-                        <div className="p-3 rounded-2xl bg-purple-50/80 border border-purple-100">
-                          <div className="flex items-start gap-2">
-                            <ShoppingBag className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
-                            <div className="flex-1">
-                              <p className="text-xs font-medium text-purple-800 mb-1">Dịch vụ</p>
-                              {confirmedBookingDetails.serviceDetails.map((service, idx) => (
-                                <div key={idx} className="flex justify-between items-center text-sm text-purple-700">
-                                  <span className="break-words">{service.serviceName}</span>
-                                  <span className="font-medium ml-2 flex-shrink-0">
-                                    {service.formattedPrice || `${service.price?.toLocaleString('vi-VN')}đ`}
-                                  </span>
-                                </div>
-                              ))}
+                      {/* Dịch vụ - Hỗ trợ cả serviceDetails và bookingDetails */}
+                      {(() => {
+                        const details = confirmedBookingDetails.serviceDetails || (confirmedBookingDetails as any).bookingDetails;
+                        if (!details || details.length === 0) return null;
+                        
+                        return (
+                          <div className="p-3 rounded-2xl bg-purple-50/80 border border-purple-100">
+                            <div className="flex items-start gap-2">
+                              <ShoppingBag className="h-4 w-4 text-purple-600 mt-0.5 flex-shrink-0" />
+                              <div className="flex-1">
+                                <p className="text-xs font-medium text-purple-800 mb-1">Dịch vụ</p>
+                                {details.map((item: any, idx: number) => {
+                                  // Lấy tên và giá từ cả 2 cấu trúc
+                                  const serviceName = item.serviceName || item.service?.name || 'Dịch vụ';
+                                  const price = item.formattedPrice || item.formattedSubTotal || item.formattedPricePerUnit ||
+                                    `${(item.price || item.subTotal || item.pricePerUnit || 0).toLocaleString('vi-VN')}đ`;
+                                  const quantity = item.quantity || 1;
+                                  
+                                  return (
+                                    <div key={idx} className="flex justify-between items-center text-sm text-purple-700">
+                                      <span className="break-words">{serviceName} {quantity > 1 ? `x${quantity}` : ''}</span>
+                                      <span className="font-medium ml-2 flex-shrink-0">{price}</span>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
 
-                      {/* Nhân viên */}
-                      {confirmedBookingDetails.assignedEmployees && confirmedBookingDetails.assignedEmployees.length > 0 && (
-                        <div className="p-3 rounded-2xl bg-cyan-50/80 border border-cyan-100">
-                          <div className="flex items-start gap-2">
-                            <User className="h-4 w-4 text-cyan-600 mt-0.5 flex-shrink-0" />
-                            <div className="flex-1">
-                              <p className="text-xs font-medium text-cyan-800 mb-1">Nhân viên phục vụ</p>
-                              {confirmedBookingDetails.assignedEmployees.map((emp, idx) => (
-                                <div key={idx} className="text-sm text-cyan-700">
-                                  {emp.employeeName}
-                                  {emp.phoneNumber && <span className="text-cyan-600 ml-1">({emp.phoneNumber})</span>}
-                                </div>
-                              ))}
+                      {/* Nhân viên - Hỗ trợ cả assignedEmployees và bookingDetails.assignments */}
+                      {(() => {
+                        // Lấy employees từ nhiều nguồn
+                        let employees: any[] = [];
+                        
+                        if (confirmedBookingDetails.assignedEmployees && confirmedBookingDetails.assignedEmployees.length > 0) {
+                          employees = confirmedBookingDetails.assignedEmployees;
+                        } else if ((confirmedBookingDetails as any).bookingDetails) {
+                          // Lấy từ bookingDetails.assignments
+                          (confirmedBookingDetails as any).bookingDetails.forEach((detail: any) => {
+                            if (detail.assignments) {
+                              detail.assignments.forEach((assignment: any) => {
+                                if (assignment.employee) {
+                                  employees.push({
+                                    employeeName: assignment.employee.fullName,
+                                    phoneNumber: assignment.employee.phoneNumber,
+                                    avatar: assignment.employee.avatar
+                                  });
+                                }
+                              });
+                            }
+                          });
+                        }
+                        
+                        if (employees.length === 0) return null;
+                        
+                        return (
+                          <div className="p-3 rounded-2xl bg-cyan-50/80 border border-cyan-100">
+                            <div className="flex items-start gap-2">
+                              <User className="h-4 w-4 text-cyan-600 mt-0.5 flex-shrink-0" />
+                              <div className="flex-1">
+                                <p className="text-xs font-medium text-cyan-800 mb-1">Nhân viên phục vụ</p>
+                                {employees.map((emp: any, idx: number) => (
+                                  <div key={idx} className="text-sm text-cyan-700">
+                                    {emp.employeeName || emp.fullName}
+                                    {emp.phoneNumber && <span className="text-cyan-600 ml-1">({emp.phoneNumber})</span>}
+                                  </div>
+                                ))}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      )}
+                        );
+                      })()}
 
                       {/* Tổng tiền */}
                       <div className="p-3 rounded-2xl bg-green-50/80 border border-green-200">
@@ -1325,13 +1374,18 @@ const VoiceBookingPage: React.FC = () => {
                           <span className="text-sm font-medium text-green-800">Tổng thanh toán</span>
                           <span className="text-lg font-bold text-green-700">
                             {confirmedBookingDetails.formattedTotalAmount || 
-                             confirmedBookingDetails.totalAmount?.toLocaleString('vi-VN') ||
-                             confirmedBookingDetails.totalPrice?.toLocaleString('vi-VN')}đ
+                             `${(confirmedBookingDetails.totalAmount || confirmedBookingDetails.totalPrice || 0).toLocaleString('vi-VN')}đ`}
                           </span>
                         </div>
-                        {confirmedBookingDetails.paymentInfo && (
+                        {/* Hỗ trợ cả paymentInfo và payment */}
+                        {(confirmedBookingDetails.paymentInfo || (confirmedBookingDetails as any).payment) && (
                           <div className="mt-1 text-xs text-green-600">
-                            Thanh toán: {confirmedBookingDetails.paymentInfo.methodName} • {confirmedBookingDetails.paymentInfo.status}
+                            {(() => {
+                              const payment = confirmedBookingDetails.paymentInfo || (confirmedBookingDetails as any).payment;
+                              const methodName = payment.methodName || payment.paymentMethod || '';
+                              const status = payment.status || payment.paymentStatus || '';
+                              return `Thanh toán: ${methodName} • ${status}`;
+                            })()}
                           </div>
                         )}
                       </div>
