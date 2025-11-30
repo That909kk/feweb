@@ -1,7 +1,8 @@
-import axios from 'axios';
+import { api } from './client';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api/v1';
 const VOICE_BOOKING_PREFIX = '/customer/bookings/voice';
+// Timeout dài hơn cho voice booking vì cần xử lý audio (STT + AI)
+const VOICE_BOOKING_TIMEOUT = 100000; // 60 giây
 
 export interface VoiceBookingResponse {
   success: boolean;
@@ -95,19 +96,34 @@ export const createVoiceBookingApi = async (
     formData.append('hints', JSON.stringify(hints));
   }
 
-  const token = localStorage.getItem('token');
-  const response = await axios.post(
-    `${API_BASE_URL}${VOICE_BOOKING_PREFIX}`,
+  const response = await api.post(
+    `${VOICE_BOOKING_PREFIX}`,
     formData,
     {
       headers: {
         'Content-Type': 'multipart/form-data',
-        'Authorization': `Bearer ${token}`
-      }
+      },
+      timeout: VOICE_BOOKING_TIMEOUT
     }
   );
 
-  return response.data;
+  console.log('[VoiceBookingApi] Create raw response:', response);
+
+  // Backend trả về VoiceBookingResponse trực tiếp hoặc trong .data
+  const responseData = response.data;
+  
+  // Nếu responseData có requestId và status trực tiếp -> đó chính là VoiceBookingResponse
+  if (responseData?.requestId && responseData?.status) {
+    return responseData as VoiceBookingResponse;
+  }
+  
+  // Nếu có nested data (wrapper ApiResponse)
+  if (responseData?.data?.requestId) {
+    return responseData.data as VoiceBookingResponse;
+  }
+
+  // Throw error nếu không có requestId
+  throw new Error(responseData?.message || 'Không thể tạo yêu cầu đặt lịch bằng giọng nói');
 };
 
 /**
@@ -132,89 +148,129 @@ export const continueVoiceBookingApi = async (
     formData.append('explicitFields', JSON.stringify(explicitFields));
   }
 
-  const token = localStorage.getItem('token');
-  const response = await axios.post(
-    `${API_BASE_URL}${VOICE_BOOKING_PREFIX}/continue`,
+  const response = await api.post(
+    `${VOICE_BOOKING_PREFIX}/continue`,
     formData,
     {
       headers: {
         'Content-Type': 'multipart/form-data',
-        'Authorization': `Bearer ${token}`
-      }
+      },
+      timeout: VOICE_BOOKING_TIMEOUT
     }
   );
 
-  return response.data;
+  console.log('[VoiceBookingApi] Continue raw response:', response);
+
+  // Backend trả về VoiceBookingResponse trực tiếp hoặc trong .data
+  const responseData = response.data;
+  
+  if (responseData?.requestId && responseData?.status) {
+    return responseData as VoiceBookingResponse;
+  }
+  
+  if (responseData?.data?.requestId) {
+    return responseData.data as VoiceBookingResponse;
+  }
+
+  throw new Error(responseData?.message || 'Không thể bổ sung thông tin');
 };
 
 /**
  * Xác nhận draft booking
  */
 export const confirmVoiceBookingApi = async (requestId: string): Promise<VoiceBookingResponse> => {
-  const token = localStorage.getItem('token');
-  const response = await axios.post(
-    `${API_BASE_URL}${VOICE_BOOKING_PREFIX}/confirm`,
-    { requestId },
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
-    }
+  const response = await api.post(
+    `${VOICE_BOOKING_PREFIX}/confirm`,
+    { requestId }
   );
 
-  return response.data;
+  console.log('[VoiceBookingApi] Confirm raw response:', response);
+
+  const responseData = response.data;
+  
+  if (responseData?.requestId && responseData?.status) {
+    return responseData as VoiceBookingResponse;
+  }
+  
+  if (responseData?.data?.requestId) {
+    return responseData.data as VoiceBookingResponse;
+  }
+
+  // Nếu có success=true và bookingId thì cũng ok
+  if (responseData?.success && responseData?.bookingId) {
+    return responseData as VoiceBookingResponse;
+  }
+
+  throw new Error(responseData?.message || 'Không thể xác nhận đặt lịch');
 };
 
 /**
  * Hủy draft booking
  */
 export const cancelVoiceBookingApi = async (requestId: string): Promise<VoiceBookingResponse> => {
-  const token = localStorage.getItem('token');
-  const response = await axios.post(
-    `${API_BASE_URL}${VOICE_BOOKING_PREFIX}/cancel`,
-    { requestId },
-    {
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
-    }
+  const response = await api.post(
+    `${VOICE_BOOKING_PREFIX}/cancel`,
+    { requestId }
   );
 
-  return response.data;
+  console.log('[VoiceBookingApi] Cancel raw response:', response);
+
+  const responseData = response.data;
+  
+  if (responseData?.requestId && responseData?.status) {
+    return responseData as VoiceBookingResponse;
+  }
+  
+  if (responseData?.data?.requestId) {
+    return responseData.data as VoiceBookingResponse;
+  }
+
+  if (responseData?.success) {
+    return responseData as VoiceBookingResponse;
+  }
+
+  throw new Error(responseData?.message || 'Không thể hủy đặt lịch');
 };
 
 /**
  * Lấy chi tiết voice booking request
  */
 export const getVoiceBookingApi = async (requestId: string): Promise<VoiceBookingRequest> => {
-  const token = localStorage.getItem('token');
-  const response = await axios.get(
-    `${API_BASE_URL}${VOICE_BOOKING_PREFIX}/${requestId}`,
-    {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    }
+  const response = await api.get(
+    `${VOICE_BOOKING_PREFIX}/${requestId}`
   );
 
-  return response.data;
+  const responseData = response.data;
+  
+  if (responseData?.requestId) {
+    return responseData as VoiceBookingRequest;
+  }
+  
+  if (responseData?.data?.requestId) {
+    return responseData.data as VoiceBookingRequest;
+  }
+
+  throw new Error('Không thể lấy thông tin voice booking');
 };
 
 /**
  * Kiểm tra trạng thái dịch vụ voice booking
  */
 export const getVoiceBookingStatusApi = async (): Promise<{ enabled: boolean; [key: string]: any }> => {
-  const token = localStorage.getItem('token');
-  const response = await axios.get(
-    `${API_BASE_URL}${VOICE_BOOKING_PREFIX}/status`,
-    {
-      headers: {
-        'Authorization': `Bearer ${token}`
-      }
-    }
+  const response = await api.get(
+    `${VOICE_BOOKING_PREFIX}/status`
   );
 
-  return response.data;
+  const responseData = response.data;
+  
+  // Response có thể là { enabled: boolean } trực tiếp hoặc trong .data
+  if (typeof responseData?.enabled === 'boolean') {
+    return responseData;
+  }
+  
+  if (typeof responseData?.data?.enabled === 'boolean') {
+    return responseData.data;
+  }
+
+  return { enabled: false };
 };

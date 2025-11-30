@@ -8,10 +8,12 @@ import {
   getVoiceBookingStatusApi,
   type VoiceBookingResponse
 } from '../api/voiceBooking';
+import { getAccessToken } from '../shared/utils/authUtils';
 import SockJS from 'sockjs-client';
 import { Client, type IMessage } from '@stomp/stompjs';
 
-const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'http://localhost:8080';
+// WS_BASE_URL đã bao gồm /ws nên chỉ cần thêm path sau
+const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'http://localhost:8080/ws';
 
 export interface VoiceBookingEventPayload {
   requestId: string;
@@ -44,15 +46,17 @@ export const useVoiceBooking = () => {
   const wsClientRef = useRef<Client | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _analyserRef = useRef<AnalyserNode | null>(null); // Tạm không dùng khi tắt auto-stop
   const silenceTimeoutRef = useRef<number | null>(null);
   const maxDurationTimeoutRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
 
-  // Silence detection config
-  const SILENCE_THRESHOLD = 0.01; // Độ nhạy phát hiện im lặng (0-1)
-  const SILENCE_DURATION = 2000; // 2 giây im lặng thì auto-stop
-  const MAX_RECORDING_DURATION = 20000; // Tối đa 20 giây mỗi lượt
+  // TẮT auto-stop - Silence detection config (không sử dụng)
+  // const SILENCE_THRESHOLD = 0.005; // Giảm ngưỡng để dễ detect tiếng nói hơn (0-1)
+  // const SILENCE_DURATION = 2500; // 2.5 giây im lặng thì auto-stop (sau khi đã nói)
+  // const MIN_RECORDING_BEFORE_SILENCE = 1500; // Phải ghi ít nhất 1.5s trước khi check silence
+  // const MAX_RECORDING_DURATION = 60000; // Tối đa 60 giây mỗi lượt
 
   /**
    * Kết nối WebSocket để nhận realtime updates
@@ -62,12 +66,25 @@ export const useVoiceBooking = () => {
       wsClientRef.current.deactivate();
     }
 
-    const socket = new SockJS(`${WS_BASE_URL}/ws/voice-booking`);
+    // Lấy access token để authenticate WebSocket
+    const token = getAccessToken();
+    
+    // WS_BASE_URL đã có /ws, chỉ cần thêm /voice-booking
+    // Thêm token vào query params để authenticate
+    const wsUrl = token 
+      ? `${WS_BASE_URL}/voice-booking?token=${encodeURIComponent(token)}`
+      : `${WS_BASE_URL}/voice-booking`;
+    
+    console.log('[VoiceBooking WS] Connecting to:', wsUrl.replace(/token=.*/, 'token=***'));
+    
+    const socket = new SockJS(wsUrl);
     const client = new Client({
       webSocketFactory: () => socket as any,
       reconnectDelay: 5000,
       heartbeatIncoming: 4000,
       heartbeatOutgoing: 4000,
+      // Thêm token vào STOMP connect headers
+      connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       debug: (str) => {
         console.log('[VoiceBooking WS]', str);
       },
@@ -114,9 +131,9 @@ export const useVoiceBooking = () => {
     }
   }, []);
 
-  /**
-   * Phát hiện im lặng trong audio stream
-   */
+  // TẮT AUTO-STOP - Hàm detectSilence đã được comment out
+  // Giờ user tự kiểm soát khi nào dừng ghi âm
+  /*
   const detectSilence = useCallback((stream: MediaStream, onSilence: () => void) => {
     const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
     const analyser = audioContext.createAnalyser();
@@ -129,39 +146,52 @@ export const useVoiceBooking = () => {
     audioContextRef.current = audioContext;
     analyserRef.current = analyser;
 
-    let silenceStart = Date.now();
-    let isSpeaking = false;
+    const recordingStartTime = Date.now();
+    let silenceStart: number | null = null;
+    let hasDetectedSpeech = false;
+    let peakVolume = 0;
 
     const checkAudioLevel = () => {
-      if (!analyserRef.current || !isRecording) return;
+      if (!analyserRef.current || !mediaRecorderRef.current || mediaRecorderRef.current.state !== 'recording') {
+        return;
+      }
 
       analyser.getByteTimeDomainData(dataArray);
 
-      // Tính volume trung bình
       let sum = 0;
       for (let i = 0; i < dataArray.length; i++) {
         const normalized = (dataArray[i] - 128) / 128;
         sum += normalized * normalized;
       }
       const volume = Math.sqrt(sum / dataArray.length);
+      
+      if (volume > peakVolume) {
+        peakVolume = volume;
+      }
 
-      // Phát hiện có tiếng nói
+      const timeSinceStart = Date.now() - recordingStartTime;
+
       if (volume > SILENCE_THRESHOLD) {
-        isSpeaking = true;
-        silenceStart = Date.now();
+        hasDetectedSpeech = true;
+        silenceStart = null;
         
-        // Clear timeout nếu đang có
         if (silenceTimeoutRef.current) {
           clearTimeout(silenceTimeoutRef.current);
           silenceTimeoutRef.current = null;
         }
-      } else if (isSpeaking) {
-        // Đã nói rồi, giờ im lặng
+      } else if (hasDetectedSpeech && timeSinceStart > MIN_RECORDING_BEFORE_SILENCE) {
+        if (silenceStart === null) {
+          silenceStart = Date.now();
+        }
+        
         const silenceDuration = Date.now() - silenceStart;
         
         if (silenceDuration >= SILENCE_DURATION) {
-          // Im lặng đủ lâu → auto-stop
-          console.log('[VoiceBooking] Silence detected, auto-stopping...');
+          console.log('[VoiceBooking] Silence detected after speech, auto-stopping...', {
+            peakVolume,
+            totalRecordingTime: timeSinceStart,
+            silenceDuration
+          });
           setAutoStopReason('silence');
           onSilence();
           return;
@@ -172,28 +202,108 @@ export const useVoiceBooking = () => {
     };
 
     checkAudioLevel();
-  }, [isRecording, SILENCE_THRESHOLD, SILENCE_DURATION]);
+  }, [SILENCE_THRESHOLD, SILENCE_DURATION, MIN_RECORDING_BEFORE_SILENCE]);
+  */
 
   /**
-   * Bắt đầu ghi âm với auto-stop
+   * Bắt đầu ghi âm - User tự kiểm soát khi nào dừng
    */
   const startRecording = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          // Thêm constraints để giữ stream ổn định
+          channelCount: 1,
+          sampleRate: 48000
+        } 
+      });
       streamRef.current = stream;
       
-      const mediaRecorder = new MediaRecorder(stream);
+      // Lắng nghe sự kiện track ended để debug
+      const audioTrack = stream.getAudioTracks()[0];
+      if (audioTrack) {
+        console.log('[VoiceBooking] Audio track settings:', audioTrack.getSettings());
+        console.log('[VoiceBooking] Audio track state:', audioTrack.readyState);
+        
+        audioTrack.onended = () => {
+          console.warn('[VoiceBooking] ⚠️ Audio track ended unexpectedly!');
+          // Nếu track bị tắt bất ngờ, dừng recording và thông báo
+          if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+            console.log('[VoiceBooking] Stopping recorder due to track ended');
+            mediaRecorderRef.current.stop();
+            setIsRecording(false);
+          }
+        };
+        
+        audioTrack.onmute = () => {
+          console.warn('[VoiceBooking] ⚠️ Audio track muted!');
+        };
+        
+        audioTrack.onunmute = () => {
+          console.log('[VoiceBooking] Audio track unmuted');
+        };
+      }
       
+      // TẠO AudioContext để giữ cho microphone stream ACTIVE
+      // Điều này ngăn trình duyệt tự động tắt mic khi không có hoạt động
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+      
+      // Resume AudioContext nếu bị suspended (browser policy)
+      if (audioContext.state === 'suspended') {
+        console.log('[VoiceBooking] AudioContext suspended, resuming...');
+        await audioContext.resume();
+      }
+      
+      const source = audioContext.createMediaStreamSource(stream);
+      
+      // Tạo một ScriptProcessor để keep stream alive (thay vì chỉ GainNode)
+      // ScriptProcessor buộc browser phải xử lý audio data liên tục
+      const scriptProcessor = audioContext.createScriptProcessor(4096, 1, 1);
+      scriptProcessor.onaudioprocess = () => {
+        // Không làm gì, chỉ để giữ stream active
+      };
+      
+      source.connect(scriptProcessor);
+      scriptProcessor.connect(audioContext.destination);
+      
+      audioContextRef.current = audioContext;
+      
+      console.log('[VoiceBooking] AudioContext created and active, state:', audioContext.state);
+      
+      // Kiểm tra các codec được hỗ trợ
+      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus') 
+        ? 'audio/webm;codecs=opus'
+        : MediaRecorder.isTypeSupported('audio/webm')
+        ? 'audio/webm'
+        : 'audio/mp4';
+      
+      console.log('[VoiceBooking] Using MIME type:', mimeType);
+      
+      const mediaRecorder = new MediaRecorder(stream, { mimeType });
+      
+      // Reset chunks và audioBlob trước khi bắt đầu recording mới
       audioChunksRef.current = [];
+      setAudioBlob(null);
       
       mediaRecorder.ondataavailable = (event) => {
+        console.log('[VoiceBooking] Data available:', event.data.size, 'bytes, chunks so far:', audioChunksRef.current.length + 1);
         if (event.data.size > 0) {
           audioChunksRef.current.push(event.data);
         }
       };
+      
+      // Lắng nghe lỗi của MediaRecorder
+      mediaRecorder.onerror = (event) => {
+        console.error('[VoiceBooking] MediaRecorder error:', event);
+      };
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        console.log('[VoiceBooking] Recording stopped, chunks:', audioChunksRef.current.length);
+        const blob = new Blob(audioChunksRef.current, { type: mimeType });
+        console.log('[VoiceBooking] Final blob size:', blob.size, 'bytes');
         setAudioBlob(blob);
         
         // Cleanup
@@ -215,34 +325,38 @@ export const useVoiceBooking = () => {
         }
       };
 
-      mediaRecorder.start();
+      // Start với timeslice 500ms để ghi dữ liệu theo chunks thường xuyên
+      // Điều này đảm bảo không mất data nếu recording bị dừng đột ngột
+      mediaRecorder.start(500);
       mediaRecorderRef.current = mediaRecorder;
       setIsRecording(true);
       setError(null);
+      
+      console.log('[VoiceBooking] Recording started with timeslice 500ms');
 
-      // Auto-stop khi phát hiện im lặng
-      detectSilence(stream, () => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-          mediaRecorderRef.current.stop();
-          setIsRecording(false);
-        }
-      });
+      // TẮT auto-stop - để user tự kiểm soát khi nào dừng ghi âm
+      // detectSilence(stream, () => {
+      //   if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      //     mediaRecorderRef.current.stop();
+      //     setIsRecording(false);
+      //   }
+      // });
 
-      // Auto-stop sau max duration
-      maxDurationTimeoutRef.current = window.setTimeout(() => {
-        if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
-          console.log('[VoiceBooking] Max duration reached, auto-stopping...');
-          setAutoStopReason('max-duration');
-          mediaRecorderRef.current.stop();
-          setIsRecording(false);
-        }
-      }, MAX_RECORDING_DURATION);
+      // TẮT auto-stop sau max duration
+      // maxDurationTimeoutRef.current = window.setTimeout(() => {
+      //   if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+      //     console.log('[VoiceBooking] Max duration reached, auto-stopping...');
+      //     setAutoStopReason('max-duration');
+      //     mediaRecorderRef.current.stop();
+      //     setIsRecording(false);
+      //   }
+      // }, MAX_RECORDING_DURATION);
 
     } catch (err) {
       console.error('Error starting recording:', err);
       setError('Không thể truy cập microphone. Vui lòng cho phép quyền ghi âm.');
     }
-  }, [detectSilence, MAX_RECORDING_DURATION]);
+  }, []);
 
   /**
    * Dừng ghi âm
@@ -277,11 +391,32 @@ export const useVoiceBooking = () => {
     setError(null);
 
     try {
-      const audioFile = audio instanceof File ? audio : new File([audio], 'recording.webm', { type: 'audio/webm' });
+      // Log chi tiết audio để debug
+      console.log('[VoiceBooking] Creating voice booking with audio:', {
+        type: audio.type,
+        size: audio.size,
+        isFile: audio instanceof File,
+        name: audio instanceof File ? audio.name : 'blob'
+      });
+      
+      const audioFile = audio instanceof File ? audio : new File([audio], 'recording.webm', { type: audio.type || 'audio/webm' });
+      
+      console.log('[VoiceBooking] Audio file to send:', {
+        name: audioFile.name,
+        type: audioFile.type,
+        size: audioFile.size
+      });
+      
       const response = await createVoiceBookingApi(audioFile, hints);
       setCurrentResponse(response);
       return response;
     } catch (err: any) {
+      // Log chi tiết lỗi
+      console.error('[VoiceBooking] Create error details:', {
+        status: err?.response?.status,
+        data: err?.response?.data,
+        message: err?.message
+      });
       const errorMessage = err?.response?.data?.message || err?.message || 'Không thể tạo yêu cầu đặt lịch';
       setError(errorMessage);
       throw err;
@@ -402,11 +537,14 @@ export const useVoiceBooking = () => {
     disconnectWebSocket();
   }, [disconnectWebSocket]);
 
-  // Cleanup on unmount
+  // Cleanup on unmount - CHỈ chạy khi component unmount, KHÔNG phụ thuộc vào isRecording
   useEffect(() => {
     return () => {
+      console.log('[VoiceBooking] Cleanup on unmount');
       disconnectWebSocket();
-      if (mediaRecorderRef.current && isRecording) {
+      // Sử dụng ref thay vì state để tránh closure stale
+      if (mediaRecorderRef.current && mediaRecorderRef.current.state === 'recording') {
+        console.log('[VoiceBooking] Stopping recorder on unmount');
         mediaRecorderRef.current.stop();
       }
       if (streamRef.current) {
@@ -422,7 +560,7 @@ export const useVoiceBooking = () => {
         clearTimeout(maxDurationTimeoutRef.current);
       }
     };
-  }, [disconnectWebSocket, isRecording]);
+  }, []); // Chỉ chạy một lần khi mount/unmount
 
   return {
     isLoading,
