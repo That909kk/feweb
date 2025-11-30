@@ -535,6 +535,8 @@ export const deleteAdminPricingRuleApi = async (ruleId: number): Promise<ApiResp
 export const getAllBookingsApi = async (params?: {
   page?: number;
   size?: number;
+  status?: string;
+  fromDate?: string;
 }): Promise<{
   success: boolean;
   data: any[];
@@ -547,7 +549,9 @@ export const getAllBookingsApi = async (params?: {
     const response = await api.get('/admin/bookings', {
       params: {
         page: params?.page ?? 0,
-        size: params?.size ?? 10
+        size: params?.size ?? 10,
+        status: params?.status,
+        fromDate: params?.fromDate
       }
     });
     console.log('[API] Got all bookings:', response.data);
@@ -564,6 +568,49 @@ export const getAllBookingsApi = async (params?: {
     };
   } catch (error: any) {
     console.error('[API] Error fetching all bookings:', error);
+    throw error;
+  }
+};
+
+/**
+ * Search bookings by bookingCode
+ * Endpoint: GET /api/v1/admin/bookings/search
+ * Tìm kiếm tương đối, không phân biệt hoa thường
+ */
+export const searchBookingsApi = async (params: {
+  bookingCode: string;
+  page?: number;
+  size?: number;
+}): Promise<{
+  success: boolean;
+  data: any[];
+  currentPage: number;
+  totalItems: number;
+  totalPages: number;
+}> => {
+  try {
+    console.log('[API] Admin searching bookings with params:', params);
+    const response = await api.get('/admin/bookings/search', {
+      params: {
+        bookingCode: params.bookingCode,
+        page: params?.page ?? 0,
+        size: params?.size ?? 10
+      }
+    });
+    console.log('[API] Search bookings result:', response.data);
+    
+    // Extract actual booking data from nested wrapper
+    const flattenedData = response.data.data?.map((item: any) => {
+      // Each item has structure: { success, message, data: {...actualBooking} }
+      return item.data || item;
+    }) || [];
+    
+    return {
+      ...response.data,
+      data: flattenedData
+    };
+  } catch (error: any) {
+    console.error('[API] Error searching bookings:', error);
     throw error;
   }
 };

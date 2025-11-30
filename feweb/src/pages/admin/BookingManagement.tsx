@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { 
   CalendarClock, 
   CheckCircle2, 
@@ -17,7 +17,7 @@ import {
   Edit
 } from 'lucide-react';
 import { useBooking } from '../../hooks/useBooking';
-import { getAllBookingsApi, updateBookingStatusApi, getBookingByIdApi } from '../../api/admin';
+import { getAllBookingsApi, updateBookingStatusApi, getBookingByIdApi, searchBookingsApi } from '../../api/admin';
 import { DashboardLayout } from '../../layouts';
 import { MetricCard, SectionCard } from '../../shared/components';
 
@@ -36,8 +36,8 @@ type BookingPost = {
     phoneNumber?: string;
     isMale?: boolean;
     birthdate?: string;
-    rating?: number | null;
-    vipLevel?: string | null;
+    rating?: string | null; // LOW, MEDIUM, HIGH
+    vipLevel?: number | null;
     [key: string]: any;
   };
   address?: {
@@ -55,8 +55,18 @@ type BookingPost = {
   note?: string | null;
   totalAmount?: number;
   formattedTotalAmount?: string;
+  baseAmount?: number;
+  totalFees?: number;
+  fees?: Array<{
+    name?: string;
+    type?: string; // PERCENT, FIXED
+    value?: number;
+    amount?: number;
+    systemSurcharge?: boolean;
+  }>;
   status: string;
   isVerified?: boolean;
+  isPost?: boolean;
   promotion?: {
     promotionId?: string;
     name?: string;
@@ -114,7 +124,7 @@ type BookingPost = {
         email?: string;
         phoneNumber?: string;
         avatar?: string;
-        rating?: number | null;
+        rating?: string | null; // LOW, MEDIUM, HIGH
         employeeStatus?: string;
         skills?: string[];
         bio?: string;
@@ -210,7 +220,6 @@ const AdminBookingManagement: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'all' | 'unverified'>('unverified');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [bookings, setBookings] = useState<BookingPost[]>([]);
-  const [allBookings, setAllBookings] = useState<BookingPost[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedBooking, setSelectedBooking] = useState<BookingPost | null>(null);
   const [showVerifyDialog, setShowVerifyDialog] = useState(false);
@@ -223,9 +232,33 @@ const AdminBookingManagement: React.FC = () => {
   const [detailBooking, setDetailBooking] = useState<BookingPost | null>(null);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
   const [searchCode, setSearchCode] = useState('');
-  const [filteredBookings, setFilteredBookings] = useState<BookingPost[]>([]);
   const [currentPage, setCurrentPage] = useState(0);
-  const [itemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(50);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalItems, setTotalItems] = useState(0);
+  const [allBookingsRaw, setAllBookingsRaw] = useState<BookingPost[]>([]); // Store raw data for client-side filtering
+  
+  // Status counts for filter buttons
+  const [statusCounts, setStatusCounts] = useState<{
+    ALL: number;
+    PENDING: number;
+    CONFIRMED: number;
+    AWAITING_EMPLOYEE: number;
+    ASSIGNED: number;
+    IN_PROGRESS: number;
+    COMPLETED: number;
+    CANCELLED: number;
+  }>({
+    ALL: 0,
+    PENDING: 0,
+    CONFIRMED: 0,
+    AWAITING_EMPLOYEE: 0,
+    ASSIGNED: 0,
+    IN_PROGRESS: 0,
+    COMPLETED: 0,
+    CANCELLED: 0
+  });
+  const [isLoadingCounts, setIsLoadingCounts] = useState(false);
   
   // Update status modal states
   const [showUpdateStatusDialog, setShowUpdateStatusDialog] = useState(false);
@@ -256,30 +289,135 @@ const AdminBookingManagement: React.FC = () => {
     }
   };
 
-  const loadAllBookings = async () => {
+  const loadAllBookings = async (page: number = 0, status?: string) => {
     setIsLoading(true);
     setError(null);
     try {
-      const response = await getAllBookingsApi({ page: 0, size: 100 });
+      const response = await getAllBookingsApi({ 
+        page, 
+        size: itemsPerPage,
+        status: status && status !== 'ALL' ? status : undefined
+      });
       // Response theo format mới: { success, data, currentPage, totalItems, totalPages }
       if (response && response.data) {
-        setAllBookings(response.data);
+        setAllBookingsRaw(response.data);
+        setTotalPages(response.totalPages || 0);
+        setTotalItems(response.totalItems || 0);
+        setCurrentPage(response.currentPage || 0);
       } else {
-        setAllBookings([]);
+        setAllBookingsRaw([]);
+        setTotalPages(0);
+        setTotalItems(0);
       }
     } catch (err: any) {
       console.error('Failed to load all bookings:', err);
       setError('Không thể tải danh sách tất cả booking');
-      setAllBookings([]);
+      setAllBookingsRaw([]);
+      setTotalPages(0);
+      setTotalItems(0);
     } finally {
       setIsLoading(false);
     }
   };
 
+  // Load status counts for filter buttons
+  const loadStatusCounts = async () => {
+    setIsLoadingCounts(true);
+    try {
+      const statuses = ['PENDING', 'CONFIRMED', 'AWAITING_EMPLOYEE', 'ASSIGNED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'] as const;
+      
+      // Call API for each status to get totalItems
+      const countPromises = statuses.map(status => 
+        getAllBookingsApi({ page: 0, size: 1, status }).then(res => ({
+          status,
+          count: res?.totalItems || 0
+        })).catch(() => ({ status, count: 0 }))
+      );
+      
+      // Also get total count (ALL)
+      const allCountPromise = getAllBookingsApi({ page: 0, size: 1 }).then(res => ({
+        status: 'ALL' as const,
+        count: res?.totalItems || 0
+      })).catch(() => ({ status: 'ALL' as const, count: 0 }));
+      
+      const results = await Promise.all([allCountPromise, ...countPromises]);
+      
+      const newCounts = results.reduce((acc, { status, count }) => {
+        acc[status] = count;
+        return acc;
+      }, {} as Record<string, number>);
+      
+      setStatusCounts(prev => ({ ...prev, ...newCounts }));
+    } catch (err) {
+      console.error('Failed to load status counts:', err);
+    } finally {
+      setIsLoadingCounts(false);
+    }
+  };
+
+  // Search bookings using API
+  const searchBookings = useCallback(async (code: string, page: number = 0) => {
+    if (!code.trim()) {
+      // Nếu không có search code, load lại tất cả bookings
+      loadAllBookings(page, statusFilter);
+      return;
+    }
+    
+    setIsLoading(true);
+    setError(null);
+    try {
+      const response = await searchBookingsApi({ 
+        bookingCode: code.trim(), 
+        page, 
+        size: itemsPerPage 
+      });
+      
+      if (response && response.data) {
+        // Filter thêm theo status nếu có
+        let filteredData = response.data;
+        if (statusFilter && statusFilter !== 'ALL') {
+          filteredData = response.data.filter(b => b.status === statusFilter);
+        }
+        setAllBookingsRaw(filteredData);
+        setTotalPages(response.totalPages || 0);
+        setTotalItems(response.totalItems || 0);
+        setCurrentPage(response.currentPage || 0);
+      } else {
+        setAllBookingsRaw([]);
+        setTotalPages(0);
+        setTotalItems(0);
+      }
+    } catch (err: any) {
+      console.error('Failed to search bookings:', err);
+      setError('Không thể tìm kiếm booking');
+      setAllBookingsRaw([]);
+      setTotalPages(0);
+      setTotalItems(0);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [itemsPerPage, statusFilter]);
+
+  // Debounce search
+  useEffect(() => {
+    if (activeTab !== 'all') return;
+    
+    const debounceTimer = setTimeout(() => {
+      if (searchCode.trim()) {
+        searchBookings(searchCode, 0);
+      } else {
+        loadAllBookings(0, statusFilter);
+      }
+    }, 500); // 500ms debounce
+    
+    return () => clearTimeout(debounceTimer);
+  }, [searchCode, activeTab]);
+
   useEffect(() => {
     // Load cả hai loại bookings khi component mount
     loadUnverifiedBookings();
     loadAllBookings();
+    loadStatusCounts(); // Load counts for filter buttons
     
     // Cleanup: unlock scroll khi component unmount
     return () => {
@@ -289,28 +427,26 @@ const AdminBookingManagement: React.FC = () => {
 
   useEffect(() => {
     // Reload khi chuyển tab
+    setCurrentPage(0);
+    setSearchCode(''); // Reset search khi chuyển tab
     if (activeTab === 'all') {
-      loadAllBookings();
+      loadAllBookings(0, statusFilter);
     } else {
       loadUnverifiedBookings();
     }
   }, [activeTab]);
 
-  // Filter bookings based on search
+  // Reload khi thay đổi status filter
   useEffect(() => {
-    const currentList = activeTab === 'all' ? allBookings : bookings;
-    if (searchCode.trim() === '') {
-      setFilteredBookings(currentList);
-    } else {
-      const filtered = currentList.filter(booking => 
-        (booking.bookingCode?.toLowerCase().includes(searchCode.toLowerCase())) ||
-        (booking.bookingId?.toLowerCase().includes(searchCode.toLowerCase()))
-      );
-      setFilteredBookings(filtered);
+    if (activeTab === 'all') {
+      setCurrentPage(0);
+      if (searchCode.trim()) {
+        searchBookings(searchCode, 0);
+      } else {
+        loadAllBookings(0, statusFilter);
+      }
     }
-    // Reset to first page when search or tab changes
-    setCurrentPage(0);
-  }, [searchCode, bookings, allBookings, activeTab, statusFilter]);
+  }, [statusFilter]);
 
   const handleVerify = async () => {
     if (!selectedBooking?.bookingId) return;
@@ -337,8 +473,9 @@ const AdminBookingManagement: React.FC = () => {
           : 'Đã từ chối booking thành công!'
       );
       
-      // Reload bookings
+      // Reload bookings and counts
       await loadUnverifiedBookings();
+      loadStatusCounts(); // Reload counts for filter buttons
       
       // Close dialog
       setShowVerifyDialog(false);
@@ -415,8 +552,9 @@ const AdminBookingManagement: React.FC = () => {
       // Show success message
       setSuccessMessage('Cập nhật trạng thái booking thành công!');
       
-      // Reload bookings
-      await loadAllBookings();
+      // Reload bookings at current page and counts
+      await loadAllBookings(currentPage);
+      loadStatusCounts(); // Reload counts for filter buttons
       
       // Close dialogs
       setShowUpdateStatusDialog(false);
@@ -439,37 +577,90 @@ const AdminBookingManagement: React.FC = () => {
     }
   };
 
-  const currentBookings = activeTab === 'all' ? allBookings : bookings;
-  let displayBookings = searchCode.trim() ? filteredBookings : currentBookings;
+  // Helper function to sort bookings: prioritize active status and time closer to now (future first)
+  const sortBookingsForDisplay = (bookingsToSort: BookingPost[]): BookingPost[] => {
+    const now = new Date();
+    
+    return [...bookingsToSort].sort((a, b) => {
+      // 1. Ưu tiên trạng thái đang hoạt động (không phải COMPLETED/CANCELLED)
+      const isACompleted = a.status === 'COMPLETED' || a.status === 'CANCELLED';
+      const isBCompleted = b.status === 'COMPLETED' || b.status === 'CANCELLED';
+      
+      if (isACompleted !== isBCompleted) {
+        return isACompleted ? 1 : -1; // COMPLETED/CANCELLED xuống dưới
+      }
+      
+      // 2. Sắp xếp theo thời gian gần nhất với hiện tại, ưu tiên tương lai
+      const timeA = a.bookingTime ? new Date(a.bookingTime).getTime() : 0;
+      const timeB = b.bookingTime ? new Date(b.bookingTime).getTime() : 0;
+      const nowTime = now.getTime();
+      
+      const isAFuture = timeA >= nowTime;
+      const isBFuture = timeB >= nowTime;
+      
+      // Ưu tiên tương lai hơn quá khứ
+      if (isAFuture !== isBFuture) {
+        return isAFuture ? -1 : 1; // Tương lai lên trên
+      }
+      
+      // Cùng loại (cùng tương lai hoặc cùng quá khứ)
+      if (isAFuture && isBFuture) {
+        // Tương lai: gần nhất lên trên (thời gian nhỏ hơn lên trên)
+        return timeA - timeB;
+      } else {
+        // Quá khứ: gần nhất lên trên (thời gian lớn hơn lên trên)
+        return timeB - timeA;
+      }
+    });
+  };
+
+  // Apply filters - giờ đây API đã xử lý search và status filter cho tab 'all'
+  let displayBookings: BookingPost[] = [];
   
-  // Apply status filter
-  if (statusFilter !== 'ALL') {
-    displayBookings = displayBookings.filter(b => b.status === statusFilter);
+  if (activeTab === 'all') {
+    // Dữ liệu đã được filter từ server (search API hoặc getAllBookings với status)
+    // Chỉ sắp xếp khi filter ALL (tất cả trạng thái)
+    if (statusFilter === 'ALL') {
+      displayBookings = sortBookingsForDisplay(allBookingsRaw);
+    } else {
+      displayBookings = allBookingsRaw;
+    }
+  } else {
+    // Unverified tab - vẫn dùng client-side filter
+    let filtered = bookings;
+    
+    // Apply search filter cho unverified tab
+    if (searchCode.trim()) {
+      filtered = filtered.filter(booking => 
+        (booking.bookingCode?.toLowerCase().includes(searchCode.toLowerCase())) ||
+        (booking.bookingId?.toLowerCase().includes(searchCode.toLowerCase()))
+      );
+    }
+    
+    displayBookings = filtered;
   }
   
-  // Count bookings by status for metrics
-  const statusCounts = {
-    ALL: currentBookings.length,
-    PENDING: currentBookings.filter(b => b.status === 'PENDING').length,
-    CONFIRMED: currentBookings.filter(b => b.status === 'CONFIRMED').length,
-    AWAITING_EMPLOYEE: currentBookings.filter(b => b.status === 'AWAITING_EMPLOYEE').length,
-    ASSIGNED: currentBookings.filter(b => b.status === 'ASSIGNED').length,
-    IN_PROGRESS: currentBookings.filter(b => b.status === 'IN_PROGRESS').length,
-    COMPLETED: currentBookings.filter(b => b.status === 'COMPLETED').length,
-    CANCELLED: currentBookings.filter(b => b.status === 'CANCELLED').length,
-  };
+  // Pagination logic - giờ đây server xử lý pagination cho tab 'all'
+  let paginatedBookings = displayBookings;
+  let totalPagesDisplay = totalPages || 1;
+  let startIndex = currentPage * itemsPerPage;
+  let endIndex = startIndex + displayBookings.length;
+  let totalItemsDisplay = totalItems || displayBookings.length;
   
-  // Pagination logic
-  const totalPages = Math.ceil(displayBookings.length / itemsPerPage);
-  const startIndex = currentPage * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedBookings = displayBookings.slice(startIndex, endIndex);
+  if (activeTab !== 'all') {
+    // Client-side pagination cho unverified tab
+    totalItemsDisplay = displayBookings.length;
+    totalPagesDisplay = Math.ceil(displayBookings.length / itemsPerPage) || 1;
+    startIndex = currentPage * itemsPerPage;
+    endIndex = Math.min(startIndex + itemsPerPage, displayBookings.length);
+    paginatedBookings = displayBookings.slice(startIndex, endIndex);
+  }
   
   const metrics = {
-    total: currentBookings.length,
+    total: activeTab === 'all' ? totalItems : allBookingsRaw.length,
     pending: bookings.filter(b => !b.isVerified).length,
-    all: allBookings.length,
-    awaitingEmployee: allBookings.filter(b => b.status === 'AWAITING_EMPLOYEE').length
+    all: statusCounts.ALL > 0 ? statusCounts.ALL : totalItems,
+    awaitingEmployee: statusCounts.AWAITING_EMPLOYEE
   };
 
   return (
@@ -507,32 +698,67 @@ const AdminBookingManagement: React.FC = () => {
         title="Danh sách Bookings"
         description={`Tìm kiếm booking theo mã đơn hàng`}
       >
-          {/* Search Box */}
-          <div className="mb-6">
-            <div className="relative">
+          {/* Search Box and Items Per Page Selector */}
+          <div className="mb-6 flex gap-4 items-start">
+            <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
               <input
                 type="text"
                 value={searchCode}
-                onChange={(e) => setSearchCode(e.target.value)}
+                onChange={(e) => {
+                  setSearchCode(e.target.value);
+                  setCurrentPage(0);
+                  // Debounce sẽ xử lý việc gọi API search
+                }}
                 placeholder="Tìm kiếm theo mã đơn hàng..."
                 className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
               {searchCode && (
                 <button
-                  onClick={() => setSearchCode('')}
+                  onClick={() => {
+                    setSearchCode('');
+                    setCurrentPage(0);
+                    // Load lại danh sách khi xóa search
+                    if (activeTab === 'all') {
+                      loadAllBookings(0, statusFilter);
+                    }
+                  }}
                   className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                 >
                   <X className="h-4 w-4" />
                 </button>
               )}
             </div>
-            {searchCode && (
-              <p className="mt-2 text-sm text-slate-600">
-                Tìm thấy <span className="font-semibold text-blue-600">{filteredBookings.length}</span> kết quả
-              </p>
+            
+            {/* Items per page selector */}
+            {activeTab === 'all' && (
+              <div className="flex items-center gap-2 text-sm">
+                <label className="text-slate-600 whitespace-nowrap">Hiển thị:</label>
+                <select
+                  value={itemsPerPage}
+                  onChange={(e) => {
+                    const newSize = Number(e.target.value);
+                    setItemsPerPage(newSize);
+                    setCurrentPage(0);
+                    // Reload with new page size
+                    if (searchCode.trim()) {
+                      searchBookings(searchCode, 0);
+                    } else {
+                      loadAllBookings(0, statusFilter);
+                    }
+                  }}
+                  className="px-3 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                  <option value={10}>10</option>
+                  <option value={25}>25</option>
+                  <option value={50}>50</option>
+                  <option value={100}>100</option>
+                </select>
+                <span className="text-slate-600 whitespace-nowrap">/ trang</span>
+              </div>
             )}
           </div>
+
 
           {/* Success Message */}
           {successMessage && (
@@ -583,10 +809,11 @@ const AdminBookingManagement: React.FC = () => {
               }`}
             >
               <List className="h-4 w-4" />
-              Tất cả booking ({allBookings.length})
+              Tất cả booking ({totalItems})
             </button>
           </div>
 
+          {/* Status Filter Tabs - Only show in 'all' tab */}
           {/* Status Filter Tabs - Only show in 'all' tab */}
           {activeTab === 'all' && (
           <div className="mb-6 flex flex-wrap gap-2">
@@ -598,7 +825,7 @@ const AdminBookingManagement: React.FC = () => {
                   : 'bg-slate-50 text-slate-700 hover:bg-slate-100 border border-slate-200'
               }`}
             >
-              Tất cả ({statusCounts.ALL})
+              Tất cả {statusCounts.ALL > 0 && `(${statusCounts.ALL})`}
             </button>
             <button
               onClick={() => { setStatusFilter('PENDING'); setCurrentPage(0); }}
@@ -608,7 +835,7 @@ const AdminBookingManagement: React.FC = () => {
                   : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200'
               }`}
             >
-              Chờ xử lý ({statusCounts.PENDING})
+              Chờ xử lý {statusCounts.PENDING > 0 && `(${statusCounts.PENDING})`}
             </button>
             <button
               onClick={() => { setStatusFilter('CONFIRMED'); setCurrentPage(0); }}
@@ -618,7 +845,7 @@ const AdminBookingManagement: React.FC = () => {
                   : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
               }`}
             >
-              Đã xác nhận ({statusCounts.CONFIRMED})
+              Đã xác nhận {statusCounts.CONFIRMED > 0 && `(${statusCounts.CONFIRMED})`}
             </button>
             <button
               onClick={() => { setStatusFilter('AWAITING_EMPLOYEE'); setCurrentPage(0); }}
@@ -628,7 +855,7 @@ const AdminBookingManagement: React.FC = () => {
                   : 'bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200'
               }`}
             >
-              Chờ nhân viên ({statusCounts.AWAITING_EMPLOYEE})
+              Chờ nhân viên {statusCounts.AWAITING_EMPLOYEE > 0 && `(${statusCounts.AWAITING_EMPLOYEE})`}
             </button>
             <button
               onClick={() => { setStatusFilter('ASSIGNED'); setCurrentPage(0); }}
@@ -638,7 +865,7 @@ const AdminBookingManagement: React.FC = () => {
                   : 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border border-indigo-200'
               }`}
             >
-              Đã phân công ({statusCounts.ASSIGNED})
+              Đã phân công {statusCounts.ASSIGNED > 0 && `(${statusCounts.ASSIGNED})`}
             </button>
             <button
               onClick={() => { setStatusFilter('IN_PROGRESS'); setCurrentPage(0); }}
@@ -648,7 +875,7 @@ const AdminBookingManagement: React.FC = () => {
                   : 'bg-purple-50 text-purple-700 hover:bg-purple-100 border border-purple-200'
               }`}
             >
-              Đang thực hiện ({statusCounts.IN_PROGRESS})
+              Đang thực hiện {statusCounts.IN_PROGRESS > 0 && `(${statusCounts.IN_PROGRESS})`}
             </button>
             <button
               onClick={() => { setStatusFilter('COMPLETED'); setCurrentPage(0); }}
@@ -658,7 +885,7 @@ const AdminBookingManagement: React.FC = () => {
                   : 'bg-green-50 text-green-700 hover:bg-green-100 border border-green-200'
               }`}
             >
-              Hoàn thành ({statusCounts.COMPLETED})
+              Hoàn thành {statusCounts.COMPLETED > 0 && `(${statusCounts.COMPLETED})`}
             </button>
             <button
               onClick={() => { setStatusFilter('CANCELLED'); setCurrentPage(0); }}
@@ -668,19 +895,84 @@ const AdminBookingManagement: React.FC = () => {
                   : 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
               }`}
             >
-              Đã hủy ({statusCounts.CANCELLED})
+              Đã hủy {statusCounts.CANCELLED > 0 && `(${statusCounts.CANCELLED})`}
             </button>
+            {/* Loading indicator for counts */}
+            {isLoadingCounts && (
+              <div className="flex items-center gap-1 text-xs text-slate-500">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                <span>Đang tải...</span>
+              </div>
+            )}
           </div>
           )}
 
-          {/* Results summary */}
-          {!isLoading && displayBookings.length > 0 && (
-            <div className="mb-4 text-sm text-slate-600">
-              Hiển thị <span className="font-semibold text-slate-900">{startIndex + 1}-{Math.min(endIndex, displayBookings.length)}</span> trong tổng <span className="font-semibold text-slate-900">{displayBookings.length}</span> kết quả
-              {statusFilter !== 'ALL' && (
-                <span className="ml-2 text-blue-600">
-                  (Đang lọc: {statusFilter === 'AWAITING_EMPLOYEE' ? 'Chờ nhân viên' : translateStatus(statusFilter)})
-                </span>
+          {/* Results summary and Top Pagination */}
+          {!isLoading && paginatedBookings.length > 0 && (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
+              <div className="text-sm text-slate-600">
+                Hiển thị <span className="font-semibold text-slate-900">{startIndex + 1}-{endIndex}</span> trong tổng <span className="font-semibold text-slate-900">{totalItemsDisplay}</span> kết quả
+                {(statusFilter !== 'ALL' || searchCode.trim()) && (
+                  <span className="ml-2 text-blue-600">
+                    {statusFilter !== 'ALL' && `(Lọc: ${statusFilter === 'AWAITING_EMPLOYEE' ? 'Chờ nhân viên' : translateStatus(statusFilter)})`}
+                    {searchCode.trim() && ` (Tìm: "${searchCode}")`}
+                  </span>
+                )}
+              </div>
+              
+              {/* Top Pagination - Compact version */}
+              {totalPagesDisplay > 1 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      const newPage = Math.max(0, currentPage - 1);
+                      if (activeTab === 'all') {
+                        if (searchCode.trim()) {
+                          searchBookings(searchCode, newPage);
+                        } else {
+                          loadAllBookings(newPage, statusFilter);
+                        }
+                      } else {
+                        setCurrentPage(newPage);
+                      }
+                    }}
+                    disabled={currentPage === 0}
+                    className={`px-2 py-1 rounded text-xs font-medium transition ${
+                      currentPage === 0
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                        : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    ←
+                  </button>
+                  
+                  <span className="text-sm text-slate-600">
+                    Trang <span className="font-semibold">{currentPage + 1}</span> / {totalPagesDisplay}
+                  </span>
+                  
+                  <button
+                    onClick={() => {
+                      const newPage = Math.min(totalPagesDisplay - 1, currentPage + 1);
+                      if (activeTab === 'all') {
+                        if (searchCode.trim()) {
+                          searchBookings(searchCode, newPage);
+                        } else {
+                          loadAllBookings(newPage, statusFilter);
+                        }
+                      } else {
+                        setCurrentPage(newPage);
+                      }
+                    }}
+                    disabled={currentPage === totalPagesDisplay - 1}
+                    className={`px-2 py-1 rounded text-xs font-medium transition ${
+                      currentPage === totalPagesDisplay - 1
+                        ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
+                        : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
+                    }`}
+                  >
+                    →
+                  </button>
+                </div>
               )}
             </div>
           )}
@@ -690,14 +982,14 @@ const AdminBookingManagement: React.FC = () => {
               <Loader2 className="mr-3 h-5 w-5 animate-spin" />
               Đang tải dữ liệu...
             </div>
-          ) : displayBookings.length === 0 ? (
+          ) : paginatedBookings.length === 0 ? (
             <div className="flex flex-col items-center justify-center rounded-3xl border border-slate-100 bg-slate-50 py-16 text-center">
               <CheckCircle2 className="mb-4 h-10 w-10 text-emerald-500" />
               <h3 className="text-lg font-semibold text-slate-900">
-                {searchCode ? 'Không tìm thấy booking nào' : (activeTab === 'all' ? 'Chưa có booking nào' : 'Không có booking nào chờ xác minh')}
+                {searchCode || statusFilter !== 'ALL' ? 'Không tìm thấy booking nào' : (activeTab === 'all' ? 'Chưa có booking nào' : 'Không có booking nào chờ xác minh')}
               </h3>
               <p className="mt-2 max-w-sm text-sm text-slate-500">
-                {searchCode ? `Không tìm thấy booking với mã "${searchCode}"` : (activeTab === 'all' ? 'Hệ thống chưa có booking nào' : 'Tất cả booking posts đã được xử lý')}
+                {searchCode || statusFilter !== 'ALL' ? 'Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm' : (activeTab === 'all' ? 'Hệ thống chưa có booking nào' : 'Tất cả booking posts đã được xử lý')}
               </p>
             </div>
           ) : (
@@ -753,6 +1045,13 @@ const AdminBookingManagement: React.FC = () => {
                       }`}>
                         {translateStatus(booking.status)}
                       </span>
+                      
+                      {/* isPost Badge */}
+                      {booking.isPost && (
+                        <span className="inline-flex items-center rounded-full bg-sky-100 text-sky-700 border border-sky-300 px-2 py-1 text-xs font-semibold">
+                          📢 Post
+                        </span>
+                      )}
                       
                       {!booking.isVerified && (
                         <span className="inline-flex items-center rounded-full border border-status-warning/30 bg-status-warning/10 px-3 py-1 text-xs font-semibold text-status-warning">
@@ -964,11 +1263,22 @@ const AdminBookingManagement: React.FC = () => {
           )}
           
           {/* Pagination UI */}
-          {!isLoading && displayBookings.length > 0 && totalPages > 1 && (
+          {!isLoading && paginatedBookings.length > 0 && totalPagesDisplay > 1 && (
             <div className="mt-6 flex items-center justify-center gap-2">
               {/* Previous Button */}
               <button
-                onClick={() => setCurrentPage(prev => Math.max(0, prev - 1))}
+                onClick={() => {
+                  const newPage = Math.max(0, currentPage - 1);
+                  if (activeTab === 'all') {
+                    if (searchCode.trim()) {
+                      searchBookings(searchCode, newPage);
+                    } else {
+                      loadAllBookings(newPage, statusFilter);
+                    }
+                  } else {
+                    setCurrentPage(newPage);
+                  }
+                }}
                 disabled={currentPage === 0}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
                   currentPage === 0
@@ -981,27 +1291,61 @@ const AdminBookingManagement: React.FC = () => {
 
               {/* Page Numbers */}
               <div className="flex gap-1">
-                {Array.from({ length: totalPages }, (_, i) => (
-                  <button
-                    key={i}
-                    onClick={() => setCurrentPage(i)}
-                    className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                      currentPage === i
-                        ? 'bg-blue-600 text-white shadow-sm'
-                        : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
-                    }`}
-                  >
-                    {i + 1}
-                  </button>
-                ))}
+                {Array.from({ length: Math.min(totalPagesDisplay, 10) }, (_, i) => {
+                  // Show first 5, last 5, or pages around current for large page counts
+                  let pageNum = i;
+                  if (totalPagesDisplay > 10) {
+                    if (currentPage < 5) {
+                      pageNum = i;
+                    } else if (currentPage > totalPagesDisplay - 6) {
+                      pageNum = totalPagesDisplay - 10 + i;
+                    } else {
+                      pageNum = currentPage - 4 + i;
+                    }
+                  }
+                  return (
+                    <button
+                      key={pageNum}
+                      onClick={() => {
+                        if (activeTab === 'all') {
+                          if (searchCode.trim()) {
+                            searchBookings(searchCode, pageNum);
+                          } else {
+                            loadAllBookings(pageNum, statusFilter);
+                          }
+                        } else {
+                          setCurrentPage(pageNum);
+                        }
+                      }}
+                      className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
+                        currentPage === pageNum
+                          ? 'bg-blue-600 text-white shadow-sm'
+                          : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
+                      }`}
+                    >
+                      {pageNum + 1}
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Next Button */}
               <button
-                onClick={() => setCurrentPage(prev => Math.min(totalPages - 1, prev + 1))}
-                disabled={currentPage === totalPages - 1}
+                onClick={() => {
+                  const newPage = Math.min(totalPagesDisplay - 1, currentPage + 1);
+                  if (activeTab === 'all') {
+                    if (searchCode.trim()) {
+                      searchBookings(searchCode, newPage);
+                    } else {
+                      loadAllBookings(newPage, statusFilter);
+                    }
+                  } else {
+                    setCurrentPage(newPage);
+                  }
+                }}
+                disabled={currentPage === totalPagesDisplay - 1}
                 className={`px-3 py-1.5 rounded-lg text-sm font-medium transition ${
-                  currentPage === totalPages - 1
+                  currentPage === totalPagesDisplay - 1
                     ? 'bg-slate-100 text-slate-400 cursor-not-allowed'
                     : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
                 }`}
@@ -1173,8 +1517,13 @@ const AdminBookingManagement: React.FC = () => {
                               {booking.customer.fullName || booking.customerName || 'Chưa có'}
                             </p>
                             {booking.customer?.rating && (
-                              <p className="text-sm text-amber-600">
-                                ⭐ {booking.customer.rating.toFixed(1)}
+                              <p className={`text-sm font-medium ${
+                                booking.customer.rating === 'HIGH' ? 'text-emerald-600' :
+                                booking.customer.rating === 'MEDIUM' ? 'text-amber-600' :
+                                booking.customer.rating === 'LOW' ? 'text-rose-600' :
+                                'text-slate-600'
+                              }`}>
+                                ⭐ {booking.customer.rating === 'HIGH' ? 'Cao' : booking.customer.rating === 'MEDIUM' ? 'Trung bình' : booking.customer.rating === 'LOW' ? 'Thấp' : booking.customer.rating}
                               </p>
                             )}
                           </div>
@@ -1231,10 +1580,26 @@ const AdminBookingManagement: React.FC = () => {
                         </div>
                       )}
                       
-                      {booking.customer?.vipLevel && (
+                      {booking.customer?.vipLevel !== undefined && booking.customer?.vipLevel !== null && (
                         <div className="md:col-span-2">
                           <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-amber-400 to-yellow-500 px-3 py-1 text-sm font-semibold text-white shadow-lg">
-                            👑 VIP {booking.customer.vipLevel}
+                            👑 VIP Level {booking.customer.vipLevel}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {booking.customer?.rating && (
+                        <div>
+                          <span className="text-slate-500">Đánh giá:</span>
+                          <span className={`ml-2 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold ${
+                            booking.customer.rating === 'HIGH' ? 'bg-emerald-100 text-emerald-700' :
+                            booking.customer.rating === 'MEDIUM' ? 'bg-amber-100 text-amber-700' :
+                            booking.customer.rating === 'LOW' ? 'bg-rose-100 text-rose-700' :
+                            'bg-slate-100 text-slate-700'
+                          }`}>
+                            {booking.customer.rating === 'HIGH' ? '⭐ Cao' : 
+                             booking.customer.rating === 'MEDIUM' ? '⭐ Trung bình' : 
+                             booking.customer.rating === 'LOW' ? '⭐ Thấp' : booking.customer.rating}
                           </span>
                         </div>
                       )}
@@ -1378,8 +1743,18 @@ const AdminBookingManagement: React.FC = () => {
                                           />
                                         )}
                                         <div className="flex-1 text-xs">
-                                          <div className="font-medium text-slate-900">
+                                          <div className="font-medium text-slate-900 flex items-center gap-1">
                                             {assignment.employee?.fullName || 'Chưa có'}
+                                            {assignment.employee?.rating && (
+                                              <span className={`text-[10px] px-1.5 py-0.5 rounded-full ${
+                                                assignment.employee.rating === 'HIGH' ? 'bg-emerald-100 text-emerald-700' :
+                                                assignment.employee.rating === 'MEDIUM' ? 'bg-amber-100 text-amber-700' :
+                                                assignment.employee.rating === 'LOW' ? 'bg-rose-100 text-rose-700' :
+                                                'bg-slate-100 text-slate-700'
+                                              }`}>
+                                                ⭐ {assignment.employee.rating === 'HIGH' ? 'Cao' : assignment.employee.rating === 'MEDIUM' ? 'TB' : assignment.employee.rating === 'LOW' ? 'Thấp' : assignment.employee.rating}
+                                              </span>
+                                            )}
                                           </div>
                                           <div className="text-slate-500">
                                             {assignment.employee?.phoneNumber || assignment.employee?.email || ''}
@@ -1389,11 +1764,30 @@ const AdminBookingManagement: React.FC = () => {
                                           assignment.status === 'ASSIGNED' ? 'bg-blue-100 text-blue-700' :
                                           assignment.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700' :
                                           assignment.status === 'CANCELLED' ? 'bg-rose-100 text-rose-700' :
+                                          assignment.status === 'IN_PROGRESS' ? 'bg-purple-100 text-purple-700' :
+                                          assignment.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
                                           'bg-slate-100 text-slate-700'
                                         }`}>
                                           {translateStatus(assignment.status)}
                                         </span>
                                       </div>
+                                      
+                                      {/* Check-in/Check-out times */}
+                                      {(assignment.checkInTime || assignment.checkOutTime) && (
+                                        <div className="mt-1 flex flex-wrap gap-2 text-[10px] text-slate-500">
+                                          {assignment.checkInTime && (
+                                            <span className="bg-green-50 text-green-700 px-1.5 py-0.5 rounded">
+                                              🕐 In: {new Date(assignment.checkInTime).toLocaleString('vi-VN')}
+                                            </span>
+                                          )}
+                                          {assignment.checkOutTime && (
+                                            <span className="bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded">
+                                              🕐 Out: {new Date(assignment.checkOutTime).toLocaleString('vi-VN')}
+                                            </span>
+                                          )}
+                                        </div>
+                                      )}
+                                      
                                       {assignment.employee?.skills && assignment.employee.skills.length > 0 && (
                                         <div className="mt-1 flex flex-wrap gap-1">
                                           {assignment.employee.skills.map((skill, sIndex) => (
@@ -1442,33 +1836,87 @@ const AdminBookingManagement: React.FC = () => {
                       </div>
                     )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mb-3">
-                      <div>
-                        <span className="text-slate-500">Tổng tiền:</span>
-                        <span className="ml-2 font-bold text-emerald-600 text-lg">
-                          {booking.formattedTotalAmount || booking.totalAmount || 'Chưa có'}
-                        </span>
+                    {/* Chi tiết giá */}
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200 mb-3">
+                      <div className="space-y-2 text-sm">
+                        {booking.baseAmount !== undefined && (
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">Giá gốc:</span>
+                            <span className="font-medium text-slate-900">
+                              {booking.baseAmount?.toLocaleString('vi-VN')}đ
+                            </span>
+                          </div>
+                        )}
+                        
+                        {/* Hiển thị các khoản phí */}
+                        {booking.fees && booking.fees.length > 0 && (
+                          <div className="border-t border-slate-200 pt-2 mt-2">
+                            {booking.fees.map((fee, idx) => (
+                              <div key={idx} className="flex justify-between text-xs">
+                                <span className="text-slate-500">
+                                  {fee.name || 'Phí'} 
+                                  {fee.type === 'PERCENT' && fee.value ? ` (${(fee.value * 100).toFixed(0)}%)` : ''}
+                                </span>
+                                <span className={`font-medium ${fee.systemSurcharge ? 'text-amber-600' : 'text-slate-700'}`}>
+                                  +{fee.amount?.toLocaleString('vi-VN')}đ
+                                </span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        
+                        {booking.totalFees !== undefined && booking.totalFees > 0 && (
+                          <div className="flex justify-between text-xs border-t border-slate-200 pt-2">
+                            <span className="text-slate-500">Tổng phí:</span>
+                            <span className="font-medium text-amber-600">
+                              +{booking.totalFees?.toLocaleString('vi-VN')}đ
+                            </span>
+                          </div>
+                        )}
+                        
+                        <div className="flex justify-between border-t border-slate-300 pt-2 mt-2">
+                          <span className="font-semibold text-slate-700">Tổng cộng:</span>
+                          <span className="font-bold text-emerald-600 text-lg">
+                            {booking.formattedTotalAmount || `${booking.totalAmount?.toLocaleString('vi-VN')}đ` || 'Chưa có'}
+                          </span>
+                        </div>
                       </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm mb-3">
                       <div>
-                        <span className="text-slate-500">Trạng thái đơn đặt:</span>
+                        <span className="text-slate-500">Trạng thái:</span>
                         <span className={`ml-2 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
                           booking.status === 'CONFIRMED' ? 'bg-emerald-100 text-emerald-700' :
                           booking.status === 'PENDING' ? 'bg-amber-100 text-amber-700' :
                           booking.status === 'CANCELLED' ? 'bg-rose-100 text-rose-700' :
                           booking.status === 'AWAITING_EMPLOYEE' ? 'bg-blue-100 text-blue-700' :
+                          booking.status === 'ASSIGNED' ? 'bg-indigo-100 text-indigo-700' :
+                          booking.status === 'IN_PROGRESS' ? 'bg-purple-100 text-purple-700' :
+                          booking.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
                           'bg-slate-100 text-slate-700'
                         }`}>
                           {translateStatus(booking.status)}
                         </span>
                       </div>
                       <div>
-                        <span className="text-slate-500">Người Quản Trị:</span>
+                        <span className="text-slate-500">Xác minh:</span>
                         <span className={`ml-2 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
                           booking.isVerified 
                             ? 'bg-emerald-100 text-emerald-700' 
                             : 'bg-amber-100 text-amber-700'
                         }`}>
                           {booking.isVerified ? '✓ Đã duyệt' : '⏳ Chưa duyệt'}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-500">Loại:</span>
+                        <span className={`ml-2 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${
+                          booking.isPost 
+                            ? 'bg-blue-100 text-blue-700' 
+                            : 'bg-slate-100 text-slate-700'
+                        }`}>
+                          {booking.isPost ? '📢 Booking Post' : '📋 Booking thường'}
                         </span>
                       </div>
                     </div>
