@@ -4,3 +4,5 @@
 Task.md
 feweb/.env
 feweb/.node_modules
+feweb/.env.development
+feweb/.env.production
