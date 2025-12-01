@@ -5,7 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { SectionCard } from '../../shared/components';
 
 const EmployeeRequests: React.FC = () => {
-  const { user } = useAuth();
+  const { user: _user } = useAuth(); void _user; // Keep for future use
 
   return (
     <DashboardLayout

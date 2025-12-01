@@ -682,11 +682,11 @@ export const verifyBookingApi = async (
 };
 
 /**
- * Get booking details by ID
+ * Get booking details by ID (Admin)
  * Endpoint: GET /api/v1/admin/bookings/{bookingId}
  * Theo API-TestCases-Admin-UpdateBookingStatus.md Test Case 11
  */
-export const getBookingByIdApi = async (
+export const getAdminBookingByIdApi = async (
   bookingId: string
 ): Promise<any> => {
   try {

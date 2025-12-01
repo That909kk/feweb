@@ -17,7 +17,7 @@ import {
   Edit
 } from 'lucide-react';
 import { useBooking } from '../../hooks/useBooking';
-import { getAllBookingsApi, updateBookingStatusApi, getBookingByIdApi, searchBookingsApi } from '../../api/admin';
+import { getAllBookingsApi, updateBookingStatusApi, getAdminBookingByIdApi, searchBookingsApi } from '../../api/admin';
 import { DashboardLayout } from '../../layouts';
 import { MetricCard, SectionCard } from '../../shared/components';
 
@@ -521,7 +521,7 @@ const AdminBookingManagement: React.FC = () => {
     document.body.style.overflow = 'hidden';
     
     try {
-      const bookingDetail = await getBookingByIdApi(bookingId);
+      const bookingDetail = await getAdminBookingByIdApi(bookingId);
       setDetailBooking(bookingDetail);
     } catch (err: any) {
       console.error('Failed to load booking details:', err);

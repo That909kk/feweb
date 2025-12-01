@@ -6,9 +6,7 @@ import {
   logoutApi 
 } from '../api/auth';
 import type { 
-  ActiveSessionsResponse, 
-  ValidateTokenResponse, 
-  LogoutResponse,
+  ActiveSessionsResponse,
   DeviceType
 } from '../types/api';
 

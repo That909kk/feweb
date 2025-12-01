@@ -77,7 +77,8 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ role, isOpen, o
       try {
         if (role === 'CUSTOMER' && user?.id) {
           const bookings = await getCustomerBookings(user.id, { size: 5, direction: 'DESC' });
-          const customerItems: NotificationItem[] = bookings.slice(0, 5).map((booking, index) => ({
+          const bookingList = bookings.content || bookings;
+          const customerItems: NotificationItem[] = (Array.isArray(bookingList) ? bookingList : []).slice(0, 5).map((booking: any, index: number) => ({
             id: booking.bookingId ?? booking.bookingCode ?? `booking-${index}`,
             title: `Don ${booking.bookingCode ?? booking.bookingId}`,
             description: booking.serviceDetails?.[0]?.service?.name ?? 'Dich vu gia dinh',

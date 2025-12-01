@@ -46,8 +46,8 @@ export const useVoiceBooking = () => {
   const wsClientRef = useRef<Client | null>(null);
   const [wsConnected, setWsConnected] = useState(false);
   const audioContextRef = useRef<AudioContext | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const _analyserRef = useRef<AnalyserNode | null>(null); // Tạm không dùng khi tắt auto-stop
+  // Analyser ref - kept for future use with auto-stop feature
+  const analyserRef = useRef<AnalyserNode | null>(null); void analyserRef; // Suppress unused warning
   const silenceTimeoutRef = useRef<number | null>(null);
   const maxDurationTimeoutRef = useRef<number | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
