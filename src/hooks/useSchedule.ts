@@ -24,8 +24,10 @@ export const useEmployeeSchedule = () => {
       if (response.success) {
         const data = response.data;
         setEmployees(Array.isArray(data) ? data : (data?.content || []));
-        setTotalPages((data as any)?.totalPages || response.totalPages || 0);
-        setCurrentPage((data as any)?.number ?? (data as any)?.currentPage ?? 0);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const paginatedData = data as any;
+        setTotalPages(paginatedData?.totalPages || 0);
+        setCurrentPage(paginatedData?.number ?? paginatedData?.currentPage ?? 0);
       } else {
         throw new Error(response.message || 'Failed to search available employees');
       }
@@ -46,7 +48,9 @@ export const useEmployeeSchedule = () => {
     try {
       const response = await checkEmployeeAvailabilityApi(employeeId, date, timeSlot);
       if (response.success) {
-        return response.data.available ?? response.data.isAvailable ?? false;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const data = response.data as any;
+        return data.available ?? data.isAvailable ?? false;
       } else {
         throw new Error(response.message || 'Failed to check employee availability');
       }
