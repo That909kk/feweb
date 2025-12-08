@@ -396,22 +396,81 @@ export const acceptAssignmentApi = async (
 //   }
 // };
 
-// Mock function to return default statistics until real endpoint is available
+// Assignment Statistics Response Interface (API 2025_11_19)
+export interface AssignmentStatisticsResponse {
+  timeUnit: string;
+  startDate: string;
+  endDate: string;
+  totalAssignments: number;
+  countByStatus: {
+    PENDING: number;
+    ASSIGNED: number;
+    IN_PROGRESS: number;
+    COMPLETED: number;
+    CANCELLED: number;
+    NO_SHOW: number;
+  };
+}
+
+// Get employee assignment statistics by status
+// API: GET /api/v1/employee/{employeeId}/assignments/statistics
+export const getEmployeeAssignmentStatisticsApi = async (
+  employeeId: string,
+  timeUnit: 'DAY' | 'WEEK' | 'MONTH' | 'YEAR' = 'MONTH',
+  startDate?: string,
+  endDate?: string
+): Promise<ApiResponse<AssignmentStatisticsResponse>> => {
+  try {
+    const params: Record<string, string> = { timeUnit };
+    if (startDate) params.startDate = startDate;
+    if (endDate) params.endDate = endDate;
+    
+    const response = await api.get<ApiResponse<AssignmentStatisticsResponse>>(
+      `/employee/${employeeId}/assignments/statistics`,
+      { params }
+    );
+    return response.data;
+  } catch (error) {
+    console.error(`Error fetching assignment statistics for employee ${employeeId}:`, error);
+    throw error;
+  }
+};
+
+// Legacy statistics API - now uses assignment statistics
 export const getEmployeeStatisticsApi = async (employeeId: string): Promise<ApiResponse<{
   completed: number;
   upcoming: number;
   totalEarnings: number;
 }>> => {
-  console.log(`[API] Statistics endpoint not available for employee ${employeeId}, returning defaults`);
-  return {
-    success: true,
-    message: 'Statistics not available',
-    data: {
-      completed: 0,
-      upcoming: 0,
-      totalEarnings: 0
+  try {
+    // Use the new assignment statistics API
+    const response = await getEmployeeAssignmentStatisticsApi(employeeId, 'MONTH');
+    if (response.success && response.data) {
+      const { countByStatus, totalAssignments } = response.data;
+      return {
+        success: true,
+        message: 'Statistics loaded successfully',
+        data: {
+          completed: countByStatus.COMPLETED || 0,
+          upcoming: (countByStatus.PENDING || 0) + (countByStatus.ASSIGNED || 0),
+          totalEarnings: 0 // API không cung cấp thông tin thu nhập
+        }
+      };
     }
-  };
+    throw new Error('Failed to load statistics');
+  } catch (error) {
+    console.error(`Error fetching statistics for employee ${employeeId}:`, error);
+    // Return default values on error
+    return {
+      success: true,
+      message: 'Statistics not available',
+      data: {
+        completed: 0,
+        upcoming: 0,
+        totalEarnings: 0
+      }
+    };
+  }
 };
 
 // Cancel assignment
@@ -815,6 +874,7 @@ export default {
   getEmployeeAssignmentsApi,
   acceptAssignmentApi,
   getEmployeeStatisticsApi,
+  getEmployeeAssignmentStatisticsApi,
   cancelAssignmentApi,
   getAvailableBookingsApi,
   acceptBookingDetailApi,

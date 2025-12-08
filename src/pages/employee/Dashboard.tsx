@@ -16,7 +16,6 @@ import {
 import { DashboardLayout } from '../../layouts';
 import { useAuth } from '../../contexts/AuthContext';
 import { useEmployeeAssignments } from '../../hooks/useEmployee';
-import AvailableBookings from '../../components/AvailableBookings';
 // import EmployeeBookings from '../../components/EmployeeBookings'; // Tạm thời comment do API lỗi
 import { SectionCard, MetricCard } from '../../shared/components';
 import { cancelAssignmentApi, checkInAssignmentApi, checkOutAssignmentApi, acceptAssignmentApi } from '../../api/employee';
@@ -199,8 +198,7 @@ const EmployeeDashboard: React.FC = () => {
   const metrics = useMemo(() => {
     return {
       completed: stats.completed || 0,
-      upcoming: stats.upcoming || 0,
-      totalEarnings: stats.totalEarnings || 0
+      upcoming: stats.upcoming || 0
     };
   }, [stats]);
 
@@ -220,7 +218,7 @@ const EmployeeDashboard: React.FC = () => {
         </button>
       }
     >
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-6 lg:grid-cols-2">
         <MetricCard
           icon={HardHat}
           label="Công việc đang tới"
@@ -234,13 +232,6 @@ const EmployeeDashboard: React.FC = () => {
           value={`${metrics.completed}`}
           accent="navy"
           trendLabel="Ghi nhận hiệu suất và đánh giá từ khách hàng."
-        />
-        <MetricCard
-          icon={CalendarClock}
-          label="Thu nhập ước tính"
-          value={`${metrics.totalEarnings.toLocaleString('vi-VN')}₫`}
-          accent="amber"
-          trendLabel="Cập nhật theo từng công việc đã chốt."
         />
       </div>
 
@@ -426,15 +417,6 @@ const EmployeeDashboard: React.FC = () => {
             })}
           </div>
         )}
-      </SectionCard>
-
-      <SectionCard
-        title="Nhận thêm công việc phù hợp"
-        description="Lựa chọn các lịch trống để tối ưu thời gian làm việc của bạn."
-      >
-        <AvailableBookings
-          onAcceptSuccess={handleRefresh}
-        />
       </SectionCard>
 
       {/* Tạm thời ẩn do API booking-details đang lỗi 500 */}
