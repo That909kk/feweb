@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, X, Mail, KeyRound, RefreshCw } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { forgotPasswordRequestApi, resetPasswordApi } from '../api/auth';
 import type { UserRole } from '../types';
 
 const AuthPage: React.FC = () => {
@@ -32,6 +33,37 @@ const AuthPage: React.FC = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
+  // Forgot Password States
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [forgotPasswordStep, setForgotPasswordStep] = useState<'email' | 'otp' | 'success'>('email');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [otp, setOtp] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmNewPassword, setShowConfirmNewPassword] = useState(false);
+  const [forgotPasswordLoading, setForgotPasswordLoading] = useState(false);
+  const [forgotPasswordError, setForgotPasswordError] = useState('');
+  const [forgotPasswordSuccess, setForgotPasswordSuccess] = useState('');
+  const [countdown, setCountdown] = useState(0);
+  const [cooldown, setCooldown] = useState(0);
+  
+  // Countdown timer for OTP expiration
+  useEffect(() => {
+    if (countdown > 0) {
+      const timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [countdown]);
+  
+  // Cooldown timer for resend
+  useEffect(() => {
+    if (cooldown > 0) {
+      const timer = setTimeout(() => setCooldown(cooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [cooldown]);
+
   // Redirect to dashboard if already authenticated
   useEffect(() => {
     if (isInitialized && isAuthenticated && user && !isRedirecting) {
@@ -177,6 +209,121 @@ const AuthPage: React.FC = () => {
     // Simulate registration
     alert('Đăng ký thành công! Vui lòng đăng nhập.');
     setMode('login');
+  };
+
+  // ============= Forgot Password Handlers =============
+  const handleOpenForgotPassword = useCallback(() => {
+    setShowForgotPassword(true);
+    setForgotPasswordStep('email');
+    setForgotEmail('');
+    setOtp('');
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setForgotPasswordError('');
+    setForgotPasswordSuccess('');
+    setCountdown(0);
+    setCooldown(0);
+  }, []);
+
+  const handleCloseForgotPassword = useCallback(() => {
+    setShowForgotPassword(false);
+    setForgotPasswordStep('email');
+    setForgotEmail('');
+    setOtp('');
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setForgotPasswordError('');
+    setForgotPasswordSuccess('');
+    setCountdown(0);
+    setCooldown(0);
+  }, []);
+
+  const handleSendOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotPasswordError('');
+    setForgotPasswordLoading(true);
+
+    try {
+      const response = await forgotPasswordRequestApi({ email: forgotEmail });
+      if (response.success) {
+        setForgotPasswordSuccess(response.message);
+        setForgotPasswordStep('otp');
+        setCountdown(response.expirationSeconds || 180);
+        setCooldown(response.cooldownSeconds || 60);
+      } else {
+        setForgotPasswordError(response.message || 'Có lỗi xảy ra');
+      }
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || err?.message || 'Có lỗi xảy ra khi gửi OTP';
+      setForgotPasswordError(errorMessage);
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
+  const handleResendOtp = async () => {
+    if (cooldown > 0) return;
+    
+    setForgotPasswordError('');
+    setForgotPasswordLoading(true);
+
+    try {
+      const response = await forgotPasswordRequestApi({ email: forgotEmail });
+      if (response.success) {
+        setForgotPasswordSuccess('Mã OTP mới đã được gửi');
+        setCountdown(response.expirationSeconds || 180);
+        setCooldown(response.cooldownSeconds || 60);
+        setOtp('');
+      } else {
+        setForgotPasswordError(response.message || 'Có lỗi xảy ra');
+      }
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || err?.message || 'Có lỗi xảy ra khi gửi lại OTP';
+      setForgotPasswordError(errorMessage);
+    } finally {
+      setForgotPasswordLoading(false);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setForgotPasswordError('');
+
+    if (newPassword !== confirmNewPassword) {
+      setForgotPasswordError('Mật khẩu xác nhận không khớp');
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      setForgotPasswordError('Mật khẩu phải ít nhất 6 ký tự');
+      return;
+    }
+
+    setForgotPasswordLoading(true);
+
+    try {
+      const response = await resetPasswordApi({
+        email: forgotEmail,
+        otp: otp,
+        newPassword: newPassword
+      });
+      
+      if (response.success) {
+        setForgotPasswordStep('success');
+        setForgotPasswordSuccess(response.message);
+        // Tự động đóng modal sau 3 giây
+        setTimeout(() => {
+          handleCloseForgotPassword();
+        }, 3000);
+      } else {
+        setForgotPasswordError(response.message || 'Có lỗi xảy ra');
+      }
+    } catch (err: any) {
+      const errorMessage = err?.response?.data?.message || err?.message || 'Có lỗi xảy ra khi đặt lại mật khẩu';
+      setForgotPasswordError(errorMessage);
+    } finally {
+      setForgotPasswordLoading(false);
+    }
   };
 
   const handleRoleSelection = async (role: UserRole) => {
@@ -458,6 +605,7 @@ const AuthPage: React.FC = () => {
             <div className="text-right">
               <button
                 type="button"
+                onClick={handleOpenForgotPassword}
                 className="text-sm text-brand-teal hover:text-brand-tealHover font-medium transition-colors"
               >
                 Quên mật khẩu?
@@ -504,6 +652,236 @@ const AuthPage: React.FC = () => {
           </div>
         </form>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative animate-in fade-in zoom-in duration-200">
+            {/* Close Button */}
+            <button
+              onClick={handleCloseForgotPassword}
+              className="absolute right-4 top-4 text-gray-400 hover:text-gray-600 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {/* Step: Email Input */}
+            {forgotPasswordStep === 'email' && (
+              <>
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-brand-teal/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Mail className="w-8 h-8 text-brand-teal" />
+                  </div>
+                  <h2 className="text-xl font-bold text-brand-navy">Quên mật khẩu?</h2>
+                  <p className="text-brand-text/70 mt-2 text-sm">
+                    Nhập email đã đăng ký để nhận mã OTP khôi phục mật khẩu
+                  </p>
+                </div>
+
+                {forgotPasswordError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-red-600">
+                    <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-sm">{forgotPasswordError}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleSendOtp} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-brand-navy mb-2">
+                      Email
+                    </label>
+                    <input
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      className="w-full p-3 border border-brand-outline/40 rounded-xl focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all"
+                      placeholder="Nhập email của bạn"
+                      required
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={forgotPasswordLoading || !forgotEmail}
+                    className="w-full bg-gradient-to-r from-brand-teal to-brand-navy text-white py-3 rounded-xl font-semibold hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  >
+                    {forgotPasswordLoading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Đang gửi...
+                      </span>
+                    ) : 'Gửi mã OTP'}
+                  </button>
+                </form>
+              </>
+            )}
+
+            {/* Step: OTP & New Password */}
+            {forgotPasswordStep === 'otp' && (
+              <>
+                <div className="text-center mb-6">
+                  <div className="w-16 h-16 bg-brand-teal/10 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <KeyRound className="w-8 h-8 text-brand-teal" />
+                  </div>
+                  <h2 className="text-xl font-bold text-brand-navy">Nhập mã OTP</h2>
+                  <p className="text-brand-text/70 mt-2 text-sm">
+                    Mã OTP đã được gửi đến <span className="font-medium text-brand-navy">{forgotEmail}</span>
+                  </p>
+                  {countdown > 0 && (
+                    <p className="text-brand-teal font-medium mt-2">
+                      Mã hết hạn sau: {Math.floor(countdown / 60)}:{(countdown % 60).toString().padStart(2, '0')}
+                    </p>
+                  )}
+                  {countdown === 0 && forgotPasswordStep === 'otp' && (
+                    <p className="text-red-500 font-medium mt-2">
+                      Mã OTP đã hết hạn, vui lòng gửi lại
+                    </p>
+                  )}
+                </div>
+
+                {forgotPasswordError && (
+                  <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2 text-red-600">
+                    <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <span className="text-sm">{forgotPasswordError}</span>
+                  </div>
+                )}
+
+                {forgotPasswordSuccess && (
+                  <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-xl flex items-center gap-2 text-green-600">
+                    <svg className="w-5 h-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    <span className="text-sm">{forgotPasswordSuccess}</span>
+                  </div>
+                )}
+
+                <form onSubmit={handleResetPassword} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-brand-navy mb-2">
+                      Mã OTP (6 chữ số)
+                    </label>
+                    <input
+                      type="text"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      className="w-full p-3 border border-brand-outline/40 rounded-xl focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all text-center text-2xl tracking-widest font-mono"
+                      placeholder="000000"
+                      maxLength={6}
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-brand-navy mb-2">
+                      Mật khẩu mới
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showNewPassword ? 'text' : 'password'}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        className="w-full p-3 border border-brand-outline/40 rounded-xl focus:ring-2 focus:ring-brand-teal focus:border-transparent pr-12 transition-all"
+                        placeholder="Nhập mật khẩu mới"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-brand-text/50 hover:text-brand-navy transition-colors"
+                      >
+                        {showNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-brand-navy mb-2">
+                      Xác nhận mật khẩu mới
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showConfirmNewPassword ? 'text' : 'password'}
+                        value={confirmNewPassword}
+                        onChange={(e) => setConfirmNewPassword(e.target.value)}
+                        className="w-full p-3 border border-brand-outline/40 rounded-xl focus:ring-2 focus:ring-brand-teal focus:border-transparent pr-12 transition-all"
+                        placeholder="Nhập lại mật khẩu mới"
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowConfirmNewPassword(!showConfirmNewPassword)}
+                        className="absolute right-3 top-1/2 transform -translate-y-1/2 text-brand-text/50 hover:text-brand-navy transition-colors"
+                      >
+                        {showConfirmNewPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={forgotPasswordLoading || otp.length !== 6 || !newPassword || !confirmNewPassword}
+                    className="w-full bg-gradient-to-r from-brand-teal to-brand-navy text-white py-3 rounded-xl font-semibold hover:-translate-y-0.5 hover:shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  >
+                    {forgotPasswordLoading ? (
+                      <span className="flex items-center justify-center gap-2">
+                        <svg className="animate-spin h-5 w-5" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Đang xử lý...
+                      </span>
+                    ) : 'Đặt lại mật khẩu'}
+                  </button>
+
+                  <div className="flex items-center justify-between pt-2">
+                    <button
+                      type="button"
+                      onClick={() => setForgotPasswordStep('email')}
+                      className="text-sm text-brand-text/70 hover:text-brand-navy transition-colors"
+                    >
+                      ← Đổi email
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleResendOtp}
+                      disabled={cooldown > 0 || forgotPasswordLoading}
+                      className="flex items-center gap-1 text-sm text-brand-teal hover:text-brand-tealHover font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                      {cooldown > 0 ? `Gửi lại (${cooldown}s)` : 'Gửi lại OTP'}
+                    </button>
+                  </div>
+                </form>
+              </>
+            )}
+
+            {/* Step: Success */}
+            {forgotPasswordStep === 'success' && (
+              <div className="text-center py-6">
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h2 className="text-xl font-bold text-brand-navy mb-2">Thành công!</h2>
+                <p className="text-brand-text/70 mb-4">
+                  {forgotPasswordSuccess || 'Mật khẩu của bạn đã được đặt lại thành công'}
+                </p>
+                <p className="text-sm text-brand-text/50">
+                  Đang chuyển hướng về trang đăng nhập...
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

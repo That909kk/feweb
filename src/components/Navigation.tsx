@@ -11,12 +11,13 @@ import {
   Megaphone,
   MessageCircle,
   Settings,
-  ShieldCheck,
   Sparkles,
   UserCog,
   UserRound,
-  Users,
-  Receipt
+  Receipt,
+  TrendingUp,
+  Wrench,
+  ShoppingCart
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -70,12 +71,6 @@ const navigationConfig: Record<UserRole, NavItemConfig[]> = {
       icon: ClipboardList
     },
     {
-      to: '/customer/payments',
-      label: 'Thanh toán',
-      description: 'Lịch sử giao dịch',
-      icon: FileText
-    },
-    {
       to: '/customer/chat',
       label: 'Trao đổi',
       description: 'Liên lạc nhân viên',
@@ -114,12 +109,6 @@ const navigationConfig: Record<UserRole, NavItemConfig[]> = {
       icon: HardHat
     },
     {
-      to: '/employee/requests',
-      label: 'Yêu cầu',
-      description: 'Theo dõi hỗ trợ',
-      icon: Sparkles
-    },
-    {
       to: '/employee/chat',
       label: 'Trao đổi',
       description: 'Chat với khách hàng',
@@ -137,25 +126,19 @@ const navigationConfig: Record<UserRole, NavItemConfig[]> = {
       to: '/admin/dashboard',
       label: 'Tổng quan',
       description: 'Chỉ số hoạt động',
-      icon: BarChart3
+      icon: LayoutDashboard
     },
     {
       to: '/admin/statistics',
       label: 'Thống kê',
       description: 'Báo cáo & phân tích',
-      icon: BarChart3
-    },
-    {
-      to: '/admin/users',
-      label: 'Người dùng',
-      description: 'Quản lý tài khoản',
-      icon: Users
+      icon: TrendingUp
     },
     {
       to: '/admin/services',
       label: 'Dịch vụ',
       description: 'Quản lý dịch vụ',
-      icon: Settings
+      icon: Wrench
     },
     {
       to: '/admin/additional-fees',
@@ -168,31 +151,19 @@ const navigationConfig: Record<UserRole, NavItemConfig[]> = {
       label: 'Đơn hàng',
       description: 'Giám sát tiến độ',
       icon: ClipboardList
-    },
-    {
-      to: '/admin/content',
-      label: 'Nội dung',
-      description: 'Quản trị thư viện',
-      icon: Megaphone
-    },
-    {
-      to: '/admin/permissions',
-      label: 'Phân quyền',
-      description: 'Cấu hình quyền truy cập',
-      icon: ShieldCheck
     }
   ]
 };
 
 const quickActionConfig: Record<UserRole, QuickActionConfig> = {
   CUSTOMER: {
-    to: '/customer/booking',
+    to: '/customer/voice-booking',
     label: 'Đặt lịch nhanh',
-    hint: 'Sử dụng địa chỉ mặc định',
+    hint: 'Đặt lịch bằng giọng nói',
     icon: Sparkles
   },
   EMPLOYEE: {
-    to: '/employee/dashboard',
+    to: '/employee/assignments',
     label: 'Check-in ca làm',
     hint: 'Cập nhật trạng thái công việc',
     icon: HardHat

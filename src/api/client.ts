@@ -34,6 +34,23 @@ export interface ApiResponse<T = any> {
   message?: string;
 }
 
+// Public endpoints that don't need authentication
+const PUBLIC_ENDPOINTS = [
+  '/auth/register', 
+  '/auth/login', 
+  '/auth/get-role',
+  '/otp/email/send',
+  '/otp/email/verify',
+  '/otp/email/resend-cooldown',
+  '/otp/email/forgot-password-request',
+  '/otp/email/reset-password'
+];
+
+const isPublicEndpoint = (url: string | undefined): boolean => {
+  if (!url) return false;
+  return PUBLIC_ENDPOINTS.some(endpoint => url.includes(endpoint));
+};
+
 // Request interceptor to add auth header
 api.interceptors.request.use(
   (config: InternalAxiosRequestConfig) => {
@@ -48,20 +65,24 @@ api.interceptors.request.use(
       console.log(`[API] Request data:`, config.data);
     }
     
-    // Public endpoints that don't need authentication
-    const publicEndpoints = ['/auth/register', '/auth/login', '/auth/get-role'];
-    const isPublicEndpoint = publicEndpoints.some(endpoint => config.url?.includes(endpoint));
-    
-    if (!isPublicEndpoint) {
+    if (isPublicEndpoint(config.url)) {
+      // Explicitly remove Authorization header for public endpoints
+      console.log(`[API] Public endpoint detected: ${config.url}`);
+      if (config.headers.Authorization) {
+        delete config.headers.Authorization;
+        console.log(`[API] Removed Authorization header for public endpoint`);
+      }
+    } else {
       const token = localStorage.getItem('accessToken');
       if (token) {
         config.headers.Authorization = `Bearer ${token}`;
       } else {
         console.warn(`[API] No access token found for request to ${config.url}`);
       }
-    } else {
-      console.log(`[API] Public endpoint, no token required: ${config.url}`);
     }
+    
+    // Log final headers
+    console.log(`[API] Final headers:`, JSON.stringify(config.headers));
     
     return config;
   },
@@ -75,6 +96,12 @@ api.interceptors.response.use(
   (response) => response,
   async (error: AxiosError<ApiResponse>) => {
     const originalRequest = error.config;
+    
+    // Public endpoints không cần xử lý token refresh
+    if (isPublicEndpoint(originalRequest?.url)) {
+      console.log(`[API] Public endpoint error, skipping token logic:`, originalRequest?.url);
+      return Promise.reject(error);
+    }
     
     // Các endpoint authentication không cần xử lý đặc biệt
     const authEndpoints = ['/auth/register', '/auth/login', '/auth/get-role'];

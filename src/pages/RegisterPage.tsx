@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import registerData from '../static-data/pages/register.json';
 import { useRegister } from '../hooks/useRegister';
@@ -22,6 +22,8 @@ interface FormErrors {
 const RegisterPage = () => {
   const navigate = useNavigate();
   const { register, loading, error: hookError, clearError } = useRegister();
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [formData, setFormData] = useState<FormData>({
     username: '',
     password: '',
@@ -34,6 +36,12 @@ const RegisterPage = () => {
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+
+  // Clear any existing auth tokens when visiting register page
+  useEffect(() => {
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+  }, []);
 
   const data = registerData.vi; // Có thể thay đổi theo ngôn ngữ người dùng
 
@@ -50,6 +58,7 @@ const RegisterPage = () => {
       case 'password':
         if (!value) return validationErrors.passwordRequired;
         if (value.length < 6) return validationErrors.passwordLength;
+        if (value.length > 100) return validationErrors.passwordMaxLength || 'Mật khẩu không được vượt quá 100 ký tự';
         break;
       
       case 'confirmPassword':
@@ -226,6 +235,9 @@ const RegisterPage = () => {
                   errors.username ? 'border-status-danger/50' : 'border-brand-outline/40'
                 } placeholder-brand-text/40 text-brand-navy rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm`}
               />
+              {!errors.username && data.form.username.helperText && (
+                <p className="mt-1.5 text-xs text-brand-text/60">{data.form.username.helperText}</p>
+              )}
               {errors.username && (
                 <p className="mt-1.5 text-sm text-status-danger flex items-center gap-1">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -241,19 +253,40 @@ const RegisterPage = () => {
               <label htmlFor="password" className="block text-sm font-medium text-brand-navy mb-2">
                 {data.form.password.label} <span className="text-status-danger">*</span>
               </label>
-              <input
-                id="password"
-                name="password"
-                type="password"
-                required
-                value={formData.password}
-                onChange={handleInputChange}
-                onBlur={handleBlur}
-                placeholder={data.form.password.placeholder}
-                className={`appearance-none relative block w-full px-3 py-2.5 border ${
-                  errors.password ? 'border-status-danger/50' : 'border-brand-outline/40'
-                } placeholder-brand-text/40 text-brand-navy rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm`}
-              />
+              <div className="relative">
+                <input
+                  id="password"
+                  name="password"
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  value={formData.password}
+                  onChange={handleInputChange}
+                  onBlur={handleBlur}
+                  placeholder={data.form.password.placeholder}
+                  className={`appearance-none relative block w-full px-3 py-2.5 pr-10 border ${
+                    errors.password ? 'border-status-danger/50' : 'border-brand-outline/40'
+                  } placeholder-brand-text/40 text-brand-navy rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-brand-text/50 hover:text-brand-navy transition-colors"
+                >
+                  {showPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
+              {!errors.password && data.form.password.helperText && (
+                <p className="mt-1.5 text-xs text-brand-text/60">{data.form.password.helperText}</p>
+              )}
               {errors.password && (
                 <p className="mt-1.5 text-sm text-status-danger flex items-center gap-1">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -269,19 +302,37 @@ const RegisterPage = () => {
               <label htmlFor="confirmPassword" className="block text-sm font-medium text-brand-navy mb-2">
                 {data.form.confirmPassword.label} <span className="text-status-danger">*</span>
               </label>
-              <input
-                id="confirmPassword"
-                name="confirmPassword"
-                type="password"
-                required
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                onBlur={handleBlur}
-                placeholder={data.form.confirmPassword.placeholder}
-                className={`appearance-none relative block w-full px-3 py-2.5 border ${
-                  errors.confirmPassword ? 'border-status-danger/50' : 'border-brand-outline/40'
-                } placeholder-brand-text/40 text-brand-navy rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm`}
-              />
+              <div className="relative">
+                <input
+                  id="confirmPassword"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  required
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  onBlur={handleBlur}
+                  placeholder={data.form.confirmPassword.placeholder}
+                  className={`appearance-none relative block w-full px-3 py-2.5 pr-10 border ${
+                    errors.confirmPassword ? 'border-status-danger/50' : 'border-brand-outline/40'
+                  } placeholder-brand-text/40 text-brand-navy rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-brand-text/50 hover:text-brand-navy transition-colors"
+                >
+                  {showConfirmPassword ? (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
+                    </svg>
+                  ) : (
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                    </svg>
+                  )}
+                </button>
+              </div>
               {errors.confirmPassword && (
                 <p className="mt-1.5 text-sm text-status-danger flex items-center gap-1">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -310,6 +361,9 @@ const RegisterPage = () => {
                   errors.fullName ? 'border-status-danger/50' : 'border-brand-outline/40'
                 } placeholder-brand-text/40 text-brand-navy rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm`}
               />
+              {!errors.fullName && data.form.fullName.helperText && (
+                <p className="mt-1.5 text-xs text-brand-text/60">{data.form.fullName.helperText}</p>
+              )}
               {errors.fullName && (
                 <p className="mt-1.5 text-sm text-status-danger flex items-center gap-1">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -338,6 +392,9 @@ const RegisterPage = () => {
                   errors.email ? 'border-status-danger/50' : 'border-brand-outline/40'
                 } placeholder-brand-text/40 text-brand-navy rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm`}
               />
+              {!errors.email && data.form.email.helperText && (
+                <p className="mt-1.5 text-xs text-brand-text/60">{data.form.email.helperText}</p>
+              )}
               {errors.email && (
                 <p className="mt-1.5 text-sm text-status-danger flex items-center gap-1">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -366,6 +423,9 @@ const RegisterPage = () => {
                   errors.phoneNumber ? 'border-status-danger/50' : 'border-brand-outline/40'
                 } placeholder-brand-text/40 text-brand-navy rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm`}
               />
+              {!errors.phoneNumber && data.form.phoneNumber.helperText && (
+                <p className="mt-1.5 text-xs text-brand-text/60">{data.form.phoneNumber.helperText}</p>
+              )}
               {errors.phoneNumber && (
                 <p className="mt-1.5 text-sm text-status-danger flex items-center gap-1">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

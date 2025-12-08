@@ -1,5 +1,5 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   ChevronDown,
   Crown,
@@ -162,42 +162,49 @@ const AppShell: React.FC<AppShellProps> = ({
           </div>
 
           <div className="flex items-center gap-3">
-            {availableRoles && availableRoles.length > 1 && (
-              <label className="relative flex items-center gap-2 rounded-full border border-brand-outline/60 bg-white px-3 py-1 text-xs font-medium text-brand-text/80 shadow-sm">
-                <MonitorSmartphone className="h-4 w-4 text-brand-teal" />
-                <select
-                  value={selectedRole ?? role}
-                  onChange={handleRoleChange}
-                  className="cursor-pointer appearance-none bg-transparent pr-5 text-sm font-semibold text-brand-navy focus:outline-none"
-                >
-                  {availableRoles.map(userRole => (
-                    <option key={userRole} value={userRole}>
-                      {roleLabels[userRole]}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-2 top-2.5 h-3.5 w-3.5 text-brand-outline" />
-              </label>
-            )}
-
             <NotificationBell />
 
             <div className="group flex items-center gap-3 rounded-full border border-brand-outline/60 bg-white/90 px-3 py-1.5 text-sm shadow-sm">
-              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-teal/10 font-semibold text-brand-teal">
-                {user?.avatar ? (
-                  <img
-                    src={user.avatar}
-                    alt={user.fullName ?? 'Avatar'}
-                    className="h-full w-full rounded-full object-cover"
-                  />
-                ) : (
-                  initials
-                )}
-              </span>
-              <div className="hidden min-w-[120px] flex-col sm:flex">
-                <span className="text-sm font-semibold text-brand-navy">{user?.fullName ?? 'Thành viên'}</span>
-                <span className="text-xs text-brand-text/60">{user?.email ?? 'Chưa cập nhật email'}</span>
-              </div>
+              {role !== 'ADMIN' ? (
+                <Link 
+                  to={`/${role.toLowerCase()}/profile`}
+                  className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition"
+                >
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-teal/10 font-semibold text-brand-teal">
+                    {user?.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt={user.fullName ?? 'Avatar'}
+                        className="h-full w-full rounded-full object-cover"
+                      />
+                    ) : (
+                      initials
+                    )}
+                  </span>
+                  <div className="hidden min-w-[120px] flex-col sm:flex">
+                    <span className="text-sm font-semibold text-brand-navy">{user?.fullName ?? 'Thành viên'}</span>
+                    <span className="text-xs text-brand-text/60">{user?.email ?? 'Chưa cập nhật email'}</span>
+                  </div>
+                </Link>
+              ) : (
+                <>
+                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-teal/10 font-semibold text-brand-teal">
+                    {user?.avatar ? (
+                      <img
+                        src={user.avatar}
+                        alt={user.fullName ?? 'Avatar'}
+                        className="h-full w-full rounded-full object-cover"
+                      />
+                    ) : (
+                      initials
+                    )}
+                  </span>
+                  <div className="hidden min-w-[120px] flex-col sm:flex">
+                    <span className="text-sm font-semibold text-brand-navy">{user?.fullName ?? 'Thành viên'}</span>
+                    <span className="text-xs text-brand-text/60">{user?.email ?? 'Chưa cập nhật email'}</span>
+                  </div>
+                </>
+              )}
               <button
                 type="button"
                 onClick={handleLogout}

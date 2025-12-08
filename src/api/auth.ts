@@ -181,3 +181,51 @@ export const changePasswordApi = async (data: ChangePasswordRequest): Promise<Ch
   const response = await api.post<ChangePasswordResponse>('/auth/change-password', data);
   return response.data;
 };
+
+// ============= Forgot Password API =============
+
+// Send OTP for forgot password
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ForgotPasswordResponse {
+  success: boolean;
+  message: string;
+  expirationSeconds?: number;
+  cooldownSeconds?: number;
+}
+
+export const forgotPasswordRequestApi = async (data: ForgotPasswordRequest): Promise<ForgotPasswordResponse> => {
+  const response = await api.post<ForgotPasswordResponse>('/otp/email/forgot-password-request', data);
+  return response.data;
+};
+
+// Reset password with OTP
+export interface ResetPasswordRequest {
+  email: string;
+  otp: string;
+  newPassword: string;
+}
+
+export interface ResetPasswordResponse {
+  success: boolean;
+  message: string;
+}
+
+export const resetPasswordApi = async (data: ResetPasswordRequest): Promise<ResetPasswordResponse> => {
+  const response = await api.post<ResetPasswordResponse>('/otp/email/reset-password', data);
+  return response.data;
+};
+
+// Check resend cooldown
+export interface ResendCooldownResponse {
+  success: boolean;
+  cooldownSeconds: number;
+  canResend: boolean;
+}
+
+export const checkResendCooldownApi = async (email: string): Promise<ResendCooldownResponse> => {
+  const response = await api.get<ResendCooldownResponse>(`/otp/email/resend-cooldown?email=${encodeURIComponent(email)}`);
+  return response.data;
+};
