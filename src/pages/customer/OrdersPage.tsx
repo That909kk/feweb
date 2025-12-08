@@ -20,9 +20,9 @@ import { useBooking } from '../../hooks/useBooking';
 import { MetricCard, SectionCard, Pagination } from '../../shared/components';
 import { 
   getReviewCriteriaApi, 
-  createReviewApi, 
+  createReviewApi,
   type ReviewCriteria, 
-  type CriteriaRating 
+  type CriteriaRating
 } from '../../api/review';
 
 type BookingItem = {
@@ -309,7 +309,7 @@ const OrdersPage: React.FC = () => {
     };
   }, [selectedBooking, showCancelDialog, showConvertDialog, showReviewDialog]);
 
-  const loadReviewCriteria = async () => {
+  const loadReviewCriteria = async (): Promise<ReviewCriteria[]> => {
     try {
       const criteria = await getReviewCriteriaApi();
       setReviewCriteria(criteria);
@@ -319,8 +319,22 @@ const OrdersPage: React.FC = () => {
         initialRatings[c.criteriaId] = 5;
       });
       setReviewRatings(initialRatings);
+      return criteria;
     } catch (err) {
       console.error('Failed to load review criteria:', err);
+      // Fallback to default criteria if API fails
+      const defaultCriteria: ReviewCriteria[] = [
+        { criteriaId: 1, criteriaName: 'Thái độ' },
+        { criteriaId: 2, criteriaName: 'Đúng giờ' },
+        { criteriaId: 3, criteriaName: 'Chất lượng công việc' }
+      ];
+      setReviewCriteria(defaultCriteria);
+      const initialRatings: Record<number, number> = {};
+      defaultCriteria.forEach(c => {
+        initialRatings[c.criteriaId] = 5;
+      });
+      setReviewRatings(initialRatings);
+      return defaultCriteria;
     }
   };
 
@@ -417,7 +431,7 @@ const OrdersPage: React.FC = () => {
     return ['PENDING', 'CONFIRMED', 'AWAITING_EMPLOYEE'].includes(statusKey);
   };
 
-  const handleOpenReviewDialog = (booking: BookingItem) => {
+  const handleOpenReviewDialog = async (booking: BookingItem) => {
     // Get first employee from assignedEmployees array
     const employeeId = booking.assignedEmployees?.[0]?.employeeId;
     
@@ -426,13 +440,19 @@ const OrdersPage: React.FC = () => {
       return;
     }
     
+    // Load criteria if not already loaded
+    let criteriaToUse = reviewCriteria;
+    if (reviewCriteria.length === 0) {
+      criteriaToUse = await loadReviewCriteria();
+    }
+    
     setSelectedEmployeeId(employeeId);
     setSelectedBooking(booking);
     setShowReviewDialog(true);
-    // Reset review form
+    // Reset review form with default ratings
     setReviewComment('');
     const initialRatings: Record<number, number> = {};
-    reviewCriteria.forEach(c => {
+    criteriaToUse.forEach(c => {
       initialRatings[c.criteriaId] = 5;
     });
     setReviewRatings(initialRatings);
@@ -444,14 +464,26 @@ const OrdersPage: React.FC = () => {
       return;
     }
 
+    // Validate that we have criteria ratings
+    if (reviewCriteria.length === 0) {
+      setError('Chưa tải được tiêu chí đánh giá. Vui lòng thử lại.');
+      return;
+    }
+
     setIsSubmittingReview(true);
     try {
-      const criteriaRatings: CriteriaRating[] = Object.entries(reviewRatings).map(
-        ([criteriaId, rating]) => ({
-          criteriaId: parseInt(criteriaId),
-          rating
-        })
-      );
+      // Build criteria ratings from reviewCriteria to ensure all criteria are included
+      const criteriaRatings: CriteriaRating[] = reviewCriteria.map(criteria => ({
+        criteriaId: criteria.criteriaId,
+        rating: reviewRatings[criteria.criteriaId] || 5 // Default to 5 if not set
+      }));
+
+      console.log('[Review] Submitting review:', {
+        bookingId: selectedBooking.bookingId,
+        employeeId: selectedEmployeeId,
+        comment: reviewComment,
+        criteriaRatings
+      });
 
       await createReviewApi({
         bookingId: selectedBooking.bookingId,
@@ -474,7 +506,8 @@ const OrdersPage: React.FC = () => {
   };
 
   const renderDetailSheet = () => {
-    if (!selectedBooking) return null;
+    // Don't render detail sheet if review dialog is open
+    if (!selectedBooking || showReviewDialog) return null;
     const statusKey = normalizeStatus(selectedBooking.status);
     const badgePalette = statusConfig[statusKey] || statusConfig.ALL;
     const isPost = statusKey === 'AWAITING_EMPLOYEE' && selectedBooking.title;
@@ -1438,11 +1471,19 @@ const OrdersPage: React.FC = () => {
 
       {/* Review Dialog */}
       {showReviewDialog && selectedBooking && ReactDOM.createPortal(
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 px-4 py-8 backdrop-blur-sm overflow-y-auto" onClick={() => setShowReviewDialog(false)}>
-          <div className="relative w-full max-w-lg my-8" onClick={(e) => e.stopPropagation()}>
+        <div 
+          className="fixed inset-0 z-[100] flex items-start justify-center bg-slate-900/50 px-4 py-8 backdrop-blur-sm overflow-y-auto" 
+          onClick={() => {
+            setShowReviewDialog(false);
+            setSelectedBooking(null);
+            setSelectedEmployeeId(null);
+            setReviewComment('');
+          }}
+        >
+          <div className="relative w-full max-w-3xl my-auto" onClick={(e) => e.stopPropagation()}>
             <SectionCard
               title="Đánh giá dịch vụ"
-              description={`Đơn ${selectedBooking.bookingCode || selectedBooking.bookingId}`}
+              description={`Đơn ${selectedBooking?.bookingCode || selectedBooking?.bookingId}`}
               actions={
                 <button
                   onClick={() => {
@@ -1459,47 +1500,76 @@ const OrdersPage: React.FC = () => {
               }
             >
               <div className="space-y-5">
-                <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-700">
-                  <Star className="mr-2 inline h-4 w-4 align-text-top" />
-                  Đánh giá của bạn giúp chúng tôi cải thiện chất lượng dịch vụ.
-                </div>
-
-                {/* Rating Criteria */}
-                <div className="space-y-4">
-                  <h3 className="text-sm font-semibold text-slate-700">Đánh giá chi tiết</h3>
-                  {reviewCriteria.map(criteria => (
-                    <div key={criteria.criteriaId} className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-medium text-slate-700">
-                          {criteria.criteriaName}
-                        </span>
-                        <span className="text-sm font-semibold text-amber-600">
-                          {reviewRatings[criteria.criteriaId] || 5}/5
-                        </span>
+                {/* Employee info - Show assigned employee for this booking */}
+                {selectedBooking.assignedEmployees && selectedBooking.assignedEmployees.length > 0 && (
+                  <div className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                    {selectedBooking.assignedEmployees[0].avatar ? (
+                      <img
+                        src={selectedBooking.assignedEmployees[0].avatar}
+                        alt={selectedBooking.assignedEmployees[0].fullName}
+                        className="h-14 w-14 rounded-full object-cover ring-2 ring-amber-200"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(selectedBooking.assignedEmployees?.[0]?.fullName || '')}&background=f59e0b&color=fff`;
+                        }}
+                      />
+                    ) : (
+                      <div className="flex h-14 w-14 items-center justify-center rounded-full bg-amber-500 text-xl font-bold text-white ring-2 ring-amber-200">
+                        {selectedBooking.assignedEmployees[0].fullName.charAt(0).toUpperCase()}
                       </div>
-                      <div className="flex gap-2">
-                        {[1, 2, 3, 4, 5].map(rating => (
-                          <button
-                            key={rating}
-                            type="button"
-                            onClick={() => setReviewRatings(prev => ({
-                              ...prev,
-                              [criteria.criteriaId]: rating
-                            }))}
-                            className="transition hover:scale-110"
-                          >
-                            <Star
-                              className={`h-6 w-6 ${
-                                rating <= (reviewRatings[criteria.criteriaId] || 5)
-                                  ? 'fill-amber-400 text-amber-400'
-                                  : 'text-slate-300'
-                              }`}
-                            />
-                          </button>
-                        ))}
-                      </div>
+                    )}
+                    <div className="flex-1">
+                      <p className="text-lg font-semibold text-slate-900">{selectedBooking.assignedEmployees[0].fullName}</p>
+                      <p className="text-sm text-slate-500">
+                        {selectedBooking.services && selectedBooking.services.length > 0 
+                          ? selectedBooking.services.map(s => s.name).join(', ')
+                          : 'Nhân viên phục vụ'}
+                      </p>
                     </div>
-                  ))}
+                    <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-2 text-center">
+                      <Star className="mx-auto h-5 w-5 fill-amber-400 text-amber-400" />
+                      <p className="mt-1 text-xs text-amber-700">Đánh giá ngay</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Rating Criteria - Grid layout */}
+                <div>
+                  <h3 className="mb-3 text-sm font-semibold text-slate-700">Đánh giá chi tiết</h3>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {reviewCriteria.map(criteria => (
+                      <div key={criteria.criteriaId} className="rounded-2xl border border-slate-100 bg-slate-50/80 p-4">
+                        <div className="mb-2 flex items-center justify-between">
+                          <span className="text-sm font-medium text-slate-700">
+                            {criteria.criteriaName}
+                          </span>
+                          <span className="text-sm font-bold text-amber-600">
+                            {reviewRatings[criteria.criteriaId] || 5}/5
+                          </span>
+                        </div>
+                        <div className="flex justify-center gap-1">
+                          {[1, 2, 3, 4, 5].map(rating => (
+                            <button
+                              key={rating}
+                              type="button"
+                              onClick={() => setReviewRatings(prev => ({
+                                ...prev,
+                                [criteria.criteriaId]: rating
+                              }))}
+                              className="transition hover:scale-110"
+                            >
+                              <Star
+                                className={`h-7 w-7 ${
+                                  rating <= (reviewRatings[criteria.criteriaId] || 5)
+                                    ? 'fill-amber-400 text-amber-400'
+                                    : 'text-slate-300'
+                                }`}
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
                 {/* Comment */}
@@ -1510,17 +1580,17 @@ const OrdersPage: React.FC = () => {
                   <textarea
                     value={reviewComment}
                     onChange={(e) => setReviewComment(e.target.value)}
-                    rows={4}
+                    rows={3}
                     maxLength={500}
                     className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 placeholder-slate-400 transition focus:border-amber-500 focus:outline-none focus:ring-2 focus:ring-amber-500/20"
                     placeholder="Chia sẻ trải nghiệm của bạn về dịch vụ..."
                   />
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-slate-500 text-right">
                     {reviewComment.length}/500 ký tự
                   </p>
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex gap-3 pt-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -1530,7 +1600,7 @@ const OrdersPage: React.FC = () => {
                       setReviewComment('');
                     }}
                     disabled={isSubmittingReview}
-                    className="flex-1 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex-1 rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     Quay lại
                   </button>
@@ -1538,7 +1608,7 @@ const OrdersPage: React.FC = () => {
                     type="button"
                     onClick={handleSubmitReview}
                     disabled={isSubmittingReview}
-                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-amber-200 transition hover:-translate-y-0.5 hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-amber-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-amber-200 transition hover:-translate-y-0.5 hover:bg-amber-500 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {isSubmittingReview ? (
                       <>

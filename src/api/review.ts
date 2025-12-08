@@ -92,3 +92,27 @@ export const getEmployeeReviewSummaryApi = async (employeeId: string): Promise<E
   const response = await api.get<EmployeeReviewSummary>(`/reviews/employees/${employeeId}/reviews/summary`);
   return response.data;
 };
+
+// Pending review item - Booking đã hoàn thành chưa đánh giá
+export interface PendingReviewItem {
+  bookingId: string;
+  bookingCode: string;
+  bookingTime: string;
+  assignmentId: string;
+  serviceName: string;
+  employeeId: string;
+  employeeName: string;
+  employeeAvatar?: string;
+}
+
+export interface PendingReviewsResponse {
+  success: boolean;
+  data: PendingReviewItem[];
+  total: number;
+}
+
+// Get pending reviews for current customer (bookings completed but not reviewed)
+export const getPendingReviewsApi = async (): Promise<PendingReviewsResponse> => {
+  const response = await api.get<PendingReviewsResponse>('/reviews/pending');
+  return response.data;
+};
