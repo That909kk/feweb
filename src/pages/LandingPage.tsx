@@ -361,7 +361,7 @@ const LandingPage: React.FC = () => {
               © 2025 Home Mate - Công ty TNHH Thành Thật. Tất cả quyền được bảo lưu.
             </p>
             <p className="text-white/50 text-sm mt-2">
-              Phát triển bởi Lê Minh Thật (That909kk)
+              Homemate 1.0.0 Phát triển bởi Lê Minh Thật (That909kk) 
             </p>
           </div>
         </div>
