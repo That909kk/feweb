@@ -622,3 +622,99 @@ export interface ErrorResponse {
   message: string;
   details?: string;
 }
+
+// ============================================
+// Employee Working Hours Types
+// ============================================
+
+export type DayOfWeek = 'MONDAY' | 'TUESDAY' | 'WEDNESDAY' | 'THURSDAY' | 'FRIDAY' | 'SATURDAY' | 'SUNDAY';
+
+export interface WorkingHours {
+  workingHoursId: string;
+  dayOfWeek: DayOfWeek;
+  dayOfWeekDisplay: string;
+  startTime: string | null; // "HH:mm:ss" format
+  endTime: string | null;
+  isWorkingDay: boolean;
+  breakStartTime: string | null;
+  breakEndTime: string | null;
+}
+
+export interface SetWorkingHoursRequest {
+  employeeId: string;
+  dayOfWeek: DayOfWeek;
+  startTime: string;
+  endTime: string;
+  isWorkingDay: boolean;
+  breakStartTime?: string | null;
+  breakEndTime?: string | null;
+}
+
+export interface DaySchedule {
+  dayOfWeek: DayOfWeek;
+  startTime: string | null;
+  endTime: string | null;
+  isWorkingDay: boolean;
+  breakStartTime?: string | null;
+  breakEndTime?: string | null;
+}
+
+export interface SetWeeklyWorkingHoursRequest {
+  employeeId: string;
+  weeklySchedule: DaySchedule[];
+}
+
+// ============================================
+// Available Slots Types
+// ============================================
+
+export interface AvailableEmployee {
+  employeeId: string;
+  fullName: string;
+  avatar?: string | null;
+  rating?: number;
+  experienceYears?: number;
+  servicesProvided?: number;
+}
+
+export interface AvailableSlot {
+  startTime: string;
+  endTime: string;
+  availableEmployeeCount: number;
+  availableEmployees: AvailableEmployee[];
+}
+
+export interface DailyAvailableSlots {
+  date: string;
+  dayOfWeek: string;
+  totalSlots: number;
+  totalAvailableEmployees: number;
+  slots: AvailableSlot[];
+}
+
+export interface AvailableSlotsParams {
+  date: string; // YYYY-MM-DD
+  ward?: string;
+  city?: string;
+  serviceId?: number;
+  durationMinutes?: number;
+  slotIntervalMinutes?: number;
+}
+
+export interface AvailableSlotsRangeParams {
+  startDate: string;
+  endDate: string;
+  ward?: string;
+  city?: string;
+  serviceId?: number;
+  durationMinutes?: number;
+  slotIntervalMinutes?: number;
+}
+
+export interface CheckSlotParams {
+  startTime: string;
+  endTime: string;
+  ward?: string;
+  city?: string;
+  minEmployees?: number;
+}
