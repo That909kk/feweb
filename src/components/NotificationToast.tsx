@@ -63,32 +63,32 @@ const NotificationToast: React.FC<NotificationToastProps> = ({
   return (
     <div
       className={`
-        fixed top-20 right-4 z-[9999] max-w-md w-full
+        fixed top-16 sm:top-20 right-2 sm:right-4 z-[9999] max-w-[calc(100vw-1rem)] sm:max-w-md w-full
         transform transition-all duration-300 ease-out
         ${isVisible ? 'translate-x-0 opacity-100' : 'translate-x-full opacity-0'}
       `}
     >
       <div
         className={`
-          border-l-4 rounded-lg shadow-lg p-4
+          border-l-4 rounded-lg shadow-lg p-3 sm:p-4
           ${getPriorityStyles()}
           cursor-pointer hover:shadow-xl transition-shadow
         `}
         onClick={handleClick}
       >
-        <div className="flex items-start gap-3">
+        <div className="flex items-start gap-2 sm:gap-3">
           <div className="flex-shrink-0 mt-0.5">
             {getIcon()}
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-gray-900 text-sm mb-1">
+            <h4 className="font-semibold text-gray-900 text-xs sm:text-sm mb-1">
               {notification.title}
             </h4>
-            <p className="text-gray-700 text-sm line-clamp-2">
+            <p className="text-gray-700 text-xs sm:text-sm line-clamp-2">
               {notification.message}
             </p>
             {notification.actionUrl && (
-              <p className="text-xs text-blue-600 mt-2 font-medium">
+              <p className="text-[10px] sm:text-xs text-blue-600 mt-1.5 sm:mt-2 font-medium">
                 Nhấn để xem chi tiết →
               </p>
             )}

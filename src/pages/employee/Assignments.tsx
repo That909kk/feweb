@@ -445,10 +445,10 @@ const EmployeeAssignments: React.FC = () => {
         <button
           onClick={handleRefresh}
           disabled={isActioning}
-          className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-emerald-600 shadow-lg shadow-emerald-100 transition hover:-translate-y-0.5 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full bg-white px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-emerald-600 shadow-lg shadow-emerald-100 transition hover:-translate-y-0.5 hover:bg-emerald-50 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <RefreshCcw className={isActioning ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
-          Làm mới
+          <RefreshCcw className={isActioning ? 'h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin' : 'h-3.5 w-3.5 sm:h-4 sm:w-4'} />
+          <span className="hidden sm:inline">Làm mới</span>
         </button>
       }
     >
@@ -479,7 +479,7 @@ const EmployeeAssignments: React.FC = () => {
       )}
 
       {/* Filter Tabs */}
-      <div className="mb-6 flex flex-wrap gap-2">
+      <div className="mb-4 sm:mb-6 flex overflow-x-auto pb-2 gap-1.5 sm:gap-2 scrollbar-hide">
         {(Object.keys(statusDescriptors) as AssignmentStatus[]).map(status => {
           const descriptor = statusDescriptors[status];
           const count = status === 'ALL' 
@@ -490,7 +490,7 @@ const EmployeeAssignments: React.FC = () => {
             <button
               key={status}
               onClick={() => setStatusFilter(status)}
-              className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${
+              className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-semibold transition whitespace-nowrap flex-shrink-0 ${
                 statusFilter === status
                   ? descriptor.selectedClass
                   : descriptor.unselectedClass
@@ -517,7 +517,7 @@ const EmployeeAssignments: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div className="grid gap-4">
+        <div className="grid gap-3 sm:gap-4">
           {filteredAssignments.map(assignment => {
             const descriptor = statusDescriptors[assignment.status as AssignmentStatus] ?? statusDescriptors.ALL;
             
@@ -536,19 +536,19 @@ const EmployeeAssignments: React.FC = () => {
             return (
               <div
                 key={assignment.assignmentId}
-                className="flex flex-col gap-4 rounded-3xl border border-slate-100 bg-white/90 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                className="flex flex-col gap-3 sm:gap-4 rounded-2xl sm:rounded-3xl border border-slate-100 bg-white/90 p-4 sm:p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
               >
-                <div className="flex flex-wrap items-start justify-between gap-4">
-                  <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-start justify-between gap-3 sm:gap-4">
+                  <div className="flex flex-col gap-1 sm:gap-1.5">
                     <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="text-lg font-semibold text-slate-900">
+                      <h3 className="text-base sm:text-lg font-semibold text-slate-900">
                         {assignment.serviceName}
                       </h3>
-                      <span className={`rounded-full px-3 py-1 text-xs font-semibold ${descriptor.badgeClass}`}>
+                      <span className={`rounded-full px-2 sm:px-3 py-0.5 sm:py-1 text-[10px] sm:text-xs font-semibold ${descriptor.badgeClass}`}>
                         {descriptor.label}
                       </span>
                     </div>
-                    <p className="text-sm text-slate-500">Mã: {assignment.bookingCode}</p>
+                    <p className="text-xs sm:text-sm text-slate-500">Mã: {assignment.bookingCode}</p>
                   </div>
                   
                   {/* Đồng hồ bấm giờ ở góc phải trên cho IN_PROGRESS */}
@@ -557,28 +557,28 @@ const EmployeeAssignments: React.FC = () => {
                   )}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-4 text-sm text-slate-500">
-                  <span className="inline-flex items-center gap-2">
-                    <CalendarClock className="h-4 w-4 text-emerald-500" />
+                <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-4 text-xs sm:text-sm text-slate-500">
+                  <span className="inline-flex items-center gap-1.5 sm:gap-2">
+                    <CalendarClock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
                     {assignment.bookingTime ? new Date(assignment.bookingTime).toLocaleString('vi-VN') : 'N/A'}
                   </span>
-                  <span className="inline-flex items-center gap-2">
-                    <Clock8 className="h-4 w-4 text-emerald-500" />
+                  <span className="inline-flex items-center gap-1.5 sm:gap-2">
+                    <Clock8 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
                     Ước tính {assignment.estimatedDurationHours ?? 0} giờ
                   </span>
-                  <span className="inline-flex items-center gap-2">
-                    <MapPin className="h-4 w-4 text-emerald-500" />
-                    {assignment.serviceAddress || 'Chưa có địa chỉ'}
+                  <span className="inline-flex items-center gap-1.5 sm:gap-2">
+                    <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
+                    <span className="line-clamp-1">{assignment.serviceAddress || 'Chưa có địa chỉ'}</span>
                   </span>
                 </div>
 
                 {/* Thông tin khách hàng */}
-                <div className="rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
-                  <p className="text-sm font-semibold text-emerald-900">
+                <div className="rounded-xl sm:rounded-2xl border border-emerald-100 bg-emerald-50 p-3 sm:p-4">
+                  <p className="text-xs sm:text-sm font-semibold text-emerald-900">
                     Khách hàng: {assignment.customerName}
                   </p>
                   {assignment.customerPhone && (
-                    <p className="mt-1 text-xs text-emerald-700">
+                    <p className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs text-emerald-700">
                       SĐT: {assignment.customerPhone}
                     </p>
                   )}
@@ -586,11 +586,11 @@ const EmployeeAssignments: React.FC = () => {
 
                 {/* Ghi chú công việc */}
                 {assignment.note && (
-                  <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
-                    <p className="text-xs font-semibold text-slate-700 mb-1">
+                  <div className="rounded-xl sm:rounded-2xl border border-slate-100 bg-slate-50 p-3 sm:p-4">
+                    <p className="text-[10px] sm:text-xs font-semibold text-slate-700 mb-0.5 sm:mb-1">
                       📝 Ghi chú:
                     </p>
-                    <p className="text-sm text-slate-600">
+                    <p className="text-xs sm:text-sm text-slate-600">
                       {assignment.note}
                     </p>
                   </div>

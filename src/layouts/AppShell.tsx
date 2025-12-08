@@ -117,21 +117,21 @@ const AppShell: React.FC<AppShellProps> = ({
           sidebarCollapsed ? "lg:ml-20" : "lg:ml-72"
         ].join(' ')}
       >
-        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-brand-outline/40 bg-brand-surface/90 px-4 py-3 backdrop-blur-xl sm:px-6 lg:px-10">
-          <div className="flex items-center gap-3">
+        <header className="sticky top-0 z-30 flex items-center justify-between border-b border-brand-outline/40 bg-brand-surface/90 px-3 py-2.5 sm:px-4 sm:py-3 backdrop-blur-xl lg:px-10">
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Mobile menu button */}
             <button
               type="button"
-              className="inline-flex items-center justify-center rounded-full border border-brand-outline/60 p-2 text-brand-navy transition hover:border-brand-navy hover:text-brand-navy lg:hidden"
+              className="inline-flex items-center justify-center rounded-xl border border-brand-outline/60 p-1.5 sm:p-2 text-brand-navy transition hover:border-brand-navy hover:text-brand-navy lg:hidden"
               aria-label="Mở menu điều hướng"
               onClick={() => setSidebarOpen(true)}
             >
               <Menu className="h-5 w-5" />
             </button>
 
-            <Link to="/" className="flex items-center gap-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-brand-teal to-brand-navy shadow-elevation-sm">
-                <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <Link to="/" className="flex items-center gap-1.5 sm:gap-2">
+              <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-xl sm:rounded-2xl bg-gradient-to-br from-brand-teal to-brand-navy shadow-elevation-sm">
+                <svg className="h-5 w-5 sm:h-6 sm:w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
               </div>
@@ -141,21 +141,21 @@ const AppShell: React.FC<AppShellProps> = ({
               </div>
             </Link>
 
-            <span className={`hidden rounded-full px-3 py-1 text-xs font-semibold sm:inline-flex ${badge.tone}`}>
+            <span className={`hidden rounded-full px-2 py-0.5 text-[10px] sm:px-3 sm:py-1 sm:text-xs font-semibold md:inline-flex ${badge.tone}`}>
               {badge.label}
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <NotificationBell />
 
-            <div className="group flex items-center gap-3 rounded-full border border-brand-outline/60 bg-white/90 px-3 py-1.5 text-sm shadow-sm">
+            <div className="group flex items-center gap-2 sm:gap-3 rounded-xl sm:rounded-full border border-brand-outline/60 bg-white/90 px-2 py-1 sm:px-3 sm:py-1.5 text-sm shadow-sm">
               {role !== 'ADMIN' ? (
                 <Link 
                   to={`/${role.toLowerCase()}/profile`}
-                  className="flex items-center gap-3 cursor-pointer hover:opacity-80 transition"
+                  className="flex items-center gap-2 sm:gap-3 cursor-pointer hover:opacity-80 transition"
                 >
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-teal/10 font-semibold text-brand-teal">
+                  <span className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-brand-teal/10 font-semibold text-brand-teal text-xs sm:text-sm">
                     {user?.avatar ? (
                       <img
                         src={user.avatar}
@@ -166,14 +166,14 @@ const AppShell: React.FC<AppShellProps> = ({
                       initials
                     )}
                   </span>
-                  <div className="hidden min-w-[120px] flex-col sm:flex">
-                    <span className="text-sm font-semibold text-brand-navy">{user?.fullName ?? 'Thành viên'}</span>
-                    <span className="text-xs text-brand-text/60">{user?.email ?? 'Chưa cập nhật email'}</span>
+                  <div className="hidden min-w-[100px] sm:min-w-[120px] flex-col md:flex">
+                    <span className="text-xs sm:text-sm font-semibold text-brand-navy truncate max-w-[100px] sm:max-w-[120px]">{user?.fullName ?? 'Thành viên'}</span>
+                    <span className="text-[10px] sm:text-xs text-brand-text/60 truncate max-w-[100px] sm:max-w-[120px]">{user?.email ?? 'Chưa cập nhật email'}</span>
                   </div>
                 </Link>
               ) : (
                 <>
-                  <span className="flex h-9 w-9 items-center justify-center rounded-full bg-brand-teal/10 font-semibold text-brand-teal">
+                  <span className="flex h-7 w-7 sm:h-9 sm:w-9 items-center justify-center rounded-full bg-brand-teal/10 font-semibold text-brand-teal text-xs sm:text-sm">
                     {user?.avatar ? (
                       <img
                         src={user.avatar}
@@ -184,45 +184,45 @@ const AppShell: React.FC<AppShellProps> = ({
                       initials
                     )}
                   </span>
-                  <div className="hidden min-w-[120px] flex-col sm:flex">
-                    <span className="text-sm font-semibold text-brand-navy">{user?.fullName ?? 'Thành viên'}</span>
-                    <span className="text-xs text-brand-text/60">{user?.email ?? 'Chưa cập nhật email'}</span>
+                  <div className="hidden min-w-[100px] sm:min-w-[120px] flex-col md:flex">
+                    <span className="text-xs sm:text-sm font-semibold text-brand-navy truncate max-w-[100px] sm:max-w-[120px]">{user?.fullName ?? 'Thành viên'}</span>
+                    <span className="text-[10px] sm:text-xs text-brand-text/60 truncate max-w-[100px] sm:max-w-[120px]">{user?.email ?? 'Chưa cập nhật email'}</span>
                   </div>
                 </>
               )}
               <button
                 type="button"
                 onClick={handleLogout}
-                className="ml-2 inline-flex items-center gap-1 rounded-full border border-brand-outline/50 px-2 py-1 text-xs font-semibold text-brand-text/70 transition hover:border-brand-navy hover:text-brand-navy"
+                className="ml-1 sm:ml-2 inline-flex items-center gap-1 rounded-full border border-brand-outline/50 px-1.5 py-0.5 sm:px-2 sm:py-1 text-[10px] sm:text-xs font-semibold text-brand-text/70 transition hover:border-brand-navy hover:text-brand-navy"
               >
-                <LogOut className="h-3.5 w-3.5" />
-                Đăng xuất
+                <LogOut className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+                <span className="hidden sm:inline">Đăng xuất</span>
               </button>
             </div>
           </div>
         </header>
 
-        <div className="flex-1 px-4 pb-12 pt-6 sm:px-6 lg:px-10">
-          <header className="mb-8 space-y-6 rounded-3xl bg-white/85 p-6 shadow-elevation-sm backdrop-blur-sm transition hover:shadow-elevation-md">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-              <div className="space-y-3">
-                <span className={`inline-flex items-center gap-1 rounded-full px-3 py-1 text-xs font-semibold text-brand-navy`}>
-                  <Crown className="h-4 w-4 text-brand-teal" />
+        <div className="flex-1 px-3 pb-10 pt-4 sm:px-4 sm:pb-12 sm:pt-6 lg:px-10">
+          <header className="mb-5 sm:mb-8 space-y-4 sm:space-y-6 rounded-2xl sm:rounded-3xl bg-white/85 p-4 sm:p-6 shadow-elevation-sm backdrop-blur-sm transition hover:shadow-elevation-md">
+            <div className="flex flex-col gap-3 sm:gap-4 lg:flex-row lg:items-center lg:justify-between">
+              <div className="space-y-2 sm:space-y-3">
+                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-semibold text-brand-navy`}>
+                  <Crown className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-brand-teal" />
                   {badge.label}
                 </span>
-                <h1 className="font-heading text-3xl font-semibold text-brand-navy sm:text-4xl">{title}</h1>
-                {description && <p className="max-w-2xl text-sm text-brand-text/70">{description}</p>}
+                <h1 className="font-heading text-2xl sm:text-3xl lg:text-4xl font-semibold text-brand-navy">{title}</h1>
+                {description && <p className="max-w-2xl text-xs sm:text-sm text-brand-text/70">{description}</p>}
               </div>
-              {actions && <div className="flex flex-wrap items-center gap-3">{actions}</div>}
+              {actions && <div className="flex flex-wrap items-center gap-2 sm:gap-3">{actions}</div>}
             </div>
-            {toolbar && <div className="border-t border-brand-outline/40 pt-5">{toolbar}</div>}
+            {toolbar && <div className="border-t border-brand-outline/40 pt-4 sm:pt-5">{toolbar}</div>}
           </header>
 
-          <main className="space-y-6 lg:space-y-8">{children}</main>
+          <main className="space-y-4 sm:space-y-6 lg:space-y-8">{children}</main>
         </div>
 
-        <footer className="mt-auto border-t border-brand-outline/40 bg-brand-surface/90 px-4 py-4 text-xs text-brand-text/60 sm:px-6 lg:px-10">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-2">
+        <footer className="mt-auto border-t border-brand-outline/40 bg-brand-surface/90 px-3 py-3 sm:px-4 sm:py-4 text-[10px] sm:text-xs text-brand-text/60 lg:px-10">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-1 sm:gap-2 text-center sm:text-left">
             <div>
               Home Mate © {new Date().getFullYear()} · Công ty TNHH Thành Thật
             </div>

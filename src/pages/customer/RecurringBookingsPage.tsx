@@ -91,18 +91,18 @@ const RecurringBookingsPage: React.FC = () => {
       title="Lịch định kỳ"
       description="Quản lý các lịch đặt dịch vụ định kỳ của bạn"
     >
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
+        <div className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Lịch định kỳ</h1>
-            <p className="mt-2 text-gray-600">
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Lịch định kỳ</h1>
+            <p className="mt-1 sm:mt-2 text-sm sm:text-base text-gray-600">
               Quản lý các lịch đặt dịch vụ tự động của bạn
             </p>
           </div>
           <button
             onClick={() => navigate('/customer/booking')}
-            className="px-6 py-3 bg-gradient-to-r from-brand-navy to-brand-teal text-white rounded-lg hover:shadow-lg transition-all font-semibold"
+            className="px-4 sm:px-6 py-2.5 sm:py-3 bg-gradient-to-r from-brand-navy to-brand-teal text-white rounded-lg hover:shadow-lg transition-all font-semibold text-sm sm:text-base w-full sm:w-auto text-center"
           >
             + Tạo lịch mới
           </button>
@@ -147,16 +147,16 @@ const RecurringBookingsPage: React.FC = () => {
                 key={booking.recurringBookingId}
                 className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden hover:shadow-xl transition-shadow"
               >
-                <div className="p-6">
+                <div className="p-4 sm:p-6">
                   {/* Header */}
-                  <div className="flex items-start justify-between mb-4">
+                  <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 mb-4">
                     <div className="flex-1">
-                      <h3 className="text-xl font-bold text-gray-900 mb-2">
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2">
                         {booking.title}
                       </h3>
-                      <div className="flex items-center gap-3">
+                      <div className="flex flex-wrap items-center gap-2 sm:gap-3">
                         {getStatusBadge(booking.status)}
-                        <span className="text-sm text-gray-500">
+                        <span className="text-xs sm:text-sm text-gray-500">
                           {booking.recurrenceTypeDisplay}
                         </span>
                       </div>
@@ -167,7 +167,7 @@ const RecurringBookingsPage: React.FC = () => {
                           setSelectedBooking(booking);
                           setShowCancelModal(true);
                         }}
-                        className="px-4 py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-semibold"
+                        className="px-3 sm:px-4 py-1.5 sm:py-2 bg-red-50 text-red-600 rounded-lg hover:bg-red-100 transition-colors font-semibold text-sm w-full sm:w-auto"
                       >
                         Hủy lịch
                       </button>
@@ -175,7 +175,7 @@ const RecurringBookingsPage: React.FC = () => {
                   </div>
 
                   {/* Service Details */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                  <div className="grid grid-cols-1 gap-3 sm:gap-4 mb-4">
                     {booking.recurringBookingDetails.map((detail) => (
                       <div key={detail.bookingDetailId} className="flex items-start bg-gray-50 rounded-lg p-4">
                         <img
@@ -192,7 +192,7 @@ const RecurringBookingsPage: React.FC = () => {
                   </div>
 
                   {/* Schedule Info */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 mb-4">
                     <div className="flex items-start">
                       <Calendar className="w-5 h-5 text-brand-teal mr-2 mt-0.5" />
                       <div>
@@ -224,23 +224,23 @@ const RecurringBookingsPage: React.FC = () => {
                   </div>
 
                   {/* Stats */}
-                  <div className="flex items-center justify-between pt-4 border-t border-gray-200">
-                    <div className="flex items-center gap-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-4 border-t border-gray-200">
+                    <div className="flex flex-wrap items-center gap-4 sm:gap-6">
                       <div>
-                        <p className="text-sm text-gray-600">Tổng booking đã tạo</p>
-                        <p className="text-2xl font-bold text-brand-teal">{booking.totalGeneratedBookings}</p>
+                        <p className="text-xs sm:text-sm text-gray-600">Tổng booking đã tạo</p>
+                        <p className="text-xl sm:text-2xl font-bold text-brand-teal">{booking.totalGeneratedBookings}</p>
                       </div>
                       {booking.upcomingBookings !== null && (
                         <div>
-                          <p className="text-sm text-gray-600">Booking sắp tới</p>
-                          <p className="text-2xl font-bold text-brand-navy">{booking.upcomingBookings}</p>
+                          <p className="text-xs sm:text-sm text-gray-600">Booking sắp tới</p>
+                          <p className="text-xl sm:text-2xl font-bold text-brand-navy">{booking.upcomingBookings}</p>
                         </div>
                       )}
                     </div>
                     {booking.note && (
-                      <div className="text-right">
-                        <p className="text-sm text-gray-600">Ghi chú</p>
-                        <p className="text-sm text-gray-900">{booking.note}</p>
+                      <div className="text-left sm:text-right">
+                        <p className="text-xs sm:text-sm text-gray-600">Ghi chú</p>
+                        <p className="text-xs sm:text-sm text-gray-900">{booking.note}</p>
                       </div>
                     )}
                   </div>

@@ -27,21 +27,21 @@ export const Pagination: React.FC<PaginationProps> = ({
   const displayCount = itemsOnCurrentPage ?? Math.min(pageSize, totalElements - currentPage * pageSize);
 
   return (
-    <div className="mt-6 flex flex-col items-center gap-4 sm:flex-row sm:justify-between">
-      <div className="text-sm text-slate-600">
+    <div className="mt-4 sm:mt-6 flex flex-col items-center gap-3 sm:gap-4 sm:flex-row sm:justify-between">
+      <div className="text-xs sm:text-sm text-slate-600 order-2 sm:order-1">
         Hiển thị {displayCount} trong tổng số {totalElements} kết quả
       </div>
       
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 sm:gap-2 order-1 sm:order-2">
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={isLoading || currentPage === 0}
-          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex items-center gap-1 sm:gap-2 rounded-full border border-slate-200 bg-white px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          ← Trước
+          ← <span className="hidden sm:inline">Trước</span>
         </button>
         
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-0.5 sm:gap-1">
           {Array.from({ length: totalPages }, (_, i) => i).map(pageNum => {
             // Show first page, last page, current page, and pages around current
             const showPage = 
@@ -55,7 +55,7 @@ export const Pagination: React.FC<PaginationProps> = ({
 
             if (showEllipsisBefore || showEllipsisAfter) {
               return (
-                <span key={pageNum} className="px-2 text-slate-400">
+                <span key={pageNum} className="px-1 sm:px-2 text-slate-400 text-xs sm:text-sm">
                   ...
                 </span>
               );
@@ -68,7 +68,7 @@ export const Pagination: React.FC<PaginationProps> = ({
                 key={pageNum}
                 onClick={() => onPageChange(pageNum)}
                 disabled={isLoading}
-                className={`h-9 w-9 rounded-full text-sm font-semibold transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 ${
+                className={`h-7 w-7 sm:h-9 sm:w-9 rounded-full text-xs sm:text-sm font-semibold transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 ${
                   pageNum === currentPage
                     ? 'bg-sky-600 text-white shadow-lg shadow-sky-200'
                     : 'bg-white text-slate-700 border border-slate-200 hover:border-slate-300'
@@ -83,9 +83,9 @@ export const Pagination: React.FC<PaginationProps> = ({
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={isLoading || currentPage >= totalPages - 1}
-          className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
+          className="inline-flex items-center gap-1 sm:gap-2 rounded-full border border-slate-200 bg-white px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-40"
         >
-          Sau →
+          <span className="hidden sm:inline">Sau</span> →
         </button>
       </div>
     </div>

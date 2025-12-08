@@ -363,29 +363,30 @@ const ProfilePage: React.FC = () => {
         description="Quản lý thông tin cá nhân và cài đặt tài khoản của bạn."
         actions={
         isEditing ? (
-          <div className="flex gap-3">
+          <div className="flex gap-2 sm:gap-3">
             <button
               onClick={handleCancel}
               disabled={isLoading}
-              className="inline-flex items-center gap-2 rounded-2xl border border-brand-outline/40 bg-white px-4 py-2 text-sm font-medium text-brand-text hover:bg-brand-background transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1 sm:gap-2 rounded-xl sm:rounded-2xl border border-brand-outline/40 bg-white px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-brand-text hover:bg-brand-background transition-colors disabled:opacity-50"
             >
-              <X className="h-4 w-4" />
-              Hủy
+              <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              <span className="hidden sm:inline">Hủy</span>
             </button>
             <button
               onClick={handleSubmit}
               disabled={isLoading}
-              className="inline-flex items-center gap-2 rounded-2xl bg-brand-teal px-4 py-2 text-sm font-medium text-white shadow-lg hover:bg-brand-teal/90 transition-colors disabled:opacity-50"
+              className="inline-flex items-center gap-1 sm:gap-2 rounded-xl sm:rounded-2xl bg-brand-teal px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white shadow-lg hover:bg-brand-teal/90 transition-colors disabled:opacity-50"
             >
               {isLoading ? (
                 <>
-                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                  Đang lưu...
+                  <div className="h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  <span className="hidden sm:inline">Đang lưu...</span>
                 </>
               ) : (
                 <>
-                  <Save className="h-4 w-4" />
-                  Lưu thay đổi
+                  <Save className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Lưu thay đổi</span>
+                  <span className="sm:hidden">Lưu</span>
                 </>
               )}
             </button>
@@ -393,10 +394,10 @@ const ProfilePage: React.FC = () => {
         ) : (
           <button
             onClick={handleEdit}
-            className="inline-flex items-center gap-2 rounded-2xl bg-brand-navy px-4 py-2 text-sm font-medium text-white shadow-lg hover:bg-brand-navyHover transition-colors"
+            className="inline-flex items-center gap-1 sm:gap-2 rounded-xl sm:rounded-2xl bg-brand-navy px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-medium text-white shadow-lg hover:bg-brand-navyHover transition-colors"
           >
-            <Edit3 className="h-4 w-4" />
-            Chỉnh sửa
+            <Edit3 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+            <span className="hidden sm:inline">Chỉnh sửa</span>
           </button>
         )
       }
@@ -440,7 +441,7 @@ const ProfilePage: React.FC = () => {
         </div>
       )}
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-3">
         {/* Profile Card */}
         <div className="lg:col-span-1">
           <SectionCard
@@ -453,11 +454,11 @@ const ProfilePage: React.FC = () => {
                   <img
                     src={previewUrl}
                     alt={formData.fullName}
-                    className="h-32 w-32 rounded-3xl object-cover border-4 border-white shadow-lg"
+                    className="h-24 w-24 sm:h-32 sm:w-32 rounded-2xl sm:rounded-3xl object-cover border-4 border-white shadow-lg"
                   />
                 ) : (
-                  <div className="h-32 w-32 rounded-3xl bg-gradient-to-br from-brand-teal to-brand-navy flex items-center justify-center border-4 border-white shadow-lg">
-                    <span className="text-white font-bold text-4xl">
+                  <div className="h-24 w-24 sm:h-32 sm:w-32 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-brand-teal to-brand-navy flex items-center justify-center border-4 border-white shadow-lg">
+                    <span className="text-white font-bold text-3xl sm:text-4xl">
                       {formData.fullName ? formData.fullName.charAt(0).toUpperCase() : 'U'}
                     </span>
                   </div>
@@ -476,7 +477,7 @@ const ProfilePage: React.FC = () => {
               </div>
               
               <div className="text-center">
-                <h3 className="text-xl font-semibold text-brand-navy">
+                <h3 className="text-lg sm:text-xl font-semibold text-brand-navy">
                   {formData.fullName || 'Chưa có tên'}
                 </h3>
                 <p className="text-brand-text/70">{formData.email}</p>
@@ -653,20 +654,20 @@ const ProfilePage: React.FC = () => {
     
     {showChangePasswordModal && ReactDOM.createPortal(
       <div 
-        className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+        className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm"
         onClick={(e) => {
           if (e.target === e.currentTarget) handleCancelPasswordChange();
         }}
       >
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-lg my-auto max-h-[90vh] flex flex-col overflow-hidden">
+          <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl w-full max-w-lg my-auto max-h-[90vh] flex flex-col overflow-hidden">
             {/* Modal Header */}
-            <div className="bg-gradient-to-r from-brand-teal to-brand-navy px-6 py-4 rounded-t-3xl flex-shrink-0">
+            <div className="bg-gradient-to-r from-brand-teal to-brand-navy px-4 sm:px-6 py-3 sm:py-4 rounded-t-2xl sm:rounded-t-3xl flex-shrink-0">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 bg-white/20 backdrop-blur-sm rounded-xl">
-                    <Lock className="h-5 w-5 text-white" />
+                <div className="flex items-center gap-2 sm:gap-2.5">
+                  <div className="p-1.5 sm:p-2 bg-white/20 backdrop-blur-sm rounded-lg sm:rounded-xl">
+                    <Lock className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                   </div>
-                  <h2 className="text-lg font-bold text-white">
+                  <h2 className="text-base sm:text-lg font-bold text-white">
                     {passwordTextData.title || 'Đổi mật khẩu'}
                   </h2>
                 </div>

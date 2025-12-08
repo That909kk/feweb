@@ -175,7 +175,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ role, isOpen, o
   const panelClasses = useMemo(
     () =>
       [
-        'fixed inset-y-0 right-0 z-50 w-full max-w-md transform bg-white shadow-elevation-md transition-transform duration-300 ease-out',
+        'fixed inset-y-0 right-0 z-50 w-full sm:max-w-md transform bg-white shadow-elevation-md transition-transform duration-300 ease-out',
         isOpen ? 'translate-x-0' : 'translate-x-full'
       ].join(' '),
     [isOpen]
@@ -193,10 +193,10 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ role, isOpen, o
       />
       <aside className={panelClasses} aria-hidden={!isOpen} aria-label="Trung tam thong bao">
         <div className="flex h-full flex-col">
-          <header className="flex items-center justify-between border-b border-brand-outline/40 px-5 py-4">
+          <header className="flex items-center justify-between border-b border-brand-outline/40 px-4 sm:px-5 py-3 sm:py-4">
             <div>
-              <h2 className="text-lg font-semibold text-brand-navy">Thong bao moi</h2>
-              <p className="text-xs text-brand-text/60">
+              <h2 className="text-base sm:text-lg font-semibold text-brand-navy">Thong bao moi</h2>
+              <p className="text-[10px] sm:text-xs text-brand-text/60">
                 Cap nhat theo thoi gian thuc tu he thong {roleLabels[role]}.
               </p>
             </div>
@@ -210,43 +210,43 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ role, isOpen, o
             </button>
           </header>
 
-          <div className="flex-1 overflow-y-auto px-5 py-4">
+          <div className="flex-1 overflow-y-auto px-3 sm:px-5 py-3 sm:py-4">
             {isLoading ? (
-              <div className="flex h-full flex-col items-center justify-center gap-3 text-sm text-brand-text/70">
+              <div className="flex h-full flex-col items-center justify-center gap-3 text-xs sm:text-sm text-brand-text/70">
                 <Loader2 className="h-5 w-5 animate-spin text-brand-teal" />
                 Dang tai du lieu tu API...
               </div>
             ) : error ? (
-              <div className="flex flex-col items-center justify-center rounded-3xl border border-status-danger/20 bg-status-danger/5 px-4 py-8 text-center text-sm text-status-danger">
-                <AlertCircle className="mb-2 h-6 w-6" />
+              <div className="flex flex-col items-center justify-center rounded-3xl border border-status-danger/20 bg-status-danger/5 px-3 sm:px-4 py-6 sm:py-8 text-center text-xs sm:text-sm text-status-danger">
+                <AlertCircle className="mb-2 h-5 w-5 sm:h-6 sm:w-6" />
                 {error}
               </div>
             ) : items.length === 0 ? (
-              <div className="flex flex-col items-center justify-center rounded-3xl border border-brand-outline/30 bg-brand-background/60 px-4 py-10 text-center text-sm text-brand-text/60">
-                <Sparkles className="mb-3 h-6 w-6 text-brand-teal" />
+              <div className="flex flex-col items-center justify-center rounded-3xl border border-brand-outline/30 bg-brand-background/60 px-3 sm:px-4 py-8 sm:py-10 text-center text-xs sm:text-sm text-brand-text/60">
+                <Sparkles className="mb-3 h-5 w-5 sm:h-6 sm:w-6 text-brand-teal" />
                 Khong co thong bao moi.
               </div>
             ) : (
-              <ul className="space-y-3">
+              <ul className="space-y-2 sm:space-y-3">
                 {items.map(item => {
                   const palette = item.status ? statusPalette[item.status] ?? null : null;
                   return (
                     <li
                       key={item.id}
-                      className="rounded-3xl border border-brand-outline/40 bg-white/90 p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-elevation-sm"
+                      className="rounded-2xl sm:rounded-3xl border border-brand-outline/40 bg-white/90 p-3 sm:p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-elevation-sm"
                     >
-                      <div className="flex items-start gap-3">
-                        <span className="mt-1 flex h-9 w-9 items-center justify-center rounded-2xl bg-brand-teal/10 text-brand-teal">
+                      <div className="flex items-start gap-2 sm:gap-3">
+                        <span className="mt-0.5 sm:mt-1 flex h-8 w-8 sm:h-9 sm:w-9 items-center justify-center rounded-xl sm:rounded-2xl bg-brand-teal/10 text-brand-teal">
                           {palette ? (
                             palette.label.startsWith('Hoan') ? (
-                              <CheckCircle2 className="h-5 w-5" />
+                              <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5" />
                             ) : (
-                              <Shield className="h-5 w-5" />
+                              <Shield className="h-4 w-4 sm:h-5 sm:w-5" />
                             )
                           ) : role === 'CUSTOMER' ? (
-                            <CalendarClock className="h-5 w-5" />
+                            <CalendarClock className="h-4 w-4 sm:h-5 sm:w-5" />
                           ) : (
-                            <MapPin className="h-5 w-5" />
+                            <MapPin className="h-4 w-4 sm:h-5 sm:w-5" />
                           )}
                         </span>
                         <div className="flex-1 space-y-1">
@@ -271,7 +271,7 @@ const NotificationCenter: React.FC<NotificationCenterProps> = ({ role, isOpen, o
             )}
           </div>
 
-          <footer className="border-t border-brand-outline/40 px-5 py-3 text-[11px] text-brand-text/60">
+          <footer className="border-t border-brand-outline/40 px-3 sm:px-5 py-2.5 sm:py-3 text-[10px] sm:text-[11px] text-brand-text/60">
             Du lieu duoc dong bo truc tiep tu cac API domain: Booking, Assignment, Auth.
           </footer>
         </div>

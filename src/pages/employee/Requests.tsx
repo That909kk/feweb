@@ -31,7 +31,7 @@ const EmployeeRequests: React.FC = () => {
       </SectionCard>
 
       <SectionCard title="Sắp ra mắt" description="Một số điểm nổi bật sẽ có trong phiên bản chính thức.">
-        <div className="grid gap-4 md:grid-cols-3">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3">
           {[
             {
               icon: Radar,

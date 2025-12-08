@@ -27,7 +27,7 @@ const ChatPage: React.FC = () => {
       title="Tin nhắn"
       description="Trao đổi trực tiếp với nhân viên về các dịch vụ đã đặt"
     >
-      <div className="h-[calc(100vh-200px)]">
+      <div className="h-[calc(100vh-180px)] sm:h-[calc(100vh-200px)]">
         {user?.customerId && user?.accountId ? (
           <ChatContainer 
             senderId={user.customerId} 

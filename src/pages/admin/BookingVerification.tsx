@@ -195,7 +195,7 @@ const BookingVerification: React.FC = () => {
       description="Xác minh các bài đăng tìm nhân viên từ khách hàng"
     >
       {/* Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
         <MetricCard
           icon={AlertCircle}
           label="Chờ duyệt"
@@ -210,15 +210,15 @@ const BookingVerification: React.FC = () => {
         description="Tìm kiếm booking theo mã đơn hàng"
       >
         {/* Search Box */}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 sm:h-5 w-4 sm:w-5 text-slate-400" />
             <input
               type="text"
               value={searchCode}
               onChange={(e) => setSearchCode(e.target.value)}
               placeholder="Tìm kiếm theo mã đơn hàng..."
-              className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              className="w-full pl-9 sm:pl-10 pr-4 py-2 sm:py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
             />
             {searchCode && (
               <button
@@ -290,14 +290,14 @@ const BookingVerification: React.FC = () => {
                     {paginatedBookings.map((booking) => (
               <div
                 key={booking.bookingId}
-                className="bg-white rounded-2xl border border-slate-200 p-6 hover:shadow-lg transition-all"
+                className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-6 hover:shadow-lg transition-all"
               >
-                <div className="flex items-start gap-4">
+                <div className="flex flex-col sm:flex-row sm:items-start gap-3 sm:gap-4">
                   {booking.imageUrl && (
                     <img
                       src={booking.imageUrl}
                       alt="Booking"
-                      className="w-24 h-24 rounded-xl object-cover"
+                      className="w-full sm:w-24 h-40 sm:h-24 rounded-xl object-cover flex-shrink-0"
                     />
                   )}
 
@@ -341,7 +341,7 @@ const BookingVerification: React.FC = () => {
                       </p>
                     )}
 
-                    <div className="flex items-center justify-between mt-4">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 mt-4">
                       <div className="text-lg font-bold text-blue-600">
                         {booking.formattedTotalAmount}
                       </div>

@@ -916,14 +916,14 @@ const OrdersPage: React.FC = () => {
             loadBookings(0);
           }}
           disabled={isLoading}
-          className="inline-flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-semibold text-sky-600 shadow-lg shadow-sky-100 transition hover:-translate-y-0.5 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
+          className="inline-flex items-center gap-1.5 sm:gap-2 rounded-xl sm:rounded-full bg-white px-3 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-sky-600 shadow-lg shadow-sky-100 transition hover:-translate-y-0.5 hover:bg-sky-50 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          <RefreshCcw className={isLoading ? 'h-4 w-4 animate-spin' : 'h-4 w-4'} />
-          Làm mới
+          <RefreshCcw className={isLoading ? 'h-3.5 w-3.5 sm:h-4 sm:w-4 animate-spin' : 'h-3.5 w-3.5 sm:h-4 sm:w-4'} />
+          <span className="hidden sm:inline">Làm mới</span>
         </button>
       }
     >
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 lg:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
           icon={CalendarClock}
           label="Tổng đơn đã đặt"
@@ -953,47 +953,49 @@ const OrdersPage: React.FC = () => {
         headerSpacing="compact"
       >
         {/* Date Filter */}
-        <div className="mb-6 rounded-2xl border border-slate-200 bg-slate-50/50 p-4">
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-            <div className="flex-1">
-              <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-                Từ ngày
-              </label>
-              <input
-                type="date"
-                value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="mb-1.5 block text-xs font-semibold text-slate-700">
-                Đến ngày
-              </label>
-              <input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
-              />
+        <div className="mb-4 sm:mb-6 rounded-xl sm:rounded-2xl border border-slate-200 bg-slate-50/50 p-3 sm:p-4">
+          <div className="flex flex-col gap-2 sm:gap-3 sm:flex-row sm:items-end">
+            <div className="flex-1 grid grid-cols-2 gap-2 sm:contents">
+              <div className="flex-1">
+                <label className="mb-1 sm:mb-1.5 block text-[10px] sm:text-xs font-semibold text-slate-700">
+                  Từ ngày
+                </label>
+                <input
+                  type="date"
+                  value={fromDate}
+                  onChange={(e) => setFromDate(e.target.value)}
+                  className="w-full rounded-lg sm:rounded-xl border border-slate-200 bg-white px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-slate-900 transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                />
+              </div>
+              <div className="flex-1">
+                <label className="mb-1 sm:mb-1.5 block text-[10px] sm:text-xs font-semibold text-slate-700">
+                  Đến ngày
+                </label>
+                <input
+                  type="date"
+                  value={toDate}
+                  onChange={(e) => setToDate(e.target.value)}
+                  className="w-full rounded-lg sm:rounded-xl border border-slate-200 bg-white px-2 sm:px-3 py-1.5 sm:py-2 text-xs sm:text-sm text-slate-900 transition focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-500/20"
+                />
+              </div>
             </div>
             <div className="flex gap-2">
               <button
                 onClick={handleApplyDateFilter}
                 disabled={isLoading || (!fromDate && !toDate)}
-                className="inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-sky-200 transition hover:-translate-y-0.5 hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
+                className="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl bg-sky-600 px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-white shadow-lg shadow-sky-200 transition hover:-translate-y-0.5 hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
-                <CalendarClock className="h-4 w-4" />
+                <CalendarClock className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Lọc
               </button>
               {(fromDate || toDate) && (
                 <button
                   onClick={handleClearDateFilter}
                   disabled={isLoading}
-                  className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
+                  className="inline-flex items-center justify-center gap-1.5 sm:gap-2 rounded-lg sm:rounded-xl border border-slate-200 bg-white px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm font-semibold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <X className="h-4 w-4" />
-                  Xóa
+                  <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <span className="hidden sm:inline">Xóa</span>
                 </button>
               )}
             </div>
@@ -1012,7 +1014,7 @@ const OrdersPage: React.FC = () => {
         </div>
 
         {/* Status Filter */}
-        <div className="mb-6 flex w-full gap-2 overflow-x-auto pb-1">
+        <div className="mb-4 sm:mb-6 flex w-full gap-2 overflow-x-auto pb-1 scrollbar-thin">
           {filterOrder.map(filterKey => {
             const palette = statusConfig[filterKey];
             const isActive = selectedFilter === filterKey;
@@ -1024,21 +1026,21 @@ const OrdersPage: React.FC = () => {
             // Show "trang này" only when we have pagination and not showing all
             const countLabel = filterKey === 'ALL' || totalPages <= 1
               ? `Có ${count} đơn`
-              : `${count} đơn (trang này)`;
+              : `${count} đơn`;
 
             return (
               <button
                 key={filterKey}
                 onClick={() => setSelectedFilter(filterKey)}
                 className={cx(
-                  'flex min-w-[150px] flex-col rounded-2xl border px-4 py-3 text-left transition hover:-translate-y-0.5',
+                  'flex min-w-[100px] sm:min-w-[150px] flex-col rounded-xl sm:rounded-2xl border px-3 sm:px-4 py-2 sm:py-3 text-left transition hover:-translate-y-0.5 flex-shrink-0',
                   isActive
                     ? 'border-sky-200 bg-sky-50 text-sky-700 shadow-sm'
                     : 'border-slate-200 bg-white text-slate-600'
                 )}
               >
-                <span className="text-sm font-semibold">{palette.label}</span>
-                <span className="mt-1 text-xs text-slate-400">{countLabel}</span>
+                <span className="text-xs sm:text-sm font-semibold">{palette.label}</span>
+                <span className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs text-slate-400">{countLabel}</span>
               </button>
             );
           })}
@@ -1077,7 +1079,7 @@ const OrdersPage: React.FC = () => {
             </Link>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {filteredBookings.map(booking => {
               const statusKey = normalizeStatus(booking.status);
               const badgePalette = statusConfig[statusKey] || statusConfig.ALL;
@@ -1091,7 +1093,7 @@ const OrdersPage: React.FC = () => {
               return (
                 <div
                   key={booking.bookingId}
-                  className="flex flex-col gap-4 rounded-3xl border border-slate-100 bg-white/90 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                  className="flex flex-col gap-3 sm:gap-4 rounded-2xl sm:rounded-3xl border border-slate-100 bg-white/90 p-4 sm:p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                 >
                   {/* Hiển thị title và image cho booking post */}
                   {isPost && (

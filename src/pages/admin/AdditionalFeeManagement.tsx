@@ -316,15 +316,15 @@ const AdminAdditionalFeeManagement: React.FC = () => {
       description="Quản lý danh sách phụ phí áp dụng cho booking"
     >
       {/* Actions Bar */}
-      <div className="bg-white rounded-2xl shadow-sm border border-brand-outline/40 p-4 mb-6 flex items-center justify-between gap-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-brand-outline/40 p-3 sm:p-4 mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-text/40" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-brand-text/40" />
           <input
             type="text"
             placeholder="Tìm kiếm phụ phí..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-brand-outline/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-brand-teal"
+            className="w-full pl-9 sm:pl-10 pr-4 py-2 text-sm sm:text-base border border-brand-outline/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-brand-teal"
           />
         </div>
         <button
@@ -342,15 +342,16 @@ const AdminAdditionalFeeManagement: React.FC = () => {
             });
             setIsModalOpen(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-brand-teal text-white rounded-lg hover:bg-brand-teal/90 transition-colors shadow-sm"
+          className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-brand-teal text-white rounded-lg hover:bg-brand-teal/90 transition-colors shadow-sm text-sm sm:text-base flex-shrink-0"
         >
-          <Plus className="w-5 h-5" />
-          Thêm phụ phí
+          <Plus className="w-4 sm:w-5 h-4 sm:h-5" />
+          <span className="hidden sm:inline">Thêm phụ phí</span>
+          <span className="sm:hidden">Thêm</span>
         </button>
       </div>
 
       {/* Info Banner */}
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6 flex items-start gap-3">
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 sm:p-4 mb-4 sm:mb-6 flex items-start gap-2 sm:gap-3">
         <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
         <div className="text-sm text-blue-800">
           <p className="font-medium mb-1">Thông tin về phụ phí:</p>
@@ -374,7 +375,8 @@ const AdminAdditionalFeeManagement: React.FC = () => {
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-brand-outline/40 shadow-sm overflow-hidden">
-          <table className="w-full">
+          <div className="overflow-x-auto">
+          <table className="w-full min-w-[700px]">
             <thead className="bg-brand-background/50 border-b border-brand-outline/40">
               <tr>
                 <th className="text-left py-3 px-4 font-semibold text-brand-navy">Tên phụ phí</th>
@@ -494,6 +496,7 @@ const AdminAdditionalFeeManagement: React.FC = () => {
               ))}
             </tbody>
           </table>
+          </div>
 
           {/* Pagination */}
           {totalPages > 1 && (

@@ -202,33 +202,33 @@ const CustomerDashboard: React.FC = () => {
       title={`Chào ${firstName}`}
       description="Theo dõi lịch dọn dẹp, quản lý đơn đã đặt và khám phá thêm dịch vụ phù hợp với gia đình bạn."
       actions={
-        <div className="flex flex-wrap items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3 w-full sm:w-auto">
           {/* Voice Booking AI Button - Featured */}
           <Link
             to="/customer/voice-booking"
-            className="group relative inline-flex items-center gap-2.5 rounded-full bg-gradient-to-r from-brand-teal via-sky-500 to-violet-500 px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-violet-200 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-violet-300/50 active:scale-95"
+            className="group relative inline-flex items-center justify-center gap-2 sm:gap-2.5 rounded-xl sm:rounded-full bg-gradient-to-r from-brand-teal via-sky-500 to-violet-500 px-4 sm:px-6 py-2.5 text-xs sm:text-sm font-bold text-white shadow-lg shadow-violet-200 transition-all duration-300 hover:-translate-y-0.5 hover:shadow-xl hover:shadow-violet-300/50 active:scale-95"
           >
-            <div className="relative flex h-5 w-5 items-center justify-center">
+            <div className="relative flex h-4 w-4 sm:h-5 sm:w-5 items-center justify-center">
               {/* Pulsing effect */}
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-white/60 opacity-75"></span>
-              <Mic className="relative h-4 w-4 group-hover:scale-110 transition-transform" />
+              <Mic className="relative h-3.5 w-3.5 sm:h-4 sm:w-4 group-hover:scale-110 transition-transform" />
             </div>
             <span className="whitespace-nowrap">Đặt lịch bằng giọng nói</span>
-            <Wand2 className="h-4 w-4 group-hover:rotate-12 transition-transform" />
+            <Wand2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 group-hover:rotate-12 transition-transform" />
           </Link>
 
           {/* Regular Booking Button */}
           <Link
             to="/customer/booking"
-            className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-brand-teal shadow-lg shadow-sky-100 transition hover:-translate-y-0.5 hover:bg-sky-50"
+            className="inline-flex items-center justify-center gap-2 rounded-xl sm:rounded-full bg-white px-4 sm:px-5 py-2.5 sm:py-2 text-xs sm:text-sm font-semibold text-brand-teal shadow-lg shadow-sky-100 transition hover:-translate-y-0.5 hover:bg-sky-50"
           >
-            <CalendarHeart className="h-4 w-4" />
+            <CalendarHeart className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             Đặt lịch thường
           </Link>
         </div>
       }
     >
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 lg:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
           icon={CalendarClock}
           label="Tổng đơn đã đặt"
@@ -252,7 +252,7 @@ const CustomerDashboard: React.FC = () => {
         />
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
         <SectionCard
           title="Đơn sắp diễn ra"
           description="Theo dõi các dịch vụ sẽ diễn ra trong vài ngày tới."
@@ -279,35 +279,35 @@ const CustomerDashboard: React.FC = () => {
                 return (
                   <div
                     key={booking.bookingId}
-                    className="flex flex-col justify-between gap-4 rounded-2xl border border-brand-outline/40 bg-gradient-to-r from-white via-white to-sky-50/60 p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md sm:flex-row sm:items-center sm:gap-6"
+                    className="flex flex-col gap-3 sm:gap-4 rounded-xl sm:rounded-2xl border border-brand-outline/40 bg-gradient-to-r from-white via-white to-sky-50/60 p-4 sm:p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                   >
                     <div className="flex-1 min-w-0">
-                      <h3 className="text-lg font-semibold text-brand-navy">{serviceName}</h3>
-                      <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-brand-text/70">
+                      <h3 className="text-base sm:text-lg font-semibold text-brand-navy">{serviceName}</h3>
+                      <div className="mt-2 flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-brand-text/70">
                         {startTime && (
                           <>
-                            <span className="inline-flex items-center gap-2">
-                              <CalendarClock className="h-4 w-4 text-sky-500" />
+                            <span className="inline-flex items-center gap-1.5 sm:gap-2">
+                              <CalendarClock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-sky-500" />
                               {startTime.toLocaleDateString('vi-VN', { weekday: 'short', day: '2-digit', month: '2-digit' })}
                             </span>
-                            <span className="inline-flex items-center gap-2">
-                              <Clock className="h-4 w-4 text-sky-500" />
+                            <span className="inline-flex items-center gap-1.5 sm:gap-2">
+                              <Clock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-sky-500" />
                               {startTime.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
                             </span>
                           </>
                         )}
                         {booking.address?.fullAddress && (
-                          <span className="inline-flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-sky-500" />
-                            {booking.address.fullAddress}
+                          <span className="inline-flex items-center gap-1.5 sm:gap-2 break-all">
+                            <MapPin className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-sky-500 flex-shrink-0" />
+                            <span className="line-clamp-1">{booking.address.fullAddress}</span>
                           </span>
                         )}
                       </div>
                     </div>
-                    <div className="flex flex-col items-start gap-2 sm:items-end sm:flex-shrink-0">
+                    <div className="flex flex-row sm:flex-col items-center justify-between sm:items-end gap-2 mt-2 sm:mt-0 sm:flex-shrink-0">
                       {renderStatusBadge(booking.status)}
                       {booking.formattedTotalAmount && (
-                        <span className="text-sm font-semibold text-slate-700 whitespace-nowrap">
+                        <span className="text-xs sm:text-sm font-semibold text-slate-700 whitespace-nowrap">
                           {booking.formattedTotalAmount}
                         </span>
                       )}

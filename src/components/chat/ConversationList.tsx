@@ -191,18 +191,18 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                 : 'hover:bg-gray-50 border-l-4 border-transparent'
             }`}
           >
-            <div className="flex items-start space-x-3">
+            <div className="flex items-start space-x-2 sm:space-x-3">
               {/* Avatar */}
               <div className="flex-shrink-0 relative">
                 {otherPersonAvatar ? (
                   <img
                     src={otherPersonAvatar}
                     alt={otherPersonName}
-                    className="w-12 h-12 rounded-full object-cover"
+                    className="w-10 h-10 sm:w-12 sm:h-12 rounded-full object-cover"
                   />
                 ) : (
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                    <span className="text-white font-semibold text-lg">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                    <span className="text-white font-semibold text-base sm:text-lg">
                       {otherPersonName?.charAt(0).toUpperCase()}
                     </span>
                   </div>

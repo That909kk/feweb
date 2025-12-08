@@ -135,7 +135,7 @@ const PermissionManagement: React.FC = () => {
       description="Cấu hình quyền truy cập cho từng vai trò trong hệ thống"
     >
       {/* Metrics */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
           icon={Shield}
           label="Tổng vai trò"
@@ -174,7 +174,7 @@ const PermissionManagement: React.FC = () => {
         </div>
       )}
 
-        <div className="grid gap-6 lg:grid-cols-12">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 lg:grid-cols-12">
           {/* Role Selection */}
           <div className="lg:col-span-3">
             <SectionCard

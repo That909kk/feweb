@@ -355,16 +355,16 @@ const AuthPage: React.FC = () => {
     console.log(`🔍 [DEBUG] user?.roles:`, user?.roles);
     
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-green-50 to-blue-50 flex items-center justify-center p-4">
-        <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-elevation-sm border border-brand-outline/40 p-8 w-full max-w-md">
-          <div className="text-center mb-8">
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-brand-teal/10 mb-4">
-              <svg className="w-8 h-8 text-brand-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-green-50 to-blue-50 flex items-center justify-center p-3 sm:p-4">
+        <div className="bg-white/95 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-elevation-sm border border-brand-outline/40 p-5 sm:p-8 w-full max-w-md">
+          <div className="text-center mb-6 sm:mb-8">
+            <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-brand-teal/10 mb-3 sm:mb-4">
+              <svg className="w-7 h-7 sm:w-8 sm:h-8 text-brand-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
               </svg>
             </div>
-            <h2 className="text-2xl font-bold text-brand-navy mb-2">Chọn vai trò</h2>
-            <p className="text-brand-text/70">Bạn có nhiều vai trò, hãy chọn vai trò để tiếp tục</p>
+            <h2 className="text-xl sm:text-2xl font-bold text-brand-navy mb-2">Chọn vai trò</h2>
+            <p className="text-sm sm:text-base text-brand-text/70">Bạn có nhiều vai trò, hãy chọn vai trò để tiếp tục</p>
           </div>
 
           <div className="space-y-3">
@@ -374,16 +374,16 @@ const AuthPage: React.FC = () => {
                 <button
                   key={role}
                   onClick={() => handleRoleSelection(role)}
-                  className="w-full p-4 border-2 border-brand-outline/40 rounded-2xl hover:border-brand-teal hover:bg-brand-teal/5 transition-all duration-300 text-left group"
+                  className="w-full p-3 sm:p-4 border-2 border-brand-outline/40 rounded-xl sm:rounded-2xl hover:border-brand-teal hover:bg-brand-teal/5 transition-all duration-300 text-left group"
                 >
                   <div className="flex items-center justify-between">
                     <div>
-                      <h3 className="font-semibold text-brand-navy group-hover:text-brand-teal transition-colors">
+                      <h3 className="text-sm sm:text-base font-semibold text-brand-navy group-hover:text-brand-teal transition-colors">
                         {role === 'CUSTOMER' && 'Khách hàng'}
                         {role === 'EMPLOYEE' && 'Nhân viên giúp việc'}
                         {role === 'ADMIN' && 'Quản trị viên'}
                       </h3>
-                      <p className="text-sm text-brand-text/60 mt-1">
+                      <p className="text-xs sm:text-sm text-brand-text/60 mt-0.5 sm:mt-1">
                         {role === 'CUSTOMER' && 'Đặt dịch vụ giúp việc'}
                         {role === 'EMPLOYEE' && 'Nhận việc và cung cấp dịch vụ'}
                         {role === 'ADMIN' && 'Quản lý hệ thống'}
@@ -438,20 +438,20 @@ const AuthPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-green-50 to-blue-50 flex items-center justify-center p-4">
-      <div className="bg-white/95 backdrop-blur-sm rounded-3xl shadow-elevation-sm border border-brand-outline/40 p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <Link to="/" className="inline-block mb-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-green-50 to-blue-50 flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white/95 backdrop-blur-sm rounded-2xl sm:rounded-3xl shadow-elevation-sm border border-brand-outline/40 p-5 sm:p-8 w-full max-w-md">
+        <div className="text-center mb-6 sm:mb-8">
+          <Link to="/" className="inline-block mb-3 sm:mb-4">
             <div className="flex items-center justify-center gap-2">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-brand-teal to-brand-navy flex items-center justify-center">
-                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-brand-teal to-brand-navy flex items-center justify-center">
+                <svg className="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                 </svg>
               </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-brand-teal to-brand-navy bg-clip-text text-transparent">Home Mate</h1>
+              <h1 className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-brand-teal to-brand-navy bg-clip-text text-transparent">Home Mate</h1>
             </div>
           </Link>
-          <h2 className="text-2xl font-bold text-brand-navy mb-2">
+          <h2 className="text-xl sm:text-2xl font-bold text-brand-navy mb-1 sm:mb-2">
             {mode === 'login' ? 'Đăng nhập' : 'Đăng ký'}
           </h2>
           <p className="text-brand-text/70">
@@ -656,8 +656,8 @@ const AuthPage: React.FC = () => {
 
       {/* Forgot Password Modal */}
       {showForgotPassword && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 relative animate-in fade-in zoom-in duration-200">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-3 sm:p-4 overflow-y-auto">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-4 sm:p-6 relative animate-in fade-in zoom-in duration-200 my-auto">
             {/* Close Button */}
             <button
               onClick={handleCloseForgotPassword}

@@ -196,38 +196,40 @@ const BookingSuccessPage: React.FC = () => {
         : `Đơn hàng ${bookingData.bookingCode || firstBooking?.bookingCode || 'N/A'} đã được tạo thành công. ${isCashPayment ? 'Vui lòng thanh toán trực tiếp cho nhân viên sau khi hoàn thành công việc.' : 'Chúng tôi sẽ liên hệ sớm nhất.'}`
       }
       actions={
-        <div className="flex gap-3">
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
           <Link
             to="/customer/orders"
-            className="inline-flex items-center gap-2 rounded-full border border-brand-outline/40 bg-white px-5 py-2 text-sm font-semibold text-brand-navy shadow-sm transition hover:-translate-y-0.5 hover:border-brand-teal/40"
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-brand-outline/40 bg-white px-4 sm:px-5 py-2 text-sm font-semibold text-brand-navy shadow-sm transition hover:-translate-y-0.5 hover:border-brand-teal/40"
           >
             <Eye className="h-4 w-4" />
-            Xem đơn hàng
+            <span className="hidden sm:inline">Xem đơn hàng</span>
+            <span className="sm:hidden">Xem</span>
           </Link>
           <Link
             to="/customer/booking"
-            className="inline-flex items-center gap-2 rounded-full bg-brand-teal px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-brand-teal/20 transition hover:-translate-y-0.5 hover:bg-brand-tealHover"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-brand-teal px-4 sm:px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-brand-teal/20 transition hover:-translate-y-0.5 hover:bg-brand-tealHover"
           >
             <Calendar className="h-4 w-4" />
-            Đặt lịch mới
+            <span className="hidden sm:inline">Đặt lịch mới</span>
+            <span className="sm:hidden">Đặt mới</span>
           </Link>
         </div>
       }
     >
       {/* Success Banner */}
-      <div className="mb-8 rounded-3xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 p-8 text-white shadow-xl">
+      <div className="mb-6 sm:mb-8 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-emerald-500 via-emerald-600 to-teal-600 p-5 sm:p-8 text-white shadow-xl">
         <div className="flex flex-col items-center text-center">
-          <div className="mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
-            <CheckCircle className="h-10 w-10 text-white drop-shadow-sm" />
+          <div className="mb-3 sm:mb-4 flex h-16 w-16 sm:h-20 sm:w-20 items-center justify-center rounded-full bg-white/20 backdrop-blur-sm">
+            <CheckCircle className="h-8 w-8 sm:h-10 sm:w-10 text-white drop-shadow-sm" />
           </div>
-          <h1 className="mb-3 text-3xl font-bold">
+          <h1 className="mb-2 sm:mb-3 text-xl sm:text-3xl font-bold">
             {isPaid ? 'Thanh toán thành công!' : 'Đặt lịch thành công!'}
           </h1>
-          <p className="mb-4 text-lg text-emerald-50">
+          <p className="mb-3 sm:mb-4 text-sm sm:text-lg text-emerald-50">
             {isRecurring ? (
               <>
                 <span className="font-mono font-semibold text-white">{bookingData.title || 'Lịch định kỳ'}</span> đã được tạo<br/>
-                <span className="text-sm">Tổng {bookingData.totalBookingsToBeCreated || 0} booking sẽ được tạo, {bookingData.totalGeneratedBookings || 0} booking đầu tiên đã sẵn sàng</span>
+                <span className="text-xs sm:text-sm">Tổng {bookingData.totalBookingsToBeCreated || 0} booking sẽ được tạo, {bookingData.totalGeneratedBookings || 0} booking đầu tiên đã sẵn sàng</span>
               </>
             ) : isMultiple ? (
               <>Đã tạo <span className="font-mono font-semibold text-white">{bookingData.totalBookingsCreated || 0} đơn hàng</span> thành công</>
@@ -235,11 +237,11 @@ const BookingSuccessPage: React.FC = () => {
               <>Đơn hàng <span className="font-mono font-semibold text-white">{bookingData.bookingCode || firstBooking?.bookingCode || 'N/A'}</span> đã được tạo</>
             )}
           </p>
-          <div className="rounded-2xl bg-white/15 px-6 py-3 backdrop-blur-sm">
-            <div className="text-sm text-emerald-50">
+          <div className="rounded-xl sm:rounded-2xl bg-white/15 px-4 sm:px-6 py-2 sm:py-3 backdrop-blur-sm">
+            <div className="text-xs sm:text-sm text-emerald-50">
               {isCashPayment ? 'Tổng tiền cần thanh toán' : (isPaid ? 'Đã thanh toán' : 'Tổng thanh toán')}
             </div>
-            <div className="text-2xl font-bold">{displayAmount}</div>
+            <div className="text-xl sm:text-2xl font-bold">{displayAmount}</div>
             {!isPaid && isCashPayment && (
               <div className="mt-2 text-sm text-yellow-200 font-medium">
                 💵 Thanh toán trực tiếp cho nhân viên sau khi hoàn thành
@@ -259,7 +261,7 @@ const BookingSuccessPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {/* Quick Info Cards */}
         <MetricCard
           icon={Clock}
@@ -352,13 +354,13 @@ const BookingSuccessPage: React.FC = () => {
                   <Sparkles className="h-6 w-6 text-brand-teal" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="mb-2 text-xl font-semibold text-brand-navy">{serviceDetail.service.name}</h3>
-                  <p className="mb-4 text-brand-text/70">{serviceDetail.service.description}</p>
+                  <h3 className="mb-2 text-lg sm:text-xl font-semibold text-brand-navy">{serviceDetail.service.name}</h3>
+                  <p className="mb-3 sm:mb-4 text-sm sm:text-base text-brand-text/70">{serviceDetail.service.description}</p>
                   
-                  <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                    <div className="rounded-xl bg-white p-4">
-                      <div className="text-sm font-medium text-brand-text/70">Số lượng</div>
-                      <div className="text-lg font-semibold text-brand-navy">
+                  <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-3">
+                    <div className="rounded-xl bg-white p-3 sm:p-4">
+                      <div className="text-xs sm:text-sm font-medium text-brand-text/70">Số lượng</div>
+                      <div className="text-base sm:text-lg font-semibold text-brand-navy">
                         {serviceDetail.quantity} {serviceDetail.service.unit}
                       </div>
                     </div>
@@ -882,7 +884,7 @@ const BookingSuccessPage: React.FC = () => {
         description="Các hành động hữu ích cho đơn hàng của bạn."
         className="mt-6"
       >
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        <div className="grid grid-cols-1 gap-3 sm:gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Link
             to={`/customer/orders/${firstBooking.bookingId}`}
             className="group flex items-center gap-4 rounded-2xl border border-brand-outline/20 bg-gradient-to-r from-white to-blue-50/50 p-4 transition hover:-translate-y-1 hover:border-blue-200 hover:shadow-lg"

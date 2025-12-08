@@ -179,30 +179,30 @@ const VNPayResultPage: React.FC = () => {
 
   return (
     <DashboardLayout role={user?.role || 'CUSTOMER'} title="Kết quả thanh toán">
-      <div className="max-w-2xl mx-auto">
-        <div className="bg-white rounded-lg shadow-lg p-8">
+      <div className="max-w-2xl mx-auto px-4">
+        <div className="bg-white rounded-lg shadow-lg p-4 sm:p-8">
           <div className="text-center">
             {/* Icon */}
-            <div className="mb-6 flex justify-center">
+            <div className="mb-4 sm:mb-6 flex justify-center">
               {status === 'loading' && (
-                <div className="bg-blue-100 rounded-full p-4">
-                  <Loader2 className="w-16 h-16 text-blue-600 animate-spin" />
+                <div className="bg-blue-100 rounded-full p-3 sm:p-4">
+                  <Loader2 className="w-12 h-12 sm:w-16 sm:h-16 text-blue-600 animate-spin" />
                 </div>
               )}
               {status === 'success' && (
-                <div className="bg-green-100 rounded-full p-4">
-                  <CheckCircle className="w-16 h-16 text-green-600" />
+                <div className="bg-green-100 rounded-full p-3 sm:p-4">
+                  <CheckCircle className="w-12 h-12 sm:w-16 sm:h-16 text-green-600" />
                 </div>
               )}
               {status === 'failed' && (
-                <div className="bg-red-100 rounded-full p-4">
-                  <XCircle className="w-16 h-16 text-red-600" />
+                <div className="bg-red-100 rounded-full p-3 sm:p-4">
+                  <XCircle className="w-12 h-12 sm:w-16 sm:h-16 text-red-600" />
                 </div>
               )}
             </div>
 
             {/* Message */}
-            <h2 className={`text-2xl font-bold mb-2 ${
+            <h2 className={`text-xl sm:text-2xl font-bold mb-2 ${
               status === 'success' ? 'text-green-600' : 
               status === 'failed' ? 'text-red-600' : 
               'text-gray-800'
@@ -212,23 +212,23 @@ const VNPayResultPage: React.FC = () => {
 
             {/* Success description */}
             {status === 'success' && (
-              <p className="text-gray-600 mb-6">
+              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
                 Đang chuyển đến trang xác nhận đặt lịch...
               </p>
             )}
 
             {/* Failed description */}
             {status === 'failed' && (
-              <p className="text-gray-600 mb-6">
+              <p className="text-sm sm:text-base text-gray-600 mb-4 sm:mb-6">
                 Đang chuyển về trang đặt lịch để thử lại...
               </p>
             )}
 
             {/* Transaction info */}
             {transactionInfo && status === 'success' && (
-              <div className="mt-6 bg-gray-50 rounded-lg p-6 text-left">
-                <h3 className="font-semibold text-gray-800 mb-4">Thông tin giao dịch</h3>
-                <div className="space-y-3">
+              <div className="mt-4 sm:mt-6 bg-gray-50 rounded-lg p-4 sm:p-6 text-left">
+                <h3 className="font-semibold text-gray-800 mb-3 sm:mb-4 text-sm sm:text-base">Thông tin giao dịch</h3>
+                <div className="space-y-2 sm:space-y-3 text-sm sm:text-base">
                   {transactionInfo.transactionNo && (
                     <div className="flex justify-between">
                       <span className="text-gray-600">Mã giao dịch:</span>

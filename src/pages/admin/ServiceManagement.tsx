@@ -151,15 +151,15 @@ const AdminServiceManagement: React.FC = () => {
   return (
     <DashboardLayout role="ADMIN" title="Quản lý Dịch vụ" description="Quản lý danh sách dịch vụ, tùy chọn và quy tắc tính giá">
       {/* Actions Bar */}
-      <div className="bg-white rounded-2xl shadow-sm border border-brand-outline/40 p-4 mb-6 flex items-center justify-between gap-4">
+      <div className="bg-white rounded-2xl shadow-sm border border-brand-outline/40 p-3 sm:p-4 mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-brand-text/40" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 sm:w-5 h-4 sm:h-5 text-brand-text/40" />
           <input
             type="text"
             placeholder="Tìm kiếm dịch vụ..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 border border-brand-outline/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-brand-teal"
+            className="w-full pl-9 sm:pl-10 pr-4 py-2 text-sm sm:text-base border border-brand-outline/60 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-brand-teal"
           />
         </div>
         <button
@@ -169,10 +169,11 @@ const AdminServiceManagement: React.FC = () => {
             setServiceFormData({});
             setIsServiceModalOpen(true);
           }}
-          className="flex items-center gap-2 px-4 py-2 bg-brand-teal text-white rounded-lg hover:bg-brand-teal/90 transition-colors shadow-sm"
+          className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-brand-teal text-white rounded-lg hover:bg-brand-teal/90 transition-colors shadow-sm text-sm sm:text-base flex-shrink-0"
         >
-          <Plus className="w-5 h-5" />
-          Thêm dịch vụ
+          <Plus className="w-4 sm:w-5 h-4 sm:h-5" />
+          <span className="hidden sm:inline">Thêm dịch vụ</span>
+          <span className="sm:hidden">Thêm</span>
         </button>
       </div>
 
@@ -190,8 +191,8 @@ const AdminServiceManagement: React.FC = () => {
               {filteredServices.map((service) => (
                 <div key={service.serviceId} className="bg-white rounded-2xl border border-brand-outline/40 shadow-sm overflow-hidden">
                   {/* Service Header */}
-                  <div className="p-4 flex items-center justify-between hover:bg-brand-background/30 transition-colors">
-                    <div className="flex items-center gap-4 flex-1">
+                  <div className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 hover:bg-brand-background/30 transition-colors">
+                    <div className="flex items-center gap-3 sm:gap-4 flex-1 min-w-0">
                       <button
                         onClick={() => setExpandedServiceId(
                           expandedServiceId === service.serviceId ? null : service.serviceId
@@ -206,25 +207,25 @@ const AdminServiceManagement: React.FC = () => {
                       </button>
                       
                       {service.iconUrl && (
-                        <img src={service.iconUrl} alt={service.name} className="w-12 h-12 rounded-lg object-cover" />
+                        <img src={service.iconUrl} alt={service.name} className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg object-cover flex-shrink-0" />
                       )}
                       
-                      <div className="flex-1">
-                        <h3 className="font-semibold text-brand-navy">{service.name}</h3>
-                        <p className="text-sm text-brand-text/60 line-clamp-1">{service.description}</p>
-                        <div className="flex items-center gap-4 mt-1">
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-brand-navy text-sm sm:text-base truncate">{service.name}</h3>
+                        <p className="text-xs sm:text-sm text-brand-text/60 line-clamp-1">{service.description}</p>
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-1">
                           <span className="text-xs text-brand-text/60">{service.categoryName}</span>
                           <span className="text-xs font-medium text-brand-teal">
                             {service.basePrice.toLocaleString('vi-VN')}đ/{service.unit}
                           </span>
-                          <span className="text-xs text-brand-text/60">
+                          <span className="text-xs text-brand-text/60 hidden sm:inline">
                             {service.optionsCount} tùy chọn • {service.pricingRulesCount} quy tắc
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0 self-end sm:self-auto">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         service.isActive 
                           ? 'bg-emerald-100 text-emerald-700' 
@@ -266,12 +267,12 @@ const AdminServiceManagement: React.FC = () => {
 
                   {/* Expanded Details */}
                   {expandedServiceId === service.serviceId && (
-                    <div className="border-t border-brand-outline/40 p-4 bg-brand-background/30">
+                    <div className="border-t border-brand-outline/40 p-3 sm:p-4 bg-brand-background/30">
                       {/* Tabs */}
-                      <div className="flex gap-2 mb-4 border-b border-brand-outline/40">
+                      <div className="flex gap-1 sm:gap-2 mb-3 sm:mb-4 border-b border-brand-outline/40 overflow-x-auto scrollbar-hide">
                         <button
                           onClick={() => setActiveTab('info')}
-                          className={`px-4 py-2 font-medium transition-colors ${
+                          className={`px-3 sm:px-4 py-2 font-medium transition-colors text-sm sm:text-base whitespace-nowrap flex-shrink-0 ${
                             activeTab === 'info'
                               ? 'text-brand-teal border-b-2 border-brand-teal'
                               : 'text-brand-text/60 hover:text-brand-navy'
@@ -281,7 +282,7 @@ const AdminServiceManagement: React.FC = () => {
                         </button>
                         <button
                           onClick={() => setActiveTab('options')}
-                          className={`px-4 py-2 font-medium transition-colors ${
+                          className={`px-3 sm:px-4 py-2 font-medium transition-colors text-sm sm:text-base whitespace-nowrap flex-shrink-0 ${
                             activeTab === 'options'
                               ? 'text-brand-teal border-b-2 border-brand-teal'
                               : 'text-brand-text/60 hover:text-brand-navy'
@@ -291,7 +292,7 @@ const AdminServiceManagement: React.FC = () => {
                         </button>
                         <button
                           onClick={() => setActiveTab('pricing')}
-                          className={`px-4 py-2 font-medium transition-colors ${
+                          className={`px-3 sm:px-4 py-2 font-medium transition-colors text-sm sm:text-base whitespace-nowrap flex-shrink-0 ${
                             activeTab === 'pricing'
                               ? 'text-brand-teal border-b-2 border-brand-teal'
                               : 'text-brand-text/60 hover:text-brand-navy'
@@ -382,7 +383,7 @@ const AdminServiceManagement: React.FC = () => {
                                     {rule.isActive ? 'Hoạt động' : 'Tạm dừng'}
                                   </span>
                                 </div>
-                                <div className="grid grid-cols-3 gap-2 text-sm mt-2">
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-sm mt-2">
                                   <div>
                                     <span className="text-brand-text/60">Logic:</span>
                                     <p className="font-medium text-brand-navy">{rule.conditionLogic}</p>

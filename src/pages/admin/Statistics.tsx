@@ -71,8 +71,8 @@ const AdminStatistics: React.FC = () => {
       description="Phân tích doanh thu và dịch vụ theo thời gian"
     >
       {/* Period Selector */}
-      <div className="bg-white rounded-2xl shadow-sm border border-brand-outline/40 p-6 mb-6">
-        <h2 className="text-lg font-semibold text-brand-navy mb-4">
+      <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-brand-outline/40 p-4 sm:p-6 mb-4 sm:mb-6">
+        <h2 className="text-base sm:text-lg font-semibold text-brand-navy mb-3 sm:mb-4">
           Chọn khoảng thời gian
         </h2>
         <PeriodSelector
@@ -108,27 +108,27 @@ const AdminStatistics: React.FC = () => {
 
       {/* Revenue Statistics */}
       {!loading && !error && revenueData && (
-        <div className="mb-6">
-          <div className="bg-white rounded-2xl shadow-sm border border-brand-outline/40 p-6">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-teal/10">
-                <TrendingUp className="h-6 w-6 text-brand-teal" />
+        <div className="mb-4 sm:mb-6">
+          <div className="bg-white rounded-xl sm:rounded-2xl shadow-sm border border-brand-outline/40 p-4 sm:p-6">
+            <div className="flex items-center gap-2 sm:gap-3 mb-4 sm:mb-6">
+              <div className="flex h-8 w-8 sm:h-10 sm:w-10 items-center justify-center rounded-lg sm:rounded-xl bg-brand-teal/10">
+                <TrendingUp className="h-5 w-5 sm:h-6 sm:w-6 text-brand-teal" />
               </div>
               <div>
-                <h2 className="text-lg font-semibold text-brand-navy">
+                <h2 className="text-base sm:text-lg font-semibold text-brand-navy">
                   Thống kê Doanh thu
                 </h2>
-                <p className="text-sm text-brand-text/70">
+                <p className="text-xs sm:text-sm text-brand-text/70">
                   Tổng số booking: {revenueData.totalBookings}
                 </p>
               </div>
             </div>
 
             {/* Revenue Summary Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-              <div className="bg-gradient-to-br from-sky-50 to-sky-100/50 rounded-xl p-4 border border-sky-200/50">
-                <p className="text-sm text-sky-700 font-medium mb-1">Tổng doanh thu</p>
-                <p className="text-2xl font-bold text-sky-900">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
+              <div className="bg-gradient-to-br from-sky-50 to-sky-100/50 rounded-xl p-3 sm:p-4 border border-sky-200/50">
+                <p className="text-xs sm:text-sm text-sky-700 font-medium mb-1">Tổng doanh thu</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-sky-900">
                   {new Intl.NumberFormat('vi-VN', {
                     style: 'currency',
                     currency: 'VND',
@@ -136,9 +136,9 @@ const AdminStatistics: React.FC = () => {
                 </p>
               </div>
 
-              <div className="bg-gradient-to-br from-green-50 to-green-100/50 rounded-xl p-4 border border-green-200/50">
-                <p className="text-sm text-green-700 font-medium mb-1">TB/Booking</p>
-                <p className="text-2xl font-bold text-green-900">
+              <div className="bg-gradient-to-br from-green-50 to-green-100/50 rounded-xl p-3 sm:p-4 border border-green-200/50">
+                <p className="text-xs sm:text-sm text-green-700 font-medium mb-1">TB/Booking</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-green-900">
                   {new Intl.NumberFormat('vi-VN', {
                     style: 'currency',
                     currency: 'VND',
@@ -146,9 +146,9 @@ const AdminStatistics: React.FC = () => {
                 </p>
               </div>
 
-              <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 rounded-xl p-4 border border-orange-200/50">
-                <p className="text-sm text-orange-700 font-medium mb-1">Cao nhất</p>
-                <p className="text-2xl font-bold text-orange-900">
+              <div className="bg-gradient-to-br from-orange-50 to-orange-100/50 rounded-xl p-3 sm:p-4 border border-orange-200/50">
+                <p className="text-xs sm:text-sm text-orange-700 font-medium mb-1">Cao nhất</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-orange-900">
                   {new Intl.NumberFormat('vi-VN', {
                     style: 'currency',
                     currency: 'VND',
@@ -156,9 +156,9 @@ const AdminStatistics: React.FC = () => {
                 </p>
               </div>
 
-              <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-xl p-4 border border-purple-200/50">
-                <p className="text-sm text-purple-700 font-medium mb-1">Thấp nhất</p>
-                <p className="text-2xl font-bold text-purple-900">
+              <div className="bg-gradient-to-br from-purple-50 to-purple-100/50 rounded-xl p-3 sm:p-4 border border-purple-200/50">
+                <p className="text-xs sm:text-sm text-purple-700 font-medium mb-1">Thấp nhất</p>
+                <p className="text-lg sm:text-xl lg:text-2xl font-bold text-purple-900">
                   {new Intl.NumberFormat('vi-VN', {
                     style: 'currency',
                     currency: 'VND',

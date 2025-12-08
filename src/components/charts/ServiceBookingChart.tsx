@@ -115,7 +115,7 @@ export const ServiceBookingChart: React.FC<ServiceBookingChartProps> = ({ data }
   };
 
   return (
-    <div className="h-[400px] w-full">
+    <div className="h-[280px] sm:h-[350px] md:h-[400px] w-full">
       <Doughnut data={chartData} options={options} />
     </div>
   );

@@ -12,7 +12,7 @@ const ChatPage: React.FC = () => {
       title="Tin nhắn"
       description="Trao đổi trực tiếp với khách hàng về các booking"
     >
-      <div className="h-[calc(100vh-200px)]">
+      <div className="h-[calc(100vh-180px)] sm:h-[calc(100vh-200px)]">
         {user?.employeeId && user?.accountId ? (
           <ChatContainer 
             senderId={user.employeeId} 

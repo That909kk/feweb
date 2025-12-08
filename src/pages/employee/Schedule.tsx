@@ -525,10 +525,10 @@ const EmployeeSchedulePage: React.FC = () => {
       )}
 
       {/* Tabs */}
-      <div className="mb-4 flex gap-2">
+      <div className="mb-4 flex gap-2 overflow-x-auto scrollbar-hide pb-1">
         <button
           onClick={() => setActiveTab('schedule')}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
+          className={`flex items-center gap-2 rounded-lg px-3 sm:px-4 py-2 text-sm font-medium transition whitespace-nowrap flex-shrink-0 ${
             activeTab === 'schedule'
               ? 'bg-emerald-500 text-white shadow-md'
               : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
@@ -539,7 +539,7 @@ const EmployeeSchedulePage: React.FC = () => {
         </button>
         <button
           onClick={() => setActiveTab('working-hours')}
-          className={`flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition ${
+          className={`flex items-center gap-2 rounded-lg px-3 sm:px-4 py-2 text-sm font-medium transition whitespace-nowrap flex-shrink-0 ${
             activeTab === 'working-hours'
               ? 'bg-emerald-500 text-white shadow-md'
               : 'bg-white text-slate-700 hover:bg-slate-50 border border-slate-200'
@@ -554,9 +554,9 @@ const EmployeeSchedulePage: React.FC = () => {
       {activeTab === 'schedule' && (
         <SectionCard title="Lịch làm việc theo tuần">
           {/* Ghi chú màu sắc */}
-          <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-            <h4 className="mb-3 text-sm font-semibold text-slate-700">Ghi chú:</h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="mb-4 rounded-lg border border-slate-200 bg-slate-50 p-3 sm:p-4">
+            <h4 className="mb-2 sm:mb-3 text-xs sm:text-sm font-semibold text-slate-700">Ghi chú:</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
               <div className="flex items-center gap-2">
                 <div className="h-4 w-4 rounded border-2 border-yellow-400 bg-yellow-50"></div>
                 <span className="text-xs text-slate-600">Đã phân công</span>
@@ -576,25 +576,26 @@ const EmployeeSchedulePage: React.FC = () => {
             </div>
           </div>
 
-          <div className="mb-6 flex items-center justify-between">
+          <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <button
               onClick={goToPreviousWeek}
-              className="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 sm:px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
               <ChevronLeft className="h-4 w-4" />
-              Tuần trước
+              <span className="hidden sm:inline">Tuần trước</span>
+              <span className="sm:hidden">Trước</span>
             </button>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-center gap-2">
               <input
                 type="date"
                 value={selectedDate.toISOString().split('T')[0]}
                 onChange={(e) => setSelectedDate(new Date(e.target.value))}
-                className="rounded-lg border border-slate-200 px-3 py-2 text-sm"
+                className="rounded-lg border border-slate-200 px-2 sm:px-3 py-2 text-sm flex-1 sm:flex-none"
               />
               <button
                 onClick={goToToday}
-                className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600"
+                className="rounded-lg bg-emerald-500 px-3 sm:px-4 py-2 text-sm font-medium text-white hover:bg-emerald-600 whitespace-nowrap"
               >
                 Hôm nay
               </button>
@@ -602,9 +603,10 @@ const EmployeeSchedulePage: React.FC = () => {
 
             <button
               onClick={goToNextWeek}
-              className="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+              className="flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-3 sm:px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
             >
-              Tuần sau
+              <span className="hidden sm:inline">Tuần sau</span>
+              <span className="sm:hidden">Sau</span>
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
@@ -620,10 +622,10 @@ const EmployeeSchedulePage: React.FC = () => {
               </div>
             )}
             
-            <table className="w-full border-collapse">
+            <table className="w-full min-w-[700px] border-collapse">
               <thead>
                 <tr className="bg-slate-50">
-                  <th className="border border-slate-200 px-4 py-3 text-left text-sm font-semibold text-slate-700 w-32">
+                  <th className="border border-slate-200 px-2 sm:px-4 py-2 sm:py-3 text-left text-xs sm:text-sm font-semibold text-slate-700 w-20 sm:w-32">
                     Ca làm
                   </th>
                   {days.map((day, index) => {

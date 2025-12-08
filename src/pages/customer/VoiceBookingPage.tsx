@@ -908,25 +908,25 @@ const VoiceBookingPage: React.FC = () => {
       actions={
         <button
           onClick={handleGoBack}
-          className="inline-flex items-center gap-2 rounded-full bg-white px-5 py-2 text-sm font-semibold text-brand-teal shadow-lg shadow-sky-100 transition hover:-translate-y-0.5 hover:bg-sky-50"
+          className="inline-flex items-center gap-1.5 sm:gap-2 rounded-full bg-white px-3 sm:px-5 py-2 text-sm font-semibold text-brand-teal shadow-lg shadow-sky-100 transition hover:-translate-y-0.5 hover:bg-sky-50"
         >
           <ArrowLeft className="h-4 w-4" />
-          Quay lại
+          <span className="hidden sm:inline">Quay lại</span>
         </button>
       }
     >
-      <div className="mx-auto max-w-6xl min-h-[500px] flex flex-col">
+      <div className="mx-auto max-w-6xl min-h-[400px] sm:min-h-[500px] flex flex-col">
         {/* Chat Messages Container */}
-        <div className="flex-1 overflow-y-auto rounded-3xl bg-gradient-to-b from-white to-sky-50/30 p-4 md:p-8 mb-4 shadow-inner min-h-[300px] max-h-[50vh]">
-          <div className="max-w-5xl mx-auto space-y-5">
+        <div className="flex-1 overflow-y-auto rounded-2xl sm:rounded-3xl bg-gradient-to-b from-white to-sky-50/30 p-3 sm:p-4 md:p-8 mb-3 sm:mb-4 shadow-inner min-h-[250px] sm:min-h-[300px] max-h-[45vh] sm:max-h-[50vh]">
+          <div className="max-w-5xl mx-auto space-y-3 sm:space-y-5">
             {messages.map((message) => (
               <div
                 key={message.id}
                 className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in`}
               >
-                <div className={`flex items-start gap-3 max-w-[90%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
+                <div className={`flex items-start gap-2 sm:gap-3 max-w-[95%] sm:max-w-[90%] ${message.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}>
                   {/* Avatar */}
-                  <div className={`flex-shrink-0 h-10 w-10 rounded-full flex items-center justify-center ${
+                  <div className={`flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10 rounded-full flex items-center justify-center ${
                     message.role === 'user' 
                       ? 'bg-gradient-to-br from-brand-teal to-sky-500' 
                       : 'bg-gradient-to-br from-violet-500 to-purple-600'
@@ -1028,8 +1028,8 @@ const VoiceBookingPage: React.FC = () => {
                 </div>
 
                 {/* Content - Grid layout */}
-                <div className="relative px-4 py-4 bg-white">
-                  <div className="grid grid-cols-2 gap-3">
+                <div className="relative px-3 sm:px-4 py-4 bg-white">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {/* Time Card */}
                     {preview.bookingTime && (
                       <div className="flex items-center gap-2.5 p-3 rounded-xl bg-purple-50/80 border border-purple-100">
@@ -1166,11 +1166,11 @@ const VoiceBookingPage: React.FC = () => {
                 </div>
 
                 {/* Action Buttons */}
-                <div className="relative px-4 pb-5 pt-1 flex gap-3 bg-white">
+                <div className="relative px-3 sm:px-4 pb-5 pt-1 flex flex-col sm:flex-row gap-3 bg-white">
                   <button
                     onClick={handleCancel}
                     disabled={confirmingBooking}
-                    className="flex-1 h-12 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center gap-2 font-semibold text-brand-navy transition-all active:scale-95 disabled:opacity-50"
+                    className="flex-1 h-11 sm:h-12 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center gap-2 font-semibold text-brand-navy transition-all active:scale-95 disabled:opacity-50"
                   >
                     <X className="h-4 w-4" />
                     <span>Hủy</span>
@@ -1178,7 +1178,7 @@ const VoiceBookingPage: React.FC = () => {
                   <button
                     onClick={handleConfirm}
                     disabled={confirmingBooking}
-                    className="flex-[2] h-12 rounded-xl bg-gradient-to-r from-brand-teal to-sky-500 hover:from-brand-teal/90 hover:to-sky-500/90 flex items-center justify-center gap-2 font-bold text-white shadow-lg shadow-brand-teal/30 transition-all active:scale-95 disabled:opacity-70"
+                    className="flex-[2] h-11 sm:h-12 rounded-xl bg-gradient-to-r from-brand-teal to-sky-500 hover:from-brand-teal/90 hover:to-sky-500/90 flex items-center justify-center gap-2 font-bold text-white shadow-lg shadow-brand-teal/30 transition-all active:scale-95 disabled:opacity-70"
                   >
                     {confirmingBooking ? (
                       <>

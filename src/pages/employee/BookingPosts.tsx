@@ -252,7 +252,7 @@ export const BookingPosts: React.FC = () => {
         title="Bài đăng tìm nhân viên"
         description="Các booking đã được xác minh đang chờ nhân viên nhận việc"
       >
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2">
         <MetricCard
           icon={Briefcase}
           label="Tổng bài đăng khả dụng"
@@ -274,13 +274,13 @@ export const BookingPosts: React.FC = () => {
         description="Nhấn 'Nhận việc' để nhận công việc phù hợp với bạn"
       >
         {/* Filter Toggle */}
-        <div className="mb-6 rounded-xl border border-slate-200 bg-slate-50/50 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <MapPinned className="h-5 w-5 text-slate-600" />
+        <div className="mb-4 sm:mb-6 rounded-xl border border-slate-200 bg-slate-50/50 p-3 sm:p-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <MapPinned className="h-5 w-5 text-slate-600 flex-shrink-0" />
               <div>
-                <div className="font-semibold text-slate-900">Hiển thị các bài đăng phù hợp</div>
-                <div className="text-sm text-slate-500">
+                <div className="font-semibold text-sm sm:text-base text-slate-900">Hiển thị các bài đăng phù hợp</div>
+                <div className="text-xs sm:text-sm text-slate-500">
                   {matchEmployeeZones 
                     ? 'Chỉ hiển thị công việc trong khu vực của bạn' 
                     : 'Hiển thị tất cả công việc (bao gồm ngoài khu vực)'}

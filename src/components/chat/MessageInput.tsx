@@ -82,25 +82,25 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   };
 
   return (
-    <div className="border-t border-gray-200 bg-white p-4">
+    <div className="border-t border-gray-200 bg-white p-3 sm:p-4">
       {/* Image preview */}
       {imagePreview && (
-        <div className="mb-3 relative inline-block">
+        <div className="mb-2 sm:mb-3 relative inline-block">
           <img
             src={imagePreview}
             alt="Preview"
-            className="max-w-xs max-h-32 rounded-lg object-cover"
+            className="max-w-[200px] sm:max-w-xs max-h-24 sm:max-h-32 rounded-lg object-cover"
           />
           <button
             onClick={handleRemoveImage}
-            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-0.5 sm:p-1 hover:bg-red-600"
           >
-            <X className="w-4 h-4" />
+            <X className="w-3 h-3 sm:w-4 sm:h-4" />
           </button>
         </div>
       )}
 
-      <div className="flex items-end space-x-2">
+      <div className="flex items-end space-x-1.5 sm:space-x-2">
         {/* Image upload button */}
         <input
           ref={fileInputRef}
@@ -113,10 +113,10 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={disabled || sending}
-          className="flex-shrink-0 p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-shrink-0 p-1.5 sm:p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Chọn ảnh"
         >
-          <ImageIcon className="w-6 h-6" />
+          <ImageIcon className="w-5 h-5 sm:w-6 sm:h-6" />
         </button>
 
         {/* Text input */}
@@ -127,7 +127,7 @@ export const MessageInput: React.FC<MessageInputProps> = ({
             onKeyPress={handleKeyPress}
             placeholder={selectedImage ? 'Thêm chú thích (tùy chọn)' : 'Nhập tin nhắn...'}
             disabled={disabled || sending}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+            className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg resize-none focus:outline-none focus:border-blue-500 disabled:bg-gray-100 disabled:cursor-not-allowed text-sm sm:text-base"
             rows={1}
             style={{ maxHeight: '120px' }}
             onInput={(e) => {
@@ -142,18 +142,18 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         <button
           onClick={handleSend}
           disabled={disabled || sending || (!message.trim() && !selectedImage)}
-          className="flex-shrink-0 p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="flex-shrink-0 p-1.5 sm:p-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           title="Gửi"
         >
           {sending ? (
-            <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            <div className="w-5 h-5 sm:w-6 sm:h-6 border-2 border-white border-t-transparent rounded-full animate-spin" />
           ) : (
-            <Send className="w-6 h-6" />
+            <Send className="w-5 h-5 sm:w-6 sm:h-6" />
           )}
         </button>
       </div>
 
-      <p className="text-xs text-gray-500 mt-2">
+      <p className="text-[10px] sm:text-xs text-gray-500 mt-1.5 sm:mt-2 hidden sm:block">
         Nhấn Enter để gửi, Shift + Enter để xuống dòng
       </p>
     </div>

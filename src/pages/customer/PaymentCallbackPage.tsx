@@ -68,18 +68,18 @@ const PaymentCallbackPage: React.FC = () => {
       title={status === 'processing' ? 'Đang xử lý...' : (status === 'success' ? 'Thành công' : 'Thất bại')}
       description="Kết quả thanh toán VNPay"
     >
-      <div className="flex items-center justify-center min-h-[60vh]">
+      <div className="flex items-center justify-center min-h-[50vh] sm:min-h-[60vh] px-4">
         <div className="max-w-md w-full">
           {/* Processing */}
           {status === 'processing' && (
             <div className="text-center">
-              <div className="mb-6 flex justify-center">
-                <Loader2 className="h-20 w-20 text-brand-teal animate-spin" />
+              <div className="mb-4 sm:mb-6 flex justify-center">
+                <Loader2 className="h-16 w-16 sm:h-20 sm:w-20 text-brand-teal animate-spin" />
               </div>
-              <h2 className="text-2xl font-bold text-brand-navy mb-3">
+              <h2 className="text-xl sm:text-2xl font-bold text-brand-navy mb-2 sm:mb-3">
                 Đang xử lý thanh toán
               </h2>
-              <p className="text-brand-text/70">
+              <p className="text-sm sm:text-base text-brand-text/70">
                 Vui lòng chờ trong giây lát...
               </p>
             </div>
@@ -88,15 +88,15 @@ const PaymentCallbackPage: React.FC = () => {
           {/* Success */}
           {status === 'success' && (
             <div className="text-center">
-              <div className="mb-6 flex justify-center">
-                <div className="rounded-full bg-emerald-100 p-6">
-                  <CheckCircle className="h-20 w-20 text-emerald-600" />
+              <div className="mb-4 sm:mb-6 flex justify-center">
+                <div className="rounded-full bg-emerald-100 p-4 sm:p-6">
+                  <CheckCircle className="h-16 w-16 sm:h-20 sm:w-20 text-emerald-600" />
                 </div>
               </div>
-              <h2 className="text-2xl font-bold text-brand-navy mb-3">
+              <h2 className="text-xl sm:text-2xl font-bold text-brand-navy mb-2 sm:mb-3">
                 Thanh toán thành công!
               </h2>
-              <p className="text-brand-text/70 mb-6">{message}</p>
+              <p className="text-sm sm:text-base text-brand-text/70 mb-4 sm:mb-6">{message}</p>
               
               {transactionNo && (
                 <div className="bg-gray-50 rounded-xl p-4 mb-6">
@@ -126,36 +126,36 @@ const PaymentCallbackPage: React.FC = () => {
           {/* Failed */}
           {status === 'failed' && (
             <div className="text-center">
-              <div className="mb-6 flex justify-center">
-                <div className="rounded-full bg-red-100 p-6">
-                  <XCircle className="h-20 w-20 text-red-600" />
+              <div className="mb-4 sm:mb-6 flex justify-center">
+                <div className="rounded-full bg-red-100 p-4 sm:p-6">
+                  <XCircle className="h-16 w-16 sm:h-20 sm:w-20 text-red-600" />
                 </div>
               </div>
-              <h2 className="text-2xl font-bold text-brand-navy mb-3">
+              <h2 className="text-xl sm:text-2xl font-bold text-brand-navy mb-2 sm:mb-3">
                 Thanh toán thất bại
               </h2>
-              <p className="text-red-600 mb-6">{message}</p>
+              <p className="text-sm sm:text-base text-red-600 mb-4 sm:mb-6">{message}</p>
               
-              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-6">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-left text-sm text-yellow-800">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 sm:p-4 mb-4 sm:mb-6">
+                <div className="flex items-start gap-2 sm:gap-3">
+                  <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                  <div className="text-left text-xs sm:text-sm text-yellow-800">
                     <p className="font-medium mb-1">Lưu ý:</p>
                     <p>Đơn hàng của bạn vẫn được giữ với trạng thái "Chờ thanh toán". Bạn có thể thử thanh toán lại.</p>
                   </div>
                 </div>
               </div>
 
-              <div className="flex gap-3">
+              <div className="flex flex-col sm:flex-row gap-2 sm:gap-3">
                 <button
                   onClick={() => navigate('/customer/orders')}
-                  className="flex-1 px-6 py-3 rounded-xl border border-gray-300 text-brand-navy font-semibold hover:bg-gray-50 transition"
+                  className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl border border-gray-300 text-brand-navy font-semibold hover:bg-gray-50 transition text-sm sm:text-base"
                 >
                   Xem đơn hàng
                 </button>
                 <button
                   onClick={() => navigate('/customer/booking')}
-                  className="flex-1 px-6 py-3 rounded-xl bg-brand-teal text-white font-semibold hover:bg-brand-tealHover transition"
+                  className="flex-1 px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl bg-brand-teal text-white font-semibold hover:bg-brand-tealHover transition text-sm sm:text-base"
                 >
                   Đặt lịch mới
                 </button>

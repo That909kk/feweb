@@ -36,7 +36,7 @@ const AdminDashboard: React.FC = () => {
     >
       {/* Quick Stats - Current Month */}
       {!loading && revenueData && (
-        <div className="grid gap-6 lg:grid-cols-4 mb-6">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 mb-4 sm:mb-6">
           <MetricCard
             icon={TrendingUp}
             label="Doanh thu tháng này"
@@ -75,7 +75,7 @@ const AdminDashboard: React.FC = () => {
       )}
 
       {!loading && !revenueData && (
-        <div className="grid gap-6 lg:grid-cols-2 mb-6">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 mb-4 sm:mb-6">
           <MetricCard
             icon={CalendarClock}
             label="Tổng Booking Chờ Xác Minh"
@@ -97,7 +97,7 @@ const AdminDashboard: React.FC = () => {
         title="Truy cập nhanh"
         description="Các tính năng quản lý chính của hệ thống"
       >
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-4">
           <Link
             to="/admin/statistics"
             className="group flex flex-col justify-between rounded-2xl border border-brand-outline/40 bg-gradient-to-br from-white to-teal-50/60 p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-brand-teal/60 hover:shadow-elevation-sm"

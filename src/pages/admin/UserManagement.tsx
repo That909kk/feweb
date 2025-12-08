@@ -10,7 +10,7 @@ const AdminUserManagement: React.FC = () => {
       title="Quản lý người dùng"
       description="Quản lý tài khoản và thông tin người dùng hệ thống"
     >
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
           icon={Users}
           label="Tổng người dùng"
@@ -38,15 +38,15 @@ const AdminUserManagement: React.FC = () => {
         title="Tính năng đang được phát triển"
         description="Chức năng quản lý người dùng sẽ sớm có mặt"
       >
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-brand-outline/40 bg-gradient-to-br from-white to-sky-50/60 p-6">
-            <div className="flex items-center gap-4 mb-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-brand-teal/10">
-                <Users className="h-6 w-6 text-brand-teal" />
+        <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2">
+          <div className="rounded-xl sm:rounded-2xl border border-brand-outline/40 bg-gradient-to-br from-white to-sky-50/60 p-4 sm:p-6">
+            <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
+              <div className="flex h-10 w-10 sm:h-12 sm:w-12 items-center justify-center rounded-xl sm:rounded-2xl bg-brand-teal/10">
+                <Users className="h-5 w-5 sm:h-6 sm:w-6 text-brand-teal" />
               </div>
               <div>
-                <h3 className="font-semibold text-brand-navy">Danh sách người dùng</h3>
-                <p className="text-sm text-brand-text/70">Xem và quản lý tất cả người dùng</p>
+                <h3 className="font-semibold text-brand-navy text-sm sm:text-base">Danh sách người dùng</h3>
+                <p className="text-xs sm:text-sm text-brand-text/70">Xem và quản lý tất cả người dùng</p>
               </div>
             </div>
           </div>

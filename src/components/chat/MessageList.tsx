@@ -108,7 +108,7 @@ export const MessageList: React.FC<MessageListProps> = ({
               key={message.messageId}
               className={`flex ${isOwn ? 'justify-end' : 'justify-start'}`}
             >
-              <div className={`flex items-end space-x-2 max-w-[70%] ${isOwn ? 'flex-row-reverse space-x-reverse' : ''}`}>
+              <div className={`flex items-end space-x-1.5 sm:space-x-2 max-w-[85%] sm:max-w-[75%] md:max-w-[70%] ${isOwn ? 'flex-row-reverse space-x-reverse' : ''}`}>
                 {/* Avatar */}
                 {!isOwn && (
                   <div className="flex-shrink-0">
@@ -116,11 +116,11 @@ export const MessageList: React.FC<MessageListProps> = ({
                       <img
                         src={message.senderAvatar}
                         alt={message.senderName}
-                        className="w-8 h-8 rounded-full object-cover"
+                        className="w-6 h-6 sm:w-8 sm:h-8 rounded-full object-cover"
                       />
                     ) : (
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
-                        <span className="text-white font-semibold text-xs">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center">
+                        <span className="text-white font-semibold text-[10px] sm:text-xs">
                           {message.senderName?.charAt(0).toUpperCase()}
                         </span>
                       </div>
@@ -132,13 +132,13 @@ export const MessageList: React.FC<MessageListProps> = ({
                 <div>
                   {message.messageType === 'TEXT' && message.content && (
                     <div
-                      className={`rounded-2xl px-4 py-2 ${
+                      className={`rounded-2xl px-3 py-1.5 sm:px-4 sm:py-2 ${
                         isOwn
                           ? 'bg-blue-600 text-white rounded-br-sm'
                           : 'bg-gray-100 text-gray-900 rounded-bl-sm'
                       }`}
                     >
-                      <p className="break-words whitespace-pre-wrap">{message.content}</p>
+                      <p className="break-words whitespace-pre-wrap text-sm sm:text-base">{message.content}</p>
                     </div>
                   )}
 
@@ -151,7 +151,7 @@ export const MessageList: React.FC<MessageListProps> = ({
                       <img
                         src={message.imageUrl}
                         alt="Hình ảnh"
-                        className="max-w-xs max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+                        className="max-w-[200px] sm:max-w-xs max-h-48 sm:max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
                         onClick={() => setImageModal(message.imageUrl)}
                       />
                       {message.content && (

@@ -192,14 +192,14 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
         <div className={`w-full lg:w-80 border-r border-gray-200 flex flex-col ${
           selectedConversation ? 'hidden lg:flex' : 'flex'
         }`}>
-          <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-purple-600">
-            <h2 className="text-lg font-semibold text-white flex items-center">
-              <MessageCircle className="w-5 h-5 mr-2" />
+          <div className="p-3 sm:p-4 border-b border-gray-200 bg-gradient-to-r from-blue-600 to-purple-600">
+            <h2 className="text-base sm:text-lg font-semibold text-white flex items-center">
+              <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-2" />
               Tin nhắn
             </h2>
             {wsConnected && (
-              <p className="text-xs text-blue-100 mt-1">
-                <span className="inline-block w-2 h-2 bg-green-400 rounded-full mr-1 animate-pulse"></span>
+              <p className="text-[10px] sm:text-xs text-blue-100 mt-1">
+                <span className="inline-block w-1.5 h-1.5 sm:w-2 sm:h-2 bg-green-400 rounded-full mr-1 animate-pulse"></span>
                 Đang kết nối
               </p>
             )}
@@ -235,11 +235,11 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
               onMessagesRead={handleMessagesRead}
             />
           ) : (
-            <div className="flex items-center justify-center h-full text-gray-500">
+            <div className="flex items-center justify-center h-full text-gray-500 p-4">
               <div className="text-center">
-                <MessageCircle className="mx-auto h-20 w-20 text-gray-300 mb-4" />
-                <p className="text-lg font-medium">Chọn một cuộc trò chuyện</p>
-                <p className="text-sm mt-2">Chọn cuộc trò chuyện từ danh sách bên trái</p>
+                <MessageCircle className="mx-auto h-12 w-12 sm:h-16 sm:w-16 md:h-20 md:w-20 text-gray-300 mb-3 sm:mb-4" />
+                <p className="text-sm sm:text-base md:text-lg font-medium">Chọn một cuộc trò chuyện</p>
+                <p className="text-xs sm:text-sm mt-1.5 sm:mt-2">Chọn cuộc trò chuyện từ danh sách bên trái</p>
               </div>
             </div>
           )}

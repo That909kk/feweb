@@ -135,7 +135,7 @@ export const RevenueChart: React.FC<RevenueChartProps> = ({ data }) => {
   };
 
   return (
-    <div className="h-[400px] w-full">
+    <div className="h-[280px] sm:h-[350px] md:h-[400px] w-full">
       <Bar data={chartData} options={options} />
     </div>
   );

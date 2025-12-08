@@ -1868,8 +1868,8 @@ const BookingPage: React.FC = () => {
         return (
           <div className="space-y-8">
             <div className="text-center">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Địa điểm thực hiện</h3>
-              <p className="text-gray-600">Chọn hoặc nhập địa chỉ nơi bạn muốn sử dụng dịch vụ</p>
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Địa điểm thực hiện</h3>
+              <p className="text-sm sm:text-base text-gray-600">Chọn hoặc nhập địa chỉ nơi bạn muốn sử dụng dịch vụ</p>
             </div>
 
             <div className="space-y-6">
@@ -1882,7 +1882,7 @@ const BookingPage: React.FC = () => {
                 
                 {/* Địa chỉ từ thông tin người dùng */}
                 <div 
-                  className={`group p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
+                  className={`group p-4 sm:p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
                     addressSource === 'profile' 
                       ? 'border-blue-500 bg-blue-50 shadow-blue-100 ring-2 ring-blue-100' 
                       : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-lg'
@@ -1890,16 +1890,16 @@ const BookingPage: React.FC = () => {
                   onClick={() => handleAddressSourceChange('profile')}
                 >
                   <div className="flex items-start">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-4 transition-all ${
+                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mr-3 sm:mr-4 transition-all flex-shrink-0 ${
                       addressSource === 'profile' ? 'bg-blue-100' : 'bg-gray-100 group-hover:bg-blue-50'
                     }`}>
-                      <User className={`w-6 h-6 ${
+                      <User className={`w-5 h-5 sm:w-6 sm:h-6 ${
                         addressSource === 'profile' ? 'text-blue-600' : 'text-gray-600 group-hover:text-blue-600'
                       }`} />
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center mb-2">
-                        <h4 className="font-semibold text-gray-900">Địa chỉ mặc định</h4>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <h4 className="font-semibold text-gray-900 text-sm sm:text-base">Địa chỉ mặc định</h4>
                         {addressSource === 'profile' && (
                           <div className="ml-3 flex items-center">
                             <CheckCircle className="w-5 h-5 text-blue-600 mr-1" />
@@ -1919,7 +1919,7 @@ const BookingPage: React.FC = () => {
                 
                 {/* Lấy địa chỉ hiện tại */}
                 <div 
-                  className={`group p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
+                  className={`group p-4 sm:p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
                     addressSource === 'current' 
                       ? 'border-blue-500 bg-blue-50 shadow-blue-100 ring-2 ring-blue-100' 
                       : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-lg'
@@ -1927,16 +1927,16 @@ const BookingPage: React.FC = () => {
                   onClick={() => handleAddressSourceChange('current')}
                 >
                   <div className="flex items-start">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-4 transition-all ${
+                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mr-3 sm:mr-4 transition-all flex-shrink-0 ${
                       addressSource === 'current' ? 'bg-blue-100' : 'bg-gray-100 group-hover:bg-blue-50'
                     }`}>
-                      <NavigationIcon className={`w-6 h-6 ${
+                      <NavigationIcon className={`w-5 h-5 sm:w-6 sm:h-6 ${
                         addressSource === 'current' ? 'text-blue-600' : 'text-gray-600 group-hover:text-blue-600'
                       }`} />
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center mb-2">
-                        <h4 className="font-semibold text-gray-900">Vị trí hiện tại</h4>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <h4 className="font-semibold text-gray-900 text-sm sm:text-base">Vị trí hiện tại</h4>
                         {addressSource === 'current' && (
                           <div className="ml-3 flex items-center">
                             <CheckCircle className="w-5 h-5 text-blue-600 mr-1" />
@@ -1963,7 +1963,7 @@ const BookingPage: React.FC = () => {
                 
                 {/* Nhập địa chỉ tùy chỉnh */}
                 <div 
-                  className={`group p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
+                  className={`group p-4 sm:p-6 border-2 rounded-xl cursor-pointer transition-all duration-300 ${
                     addressSource === 'custom' 
                       ? 'border-blue-500 bg-blue-50 shadow-blue-100 ring-2 ring-blue-100' 
                       : 'border-gray-200 bg-white hover:border-blue-300 hover:shadow-lg'
@@ -1971,16 +1971,16 @@ const BookingPage: React.FC = () => {
                   onClick={() => handleAddressSourceChange('custom')}
                 >
                   <div className="flex items-start">
-                    <div className={`w-12 h-12 rounded-full flex items-center justify-center mr-4 transition-all ${
+                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full flex items-center justify-center mr-3 sm:mr-4 transition-all flex-shrink-0 ${
                       addressSource === 'custom' ? 'bg-blue-100' : 'bg-gray-100 group-hover:bg-blue-50'
                     }`}>
-                      <MapPin className={`w-6 h-6 ${
+                      <MapPin className={`w-5 h-5 sm:w-6 sm:h-6 ${
                         addressSource === 'custom' ? 'text-blue-600' : 'text-gray-600 group-hover:text-blue-600'
                       }`} />
                     </div>
-                    <div className="flex-1">
-                      <div className="flex items-center mb-2">
-                        <h4 className="font-semibold text-gray-900">Địa chỉ khác</h4>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-2 mb-2">
+                        <h4 className="font-semibold text-gray-900 text-sm sm:text-base">Địa chỉ khác</h4>
                         {addressSource === 'custom' && (
                           <div className="ml-3 flex items-center">
                             <CheckCircle className="w-5 h-5 text-blue-600 mr-1" />
@@ -2712,8 +2712,8 @@ const BookingPage: React.FC = () => {
               )}
 
               {/* Duration and Notes */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-200">
+              <div className="grid grid-cols-1 gap-4 sm:gap-6">
+                <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 sm:p-6 border border-purple-200">
                   <h5 className="font-semibold text-gray-900 mb-4 flex items-center">
                     <svg className="w-5 h-5 mr-2 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -2824,7 +2824,7 @@ const BookingPage: React.FC = () => {
                   )}
                 </div>
 
-                <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl p-6 border border-orange-200">
+                <div className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-xl p-4 sm:p-6 border border-orange-200">
                   <h5 className="font-semibold text-gray-900 mb-4 flex items-center">
                     <svg className="w-5 h-5 mr-2 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-1l-4 4z" />
@@ -2846,16 +2846,16 @@ const BookingPage: React.FC = () => {
               </div>
 
               {/* Employee Selection Section */}
-              <div className="bg-gradient-to-r from-cyan-50 to-blue-50 rounded-xl p-6 border border-cyan-200">
-                <h4 className="text-lg font-semibold text-gray-900 flex items-center mb-6">
-                  <svg className="w-5 h-5 mr-2 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="bg-gradient-to-r from-cyan-50 to-blue-50 rounded-xl p-4 sm:p-6 border border-cyan-200">
+                <h4 className="text-base sm:text-lg font-semibold text-gray-900 flex items-center mb-4 sm:mb-6">
+                  <svg className="w-4 h-4 sm:w-5 sm:h-5 mr-2 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
                   </svg>
                   Phương thức đặt lịch
                 </h4>
 
                 {/* Option Selection: Choose between Employee or Post */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4 sm:mb-6">
                   {/* Option 1: Chọn nhân viên */}
                   <button
                     type="button"
@@ -2864,26 +2864,26 @@ const BookingPage: React.FC = () => {
                       setPostTitle('');
                       setPostImageFiles([]); // Reset image files
                     }}
-                    className={`p-5 rounded-xl border-2 transition-all duration-200 ${
+                    className={`p-3 sm:p-5 rounded-xl border-2 transition-all duration-200 ${
                       showEmployeeSelection
                         ? 'border-cyan-500 bg-cyan-50 shadow-lg'
                         : 'border-gray-200 bg-white hover:border-cyan-300 hover:shadow-md'
                     }`}
                   >
-                    <div className="flex items-center mb-3">
-                      <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
+                    <div className="flex items-center mb-2 sm:mb-3">
+                      <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 mr-2 sm:mr-3 flex items-center justify-center ${
                         showEmployeeSelection ? 'border-cyan-500' : 'border-gray-300'
                       }`}>
                         {showEmployeeSelection && (
-                          <div className="w-3 h-3 rounded-full bg-cyan-500"></div>
+                          <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-cyan-500"></div>
                         )}
                       </div>
-                      <svg className="w-6 h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-cyan-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
-                      <h5 className="ml-2 font-semibold text-gray-900">Chọn nhân viên</h5>
+                      <h5 className="ml-1.5 sm:ml-2 font-semibold text-gray-900 text-sm sm:text-base">Chọn nhân viên</h5>
                     </div>
-                    <p className="text-sm text-gray-600 text-left">
+                    <p className="text-xs sm:text-sm text-gray-600 text-left">
                       Đặt lịch trực tiếp với nhân viên phù hợp
                     </p>
                   </button>
@@ -2895,26 +2895,26 @@ const BookingPage: React.FC = () => {
                       setShowEmployeeSelection(false);
                       setSelectedEmployees([]);
                     }}
-                    className={`p-5 rounded-xl border-2 transition-all duration-200 ${
+                    className={`p-3 sm:p-5 rounded-xl border-2 transition-all duration-200 ${
                       !showEmployeeSelection
                         ? 'border-indigo-500 bg-indigo-50 shadow-lg'
                         : 'border-gray-200 bg-white hover:border-indigo-300 hover:shadow-md'
                     }`}
                   >
-                    <div className="flex items-center mb-3">
-                      <div className={`w-5 h-5 rounded-full border-2 mr-3 flex items-center justify-center ${
+                    <div className="flex items-center mb-2 sm:mb-3">
+                      <div className={`w-4 h-4 sm:w-5 sm:h-5 rounded-full border-2 mr-2 sm:mr-3 flex items-center justify-center ${
                         !showEmployeeSelection ? 'border-indigo-500' : 'border-gray-300'
                       }`}>
                         {!showEmployeeSelection && (
-                          <div className="w-3 h-3 rounded-full bg-indigo-500"></div>
+                          <div className="w-2 h-2 sm:w-3 sm:h-3 rounded-full bg-indigo-500"></div>
                         )}
                       </div>
-                      <svg className="w-6 h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-5 h-5 sm:w-6 sm:h-6 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                       </svg>
-                      <h5 className="ml-2 font-semibold text-gray-900">Tạo bài đăng</h5>
+                      <h5 className="ml-1.5 sm:ml-2 font-semibold text-gray-900 text-sm sm:text-base">Tạo bài đăng</h5>
                     </div>
-                    <p className="text-sm text-gray-600 text-left">
+                    <p className="text-xs sm:text-sm text-gray-600 text-left">
                       Đăng tìm nhân viên (cần admin xác minh)
                     </p>
                   </button>
@@ -3561,10 +3561,10 @@ const BookingPage: React.FC = () => {
         )}
         
         {/* Enhanced Progress Bar */}
-        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100">
           <div className="flex items-center justify-between relative">
             {/* Progress Line */}
-            <div className="absolute top-5 left-10 right-10 h-0.5 bg-gray-200">
+            <div className="absolute top-4 sm:top-5 left-6 sm:left-10 right-6 sm:right-10 h-0.5 bg-gray-200">
               <div 
                 className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-500 ease-out"
                 style={{ width: `${((step - 1) / 3) * 100}%` }}
@@ -3580,7 +3580,7 @@ const BookingPage: React.FC = () => {
             ].map((stepItem) => (
               <div key={stepItem.num} className="flex flex-col items-center relative z-10">
                 <div
-                  className={`flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300 ${
+                  className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 transition-all duration-300 ${
                     step >= stepItem.num
                       ? 'bg-gradient-to-r from-blue-500 to-indigo-500 border-blue-500 text-white shadow-lg'
                       : step === stepItem.num - 1
@@ -3589,18 +3589,18 @@ const BookingPage: React.FC = () => {
                   }`}
                 >
                   {step > stepItem.num ? (
-                    <CheckCircle className="w-5 h-5" />
+                    <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                   ) : (
-                    <span className="text-sm font-semibold">{stepItem.num}</span>
+                    <span className="text-xs sm:text-sm font-semibold">{stepItem.num}</span>
                   )}
                 </div>
-                <div className="mt-2 text-center">
-                  <p className={`text-sm font-medium ${
+                <div className="mt-1.5 sm:mt-2 text-center">
+                  <p className={`text-xs sm:text-sm font-medium ${
                     step >= stepItem.num ? 'text-blue-600' : 'text-gray-500'
                   }`}>
                     {stepItem.title}
                   </p>
-                  <p className="text-xs text-gray-400 mt-0.5 max-w-20">
+                  <p className="text-xs text-gray-400 mt-0.5 max-w-20 hidden sm:block">
                     {stepItem.subtitle}
                   </p>
                 </div>
@@ -3611,25 +3611,26 @@ const BookingPage: React.FC = () => {
 
         {/* Main Content Card */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-          <div className="p-6 sm:p-8">
+          <div className="p-4 sm:p-6 lg:p-8">
             {renderStepContent()}
           </div>
           
           {/* Action Buttons */}
-          <div className="bg-gray-50 px-6 py-4 sm:px-8 sm:py-6 border-t border-gray-100">
-            <div className="flex justify-between items-center">
+          <div className="bg-gray-50 px-4 py-3 sm:px-6 sm:py-4 lg:px-8 lg:py-6 border-t border-gray-100">
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
               <button
                 onClick={handlePrev}
                 disabled={step === 1}
-                className="flex items-center px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium"
+                className="flex items-center px-3 sm:px-4 py-2 sm:py-2.5 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium text-sm sm:text-base w-full sm:w-auto justify-center"
               >
-                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-4 h-4 mr-1 sm:mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
                 </svg>
-                Quay lại
+                <span className="hidden sm:inline">Quay lại</span>
+                <span className="sm:hidden">Quay lại</span>
               </button>
               
-              <div className="text-sm text-gray-500 hidden sm:block">
+              <div className="text-xs sm:text-sm text-gray-500 order-first sm:order-none">
                 Bước {step} / 4
               </div>
               
@@ -3653,13 +3654,21 @@ const BookingPage: React.FC = () => {
                         : (bookingData.bookingTimes.length === 0 || !bookingData.duration || bookingData.duration <= 0) // Single mode validation
                     ))
                   }
-                  className="flex items-center px-6 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-sm"
+                  className="flex items-center justify-center px-4 sm:px-6 py-2 sm:py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-sm text-sm sm:text-base w-full sm:w-auto"
                 >
-                  {step === 3 && bookingData.bookingTimes.length === 0
-                    ? 'Vui lòng thêm ít nhất một mốc thời gian' 
-                    : 'Tiếp tục'
-                  }
-                  <svg className="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <span className="hidden sm:inline">
+                    {step === 3 && bookingData.bookingTimes.length === 0
+                      ? 'Vui lòng thêm ít nhất một mốc thời gian' 
+                      : 'Tiếp tục'
+                    }
+                  </span>
+                  <span className="sm:hidden">
+                    {step === 3 && bookingData.bookingTimes.length === 0
+                      ? 'Thêm thời gian' 
+                      : 'Tiếp tục'
+                    }
+                  </span>
+                  <svg className="w-4 h-4 ml-1 sm:ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
                   </svg>
                 </button>
@@ -3667,17 +3676,19 @@ const BookingPage: React.FC = () => {
                 <button
                   onClick={handleSubmit}
                   disabled={bookingLoading || recurringBookingLoading}
-                  className="flex items-center px-8 py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 font-semibold shadow-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="flex items-center justify-center px-4 sm:px-8 py-2 sm:py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 font-semibold shadow-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base w-full sm:w-auto"
                 >
                   {(bookingLoading || recurringBookingLoading) ? (
                     <>
                       <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
-                      Đang xử lý...
+                      <span className="hidden sm:inline">Đang xử lý...</span>
+                      <span className="sm:hidden">Xử lý...</span>
                     </>
                   ) : (
                     <>
-                      <CheckCircle className="w-5 h-5 mr-2" />
-                      Xác nhận đặt lịch
+                      <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
+                      <span className="hidden sm:inline">Xác nhận đặt lịch</span>
+                      <span className="sm:hidden">Xác nhận</span>
                     </>
                   )}
                 </button>

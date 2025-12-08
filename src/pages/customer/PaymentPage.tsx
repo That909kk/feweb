@@ -368,19 +368,19 @@ const PaymentPage: React.FC = () => {
   if (isProcessing || isPaymentComplete || isAutoProcessing) {
     return (
       <DashboardLayout role={user?.role || 'CUSTOMER'} title="Thanh toán">
-        <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex items-center justify-center min-h-[50vh] sm:min-h-[60vh] px-4">
           <div className="text-center">
             {isPaymentComplete ? (
               <>
                 <div className="mb-4 flex justify-center">
-                  <div className="bg-green-100 rounded-full p-4">
-                    <CheckCircle className="w-16 h-16 text-green-600" />
+                  <div className="bg-green-100 rounded-full p-3 sm:p-4">
+                    <CheckCircle className="w-12 h-12 sm:w-16 sm:h-16 text-green-600" />
                   </div>
                 </div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
                   {selectedPaymentMethod?.methodCode === 'CASH' ? 'Đặt lịch thành công!' : 'Thanh toán thành công!'}
                 </h2>
-                <p className="text-gray-600">
+                <p className="text-sm sm:text-base text-gray-600">
                   {selectedPaymentMethod?.methodCode === 'CASH' 
                     ? 'Bạn sẽ thanh toán trực tiếp cho nhân viên sau khi hoàn thành. Đang chuyển đến trang xác nhận...'
                     : 'Đang chuyển đến trang xác nhận...'
@@ -390,12 +390,12 @@ const PaymentPage: React.FC = () => {
             ) : (
               <>
                 <div className="mb-4 flex justify-center">
-                  <Loader2 className="w-16 h-16 text-blue-600 animate-spin" />
+                  <Loader2 className="w-12 h-12 sm:w-16 sm:h-16 text-blue-600 animate-spin" />
                 </div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">
+                <h2 className="text-xl sm:text-2xl font-bold text-gray-800 mb-2">
                   Đang xử lý thanh toán...
                 </h2>
-                <p className="text-gray-600">
+                <p className="text-sm sm:text-base text-gray-600">
                   Vui lòng không đóng trang này
                 </p>
                 {selectedPaymentMethod && (
@@ -416,18 +416,18 @@ const PaymentPage: React.FC = () => {
 
   return (
     <DashboardLayout role={user?.role || 'CUSTOMER'} title="Thanh toán">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-2xl mx-auto px-4">
         {/* Header */}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <button
             onClick={() => navigate('/customer/booking')}
-            className="flex items-center text-gray-600 hover:text-gray-800 mb-4 transition-colors"
+            className="flex items-center text-gray-600 hover:text-gray-800 mb-3 sm:mb-4 transition-colors text-sm sm:text-base"
           >
-            <ArrowLeft className="w-5 h-5 mr-2" />
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
             Quay lại đặt lịch
           </button>
-          <h1 className="text-3xl font-bold text-gray-800">Xác nhận thanh toán</h1>
-          <p className="text-gray-600 mt-2">
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">Xác nhận thanh toán</h1>
+          <p className="text-sm sm:text-base text-gray-600 mt-1 sm:mt-2">
             Đã xảy ra lỗi trong quá trình thanh toán
           </p>
         </div>

@@ -288,10 +288,10 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) =
 
       {/* Notification Dropdown */}
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-[80vh] flex flex-col overflow-hidden">
+        <div className="fixed sm:absolute inset-x-2 sm:inset-x-auto sm:right-0 top-14 sm:top-auto sm:mt-2 w-auto sm:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 max-h-[80vh] flex flex-col overflow-hidden">
           {/* Header */}
-          <div className="flex items-center justify-between p-4 border-b border-gray-200 flex-shrink-0">
-            <h3 className="font-semibold text-gray-800">Thông báo</h3>
+          <div className="flex items-center justify-between gap-2 p-3 sm:p-4 border-b border-gray-200 flex-shrink-0">
+            <h3 className="font-semibold text-gray-800 text-sm sm:text-base">Thông báo</h3>
             <div className="flex items-center gap-2">
               {unreadCount > 0 && (
                 <button
@@ -299,7 +299,8 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) =
                   className="text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1"
                 >
                   <CheckCheck className="w-4 h-4" />
-                  Đánh dấu tất cả đã đọc
+                  <span className="hidden sm:inline">Đánh dấu tất cả đã đọc</span>
+                  <span className="sm:hidden">Đã đọc tất cả</span>
                 </button>
               )}
               <button
@@ -312,7 +313,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) =
           </div>
 
           {/* Notifications List */}
-          <div className="flex-1 overflow-y-auto overscroll-contain" style={{ maxHeight: 'calc(80vh - 60px)' }}>
+          <div className="flex-1 overflow-y-auto overscroll-contain">
             {isLoading && notifications.length === 0 ? (
               <div className="flex items-center justify-center py-8">
                 <Loader2 className="w-6 h-6 text-blue-500 animate-spin" />
@@ -327,7 +328,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) =
                 {notifications.map((notification) => (
                   <div
                     key={notification.notificationId}
-                    className={`p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
+                    className={`p-3 sm:p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer ${
                       !notification.isRead ? 'bg-blue-50' : ''
                     }`}
                     onClick={() => {
@@ -339,14 +340,14 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) =
                       }
                     }}
                   >
-                    <div className="flex items-start gap-3">
-                      <span className="text-2xl flex-shrink-0">
+                    <div className="flex items-start gap-2 sm:gap-3">
+                      <span className="text-xl sm:text-2xl flex-shrink-0">
                         {getNotificationIcon(notification.type)}
                       </span>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2 mb-1">
                           <h4
-                            className={`font-medium text-sm ${
+                            className={`font-medium text-sm leading-tight ${
                               !notification.isRead ? 'text-gray-900' : 'text-gray-700'
                             }`}
                           >
@@ -356,7 +357,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ className = '' }) =
                             <span className="w-2 h-2 bg-blue-500 rounded-full flex-shrink-0 mt-1" />
                           )}
                         </div>
-                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                        <p className="text-xs sm:text-sm text-gray-600 mb-2 break-words">
                           {notification.message}
                         </p>
                         <div className="flex items-center justify-between">

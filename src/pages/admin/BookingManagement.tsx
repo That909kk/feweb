@@ -670,7 +670,7 @@ const AdminBookingManagement: React.FC = () => {
         title="Quản lý Bookings"
         description="Xem tất cả bookings và xác minh các booking chờ phân công"
       >
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
           icon={List}
           label="Tổng tất cả booking"
@@ -699,9 +699,9 @@ const AdminBookingManagement: React.FC = () => {
         description={`Tìm kiếm booking theo mã đơn hàng`}
       >
           {/* Search Box and Items Per Page Selector */}
-          <div className="mb-6 flex gap-4 items-start">
+          <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-start">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 sm:h-5 sm:w-5 text-slate-400" />
               <input
                 type="text"
                 value={searchCode}
@@ -710,8 +710,8 @@ const AdminBookingManagement: React.FC = () => {
                   setCurrentPage(0);
                   // Debounce sẽ xử lý việc gọi API search
                 }}
-                placeholder="Tìm kiếm theo mã đơn hàng..."
-                className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                placeholder="Tìm theo mã đơn hàng..."
+                className="w-full pl-9 sm:pl-10 pr-4 py-2.5 sm:py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
               />
               {searchCode && (
                 <button
@@ -785,38 +785,37 @@ const AdminBookingManagement: React.FC = () => {
           )}
 
           {/* Tabs */}
-          <div className="mb-6 flex gap-2 border-b border-slate-200">
+          <div className="mb-4 sm:mb-6 flex gap-1 sm:gap-2 border-b border-slate-200 overflow-x-auto">
             <button
               onClick={() => {
                 setActiveTab('unverified');
                 setStatusFilter('ALL'); // Reset status filter when switching to unverified
               }}
-              className={`flex items-center gap-2 px-4 py-3 font-medium transition ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 font-medium transition whitespace-nowrap text-xs sm:text-sm ${
                 activeTab === 'unverified'
                   ? 'border-b-2 border-brand-navy text-brand-navy'
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              <AlertCircle className="h-4 w-4" />
-              Chờ xác minh ({bookings.length})
+              <AlertCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Chờ duyệt ({bookings.length})
             </button>
             <button
               onClick={() => setActiveTab('all')}
-              className={`flex items-center gap-2 px-4 py-3 font-medium transition ${
+              className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 font-medium transition whitespace-nowrap text-xs sm:text-sm ${
                 activeTab === 'all'
                   ? 'border-b-2 border-brand-navy text-brand-navy'
                   : 'text-slate-500 hover:text-slate-700'
               }`}
             >
-              <List className="h-4 w-4" />
-              Tất cả booking ({totalItems})
+              <List className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              Tất cả ({totalItems})
             </button>
           </div>
 
           {/* Status Filter Tabs - Only show in 'all' tab */}
-          {/* Status Filter Tabs - Only show in 'all' tab */}
           {activeTab === 'all' && (
-          <div className="mb-6 flex flex-wrap gap-2">
+          <div className="mb-4 sm:mb-6 flex gap-1.5 sm:gap-2 overflow-x-auto pb-2 scrollbar-hide">
             <button
               onClick={() => { setStatusFilter('ALL'); setCurrentPage(0); }}
               className={`px-3 py-1.5 rounded-full text-xs font-semibold transition ${
