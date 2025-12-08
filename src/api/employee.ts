@@ -446,7 +446,7 @@ export const getEmployeeStatisticsApi = async (employeeId: string): Promise<ApiR
     // Use the new assignment statistics API
     const response = await getEmployeeAssignmentStatisticsApi(employeeId, 'MONTH');
     if (response.success && response.data) {
-      const { countByStatus, totalAssignments } = response.data;
+      const { countByStatus } = response.data;
       return {
         success: true,
         message: 'Statistics loaded successfully',

@@ -1,11 +1,9 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
-  ChevronDown,
   Crown,
   LogOut,
   Menu,
-  MonitorSmartphone,
   PanelLeftClose,
   PanelLeftOpen
 } from 'lucide-react';
@@ -31,12 +29,6 @@ const roleBadges: Record<SupportedRole, { label: string; tone: string }> = {
   ADMIN: { label: 'Workspace quản trị', tone: 'bg-brand-navy/10 text-brand-navy' }
 };
 
-const roleLabels: Record<UserRole, string> = {
-  CUSTOMER: 'Khách hàng',
-  EMPLOYEE: 'Nhân viên',
-  ADMIN: 'Quản trị'
-};
-
 const SIDEBAR_STORAGE_KEY = 'homemate-sidebar-collapsed';
 
 const AppShell: React.FC<AppShellProps> = ({
@@ -47,7 +39,7 @@ const AppShell: React.FC<AppShellProps> = ({
   toolbar,
   children
 }) => {
-  const { user, availableRoles, selectedRole, selectRole, logout } = useAuth();
+  const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   
   // Lấy trạng thái menu từ localStorage, mặc định là false (mở rộng)
@@ -70,13 +62,6 @@ const AppShell: React.FC<AppShellProps> = ({
     const last = parts[parts.length - 1]?.[0] ?? '';
     return `${first}${last}`.toUpperCase();
   }, [user?.fullName]);
-
-  const handleRoleChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    const nextRole = event.target.value as UserRole;
-    if (nextRole && nextRole !== selectedRole) {
-      selectRole(nextRole);
-    }
-  };
 
   const handleLogout = async () => {
     await logout('WEB');

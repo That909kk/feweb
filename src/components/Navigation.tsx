@@ -4,20 +4,17 @@ import {
   BarChart3,
   CalendarClock,
   ClipboardList,
-  FileText,
   HardHat,
   LayoutDashboard,
   LogOut,
   Megaphone,
   MessageCircle,
-  Settings,
   Sparkles,
   UserCog,
   UserRound,
   Receipt,
   TrendingUp,
-  Wrench,
-  ShoppingCart
+  Wrench
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
