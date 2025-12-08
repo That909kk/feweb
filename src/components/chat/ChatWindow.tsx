@@ -11,13 +11,15 @@ interface ChatWindowProps {
   currentAccountId: string; // accountId - dùng cho send message & mark-read
   currentSenderId: string; // customerId hoặc employeeId - dùng để xác định user hiện tại
   onBack?: () => void;
+  onMessagesRead?: (conversationId: string) => void; // Callback khi đã mark messages as read
 }
 
 export const ChatWindow: React.FC<ChatWindowProps> = ({
   conversation,
   currentAccountId,
   currentSenderId,
-  onBack
+  onBack,
+  onMessagesRead
 }) => {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [loading, setLoading] = useState(true);
@@ -108,8 +110,10 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
 
   const markAsRead = async () => {
     try {
-      // receiverId phải là accountId, không phải customerId/employeeId
-      await markMessagesAsReadApi(conversation.conversationId, currentAccountId);
+      // receiverId phải là participantId (customerId hoặc employeeId), KHÔNG PHẢI accountId
+      await markMessagesAsReadApi(conversation.conversationId, currentSenderId);
+      // Thông báo cho parent component
+      onMessagesRead?.(conversation.conversationId);
     } catch (err) {
       console.error('Error marking messages as read:', err);
     }

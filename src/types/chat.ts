@@ -33,6 +33,7 @@ export interface Conversation {
   canChat: boolean; // false nếu booking COMPLETED/CANCELLED hoặc conversation inactive
   createdAt: string;
   updatedAt: string;
+  unreadCount?: number; // Số tin nhắn chưa đọc (cập nhật từ API hoặc WebSocket)
 }
 
 export interface CreateConversationRequest {
@@ -73,6 +74,17 @@ export interface MessageListResponse {
 export interface UnreadCountResponse {
   success: boolean;
   data: {
+    receiverId?: string;
+    conversationId?: string;
+    unreadCount: number;
+  };
+}
+
+// Response cho tổng unread count của participant
+export interface TotalUnreadCountResponse {
+  success: boolean;
+  data: {
+    receiverId: string;
     unreadCount: number;
   };
 }
@@ -96,4 +108,14 @@ export interface WebSocketMessage {
   timestamp?: string; // WebSocket dùng timestamp thay vì createdAt
   createdAt?: string; // Có thể có hoặc không
   isRead?: boolean; // Optional vì WebSocket message mới chưa có isRead
+}
+
+// WebSocket conversation summary (realtime unread count + last message)
+export interface ConversationSummaryDTO {
+  conversationId: string;
+  participantId: string;
+  senderId: string;
+  lastMessage: string;
+  lastMessageTime: string;
+  unreadCount: number;
 }

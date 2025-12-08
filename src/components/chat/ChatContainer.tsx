@@ -1,5 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
-import type { Conversation } from '../../types/chat';
+import React, { useEffect, useState, useCallback, useRef } from 'react';
+import type { Conversation, ConversationSummaryDTO } from '../../types/chat';
 import { ConversationList } from './ConversationList';
 import { ChatWindow } from './ChatWindow';
 import { webSocketService } from '../../services/websocket';
@@ -21,6 +21,12 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
   const [wsConnected, setWsConnected] = useState(false);
   const [wsError, setWsError] = useState<string | null>(null);
   const [isLoadingInitialConversation, setIsLoadingInitialConversation] = useState(false);
+  const [unreadCounts, setUnreadCounts] = useState<Map<string, number>>(new Map());
+  // State để lưu lastMessage và lastMessageTime từ WebSocket
+  const [conversationSummaries, setConversationSummaries] = useState<Map<string, { lastMessage: string; lastMessageTime: string }>>(new Map());
+  
+  // Ref để track subscribed status
+  const summarySubscribedRef = useRef(false);
 
   // Debug: Log senderId and accountId
   useEffect(() => {
@@ -28,6 +34,66 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
     console.log('🔍 [ChatContainer] accountId (for messages):', accountId);
     console.log('🔍 [ChatContainer] initialConversationId:', initialConversationId);
   }, [senderId, accountId, initialConversationId]);
+
+  // Handler cho conversation summary từ WebSocket
+  const handleConversationSummary = useCallback((summary: ConversationSummaryDTO) => {
+    console.log('[ChatContainer] Received conversation summary:', summary);
+    console.log('[ChatContainer] Current accountId:', accountId);
+    console.log('[ChatContainer] Summary senderId:', summary.senderId);
+    console.log('[ChatContainer] Summary unreadCount from BE:', summary.unreadCount);
+    
+    // Nếu tin nhắn được gửi bởi chính mình (summary.senderId === accountId), bỏ qua unread count
+    // Vì tin nhắn mình gửi không nên tính là unread cho mình
+    const isMyMessage = summary.senderId === accountId;
+    
+    // Cập nhật unread count
+    setUnreadCounts(prev => {
+      const newMap = new Map(prev);
+      const currentCount = prev.get(summary.conversationId) || 0;
+      
+      if (selectedConversation?.conversationId === summary.conversationId) {
+        // Đang mở conversation này -> set về 0
+        newMap.set(summary.conversationId, 0);
+      } else if (isMyMessage) {
+        // Tin nhắn của mình gửi đi -> không thay đổi unread count
+        // Giữ nguyên giá trị hiện tại
+      } else {
+        // Tin nhắn từ người khác khi không đang mở conversation đó
+        // Tăng lên 1 thay vì dùng giá trị từ BE (để tránh BE trả về sai)
+        newMap.set(summary.conversationId, currentCount + 1);
+      }
+      
+      console.log('[ChatContainer] Updated unread count for', summary.conversationId, ':', newMap.get(summary.conversationId));
+      return newMap;
+    });
+    
+    // Cập nhật lastMessage và lastMessageTime (luôn cập nhật để hiển thị tin nhắn mới)
+    setConversationSummaries(prev => {
+      const newMap = new Map(prev);
+      newMap.set(summary.conversationId, {
+        lastMessage: summary.lastMessage,
+        lastMessageTime: summary.lastMessageTime
+      });
+      return newMap;
+    });
+  }, [selectedConversation?.conversationId, accountId]);
+
+  // Subscribe to conversation summary khi WebSocket connected
+  useEffect(() => {
+    if (wsConnected && senderId && !summarySubscribedRef.current) {
+      console.log('[ChatContainer] Subscribing to conversation summary for:', senderId);
+      webSocketService.subscribeToConversationSummary(senderId, handleConversationSummary);
+      summarySubscribedRef.current = true;
+    }
+
+    return () => {
+      if (summarySubscribedRef.current && senderId) {
+        console.log('[ChatContainer] Unsubscribing from conversation summary');
+        webSocketService.unsubscribeFromConversationSummary(senderId);
+        summarySubscribedRef.current = false;
+      }
+    };
+  }, [wsConnected, senderId, handleConversationSummary]);
 
   // Load initial conversation if conversationId is provided
   useEffect(() => {
@@ -91,11 +157,27 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
 
   const handleConversationSelect = (conversation: Conversation) => {
     setSelectedConversation(conversation);
+    // Clear unread count cho conversation được chọn (sẽ được update lại khi mark-read xong)
+    setUnreadCounts(prev => {
+      const newMap = new Map(prev);
+      newMap.set(conversation.conversationId, 0);
+      return newMap;
+    });
   };
 
   const handleBack = () => {
     setSelectedConversation(null);
   };
+
+  // Callback khi ChatWindow đã mark messages as read
+  const handleMessagesRead = useCallback((conversationId: string) => {
+    console.log('[ChatContainer] Messages marked as read for:', conversationId);
+    setUnreadCounts(prev => {
+      const newMap = new Map(prev);
+      newMap.set(conversationId, 0);
+      return newMap;
+    });
+  }, []);
 
   return (
     <div className="h-full bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
@@ -127,6 +209,8 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
               senderId={senderId}
               selectedConversationId={selectedConversation?.conversationId}
               onConversationSelect={handleConversationSelect}
+              unreadCounts={unreadCounts}
+              conversationSummaries={conversationSummaries}
             />
           </div>
         </div>
@@ -148,6 +232,7 @@ export const ChatContainer: React.FC<ChatContainerProps> = ({
               currentAccountId={accountId}
               currentSenderId={senderId}
               onBack={handleBack}
+              onMessagesRead={handleMessagesRead}
             />
           ) : (
             <div className="flex items-center justify-center h-full text-gray-500">

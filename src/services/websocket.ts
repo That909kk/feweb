@@ -1,12 +1,12 @@
 /**
  * WebSocket Service for Real-time Chat
  * Sử dụng SockJS và STOMP
- * Dựa theo CHAT_FEATURE_README.md và websocket_realtime_test.html
+ * Dựa theo CHAT_FEATURE_README.md và chat-realtime-summary-unread.md
  */
 
 import SockJS from 'sockjs-client';
 import { Client, type IFrame, type IMessage } from '@stomp/stompjs';
-import type { WebSocketMessage } from '../types/chat';
+import type { WebSocketMessage, ConversationSummaryDTO } from '../types/chat';
 
 const WS_BASE_URL = import.meta.env.VITE_WS_BASE_URL || 'http://localhost:8080/ws';
 const WS_ENDPOINT = '/chat';
@@ -17,13 +17,16 @@ console.log('[WebSocket Config] Final WS_BASE_URL:', WS_BASE_URL);
 console.log('[WebSocket Config] Full WebSocket URL:', `${WS_BASE_URL}${WS_ENDPOINT}`);
 
 type MessageHandler = (message: WebSocketMessage) => void;
+type SummaryHandler = (summary: ConversationSummaryDTO) => void;
 type ConnectionHandler = () => void;
 type ErrorHandler = (error: any) => void;
 
 class WebSocketService {
   private client: Client | null = null;
   private subscriptions: Map<string, any> = new Map();
+  private summarySubscriptions: Map<string, any> = new Map();
   private messageHandlers: Map<string, MessageHandler[]> = new Map();
+  private summaryHandlers: Map<string, SummaryHandler[]> = new Map();
   private connectionHandlers: ConnectionHandler[] = [];
   private disconnectionHandlers: ConnectionHandler[] = [];
   private errorHandlers: ErrorHandler[] = [];
@@ -153,6 +156,14 @@ class WebSocketService {
       });
       this.subscriptions.clear();
       this.messageHandlers.clear();
+      
+      // Hủy tất cả summary subscriptions
+      this.summarySubscriptions.forEach((subscription, participantId) => {
+        console.log(`[WebSocket] Unsubscribing from summary ${participantId}`);
+        subscription.unsubscribe();
+      });
+      this.summarySubscriptions.clear();
+      this.summaryHandlers.clear();
 
       // Deactivate client
       this.client.deactivate();
@@ -213,6 +224,62 @@ class WebSocketService {
       subscription.unsubscribe();
       this.subscriptions.delete(conversationId);
       this.messageHandlers.delete(conversationId);
+    }
+  }
+
+  /**
+   * Subscribe to conversation summary (realtime unread count + last message)
+   * Topic: /topic/conversation/summary/{participantId}
+   * @param participantId customerId hoặc employeeId của participant
+   * @param handler Callback xử lý summary
+   */
+  subscribeToConversationSummary(participantId: string, handler: SummaryHandler): void {
+    if (!this.client?.connected) {
+      console.error('[WebSocket] Not connected. Call connect() first.');
+      return;
+    }
+
+    // Lưu handler
+    if (!this.summaryHandlers.has(participantId)) {
+      this.summaryHandlers.set(participantId, []);
+    }
+    this.summaryHandlers.get(participantId)!.push(handler);
+
+    // Nếu đã subscribe rồi thì không subscribe lại
+    if (this.summarySubscriptions.has(participantId)) {
+      console.log(`[WebSocket] Already subscribed to summary for ${participantId}`);
+      return;
+    }
+
+    const destination = `/topic/conversation/summary/${participantId}`;
+    console.log(`[WebSocket] Subscribing to ${destination}`);
+
+    const subscription = this.client.subscribe(destination, (message: IMessage) => {
+      try {
+        const data: ConversationSummaryDTO = JSON.parse(message.body);
+        console.log('[WebSocket] Conversation summary received:', data);
+
+        // Gọi tất cả handlers cho participant này
+        const handlers = this.summaryHandlers.get(participantId) || [];
+        handlers.forEach(h => h(data));
+      } catch (error) {
+        console.error('[WebSocket] Error parsing summary:', error);
+      }
+    });
+
+    this.summarySubscriptions.set(participantId, subscription);
+  }
+
+  /**
+   * Unsubscribe from conversation summary
+   */
+  unsubscribeFromConversationSummary(participantId: string): void {
+    const subscription = this.summarySubscriptions.get(participantId);
+    if (subscription) {
+      console.log(`[WebSocket] Unsubscribing from summary ${participantId}`);
+      subscription.unsubscribe();
+      this.summarySubscriptions.delete(participantId);
+      this.summaryHandlers.delete(participantId);
     }
   }
 

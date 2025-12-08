@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
+import { useChatUnreadCount } from '../hooks/useChatUnreadCount';
 import type { UserRole } from '../types/api';
 
 type NavigationProps = {
@@ -198,7 +199,7 @@ const quickActionConfig: Record<UserRole, QuickActionConfig> = {
 };
 
 const Navigation: React.FC<NavigationProps> = ({ role, collapsed, onNavigate }) => {
-  const { selectedRole, logout } = useAuth();
+  const { user, selectedRole, logout } = useAuth();
   const location = useLocation();
 
   const activeRole = role ?? selectedRole ?? 'CUSTOMER';
@@ -206,19 +207,36 @@ const Navigation: React.FC<NavigationProps> = ({ role, collapsed, onNavigate }) 
   const quickAction = useMemo(() => quickActionConfig[activeRole], [activeRole]);
   const workspaceLabel = roleLabels[activeRole];
 
+  // Lấy senderId dựa vào role
+  const senderId = useMemo(() => {
+    if (activeRole === 'CUSTOMER') return user?.customerId;
+    if (activeRole === 'EMPLOYEE') return user?.employeeId;
+    return null;
+  }, [activeRole, user?.customerId, user?.employeeId]);
+
+  // Hook lấy tổng unread message count (chỉ từ conversations có thể chat)
+  const { unreadCount: chatUnreadCount } = useChatUnreadCount({
+    senderId,
+    enabled: !!senderId && (activeRole === 'CUSTOMER' || activeRole === 'EMPLOYEE')
+  });
+
   const isActive = (path: string) => location.pathname.startsWith(path);
 
   const navContent = useMemo(
     () =>
       navItems.map(item => {
         const active = isActive(item.to);
+        // Kiểm tra xem item này có phải là mục chat không
+        const isChatItem = item.to.includes('/chat');
+        const showBadge = isChatItem && chatUnreadCount > 0;
+        
         return (
           <Link
             key={item.to}
             to={item.to}
             onClick={onNavigate ? () => onNavigate() : undefined}
             className={[
-              'group flex w-full items-center gap-3 rounded-2xl border px-4 py-3 transition-all duration-200',
+              'group flex w-full items-center gap-3 rounded-2xl border px-4 py-3 transition-all duration-200 relative',
               collapsed ? 'justify-center' : 'items-start',
               active
                 ? 'border-brand-teal bg-white shadow-elevation-sm'
@@ -226,32 +244,48 @@ const Navigation: React.FC<NavigationProps> = ({ role, collapsed, onNavigate }) 
             ].join(' ')}
             title={collapsed ? item.label : undefined}
           >
-            <item.icon
-              className={[
-                'h-5 w-5 flex-shrink-0 transition-colors',
-                collapsed ? 'mx-auto' : '',
-                active 
-                  ? 'text-brand-teal' 
-                  : 'text-brand-navy'
-              ].join(' ')}
-            />
-            {!collapsed && (
-              <div className="flex flex-col">
-                <span
-                  className={[
-                    'text-sm font-semibold tracking-tight',
-                    active ? 'text-brand-navy' : 'text-brand-text/80'
-                  ].join(' ')}
-                >
-                  {item.label}
+            <div className="relative flex-shrink-0">
+              <item.icon
+                className={[
+                  'h-5 w-5 transition-colors',
+                  collapsed ? 'mx-auto' : '',
+                  active 
+                    ? 'text-brand-teal' 
+                    : 'text-brand-navy'
+                ].join(' ')}
+              />
+              {/* Badge hiển thị số tin nhắn chưa đọc */}
+              {showBadge && (
+                <span className="absolute -top-2 -right-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white shadow-sm">
+                  {chatUnreadCount > 99 ? '99+' : chatUnreadCount}
                 </span>
+              )}
+            </div>
+            {!collapsed && (
+              <div className="flex flex-col flex-1">
+                <div className="flex items-center gap-2">
+                  <span
+                    className={[
+                      'text-sm font-semibold tracking-tight',
+                      active ? 'text-brand-navy' : 'text-brand-text/80'
+                    ].join(' ')}
+                  >
+                    {item.label}
+                  </span>
+                  {/* Badge khi không collapsed */}
+                  {showBadge && (
+                    <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white shadow-sm">
+                      {chatUnreadCount > 99 ? '99+' : chatUnreadCount}
+                    </span>
+                  )}
+                </div>
                 <span className="text-xs text-brand-text/60">{item.description}</span>
               </div>
             )}
           </Link>
         );
       }),
-    [collapsed, navItems, onNavigate, isActive]
+    [collapsed, navItems, onNavigate, isActive, chatUnreadCount]
   );
 
   return (

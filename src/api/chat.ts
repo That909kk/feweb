@@ -9,13 +9,14 @@ import type {
   ConversationListResponse,
   MessageListResponse,
   UnreadCountResponse,
+  TotalUnreadCountResponse,
   GetOrCreateConversationParams,
 } from '../types/chat';
 
 /**
  * Chat API Service
  * Base URL: /api/v1
- * Dựa theo CHAT_FEATURE_README.md
+ * Dựa theo CHAT_FEATURE_README.md và chat-realtime-summary-unread.md
  */
 
 // ============ CONVERSATIONS API ============
@@ -254,21 +255,44 @@ export const getAllMessagesApi = async (
 };
 
 /**
- * Get unread message count
- * GET /api/v1/messages/conversation/{conversationId}/unread-count
+ * Get unread message count for a specific conversation
+ * GET /api/v1/messages/conversation/{conversationId}/unread-count?receiverId={receiverId}
  */
 export const getUnreadMessageCountApi = async (
-  conversationId: string
+  conversationId: string,
+  receiverId: string
 ): Promise<UnreadCountResponse> => {
   try {
-    console.log(`[Chat API] Fetching unread count for conversation ${conversationId}`);
+    console.log(`[Chat API] Fetching unread count for conversation ${conversationId}, receiverId: ${receiverId}`);
     const response = await api.get<UnreadCountResponse>(
-      `/messages/conversation/${conversationId}/unread-count`
+      `/messages/conversation/${conversationId}/unread-count`,
+      { params: { receiverId } }
     );
     console.log('[Chat API] Unread count fetched:', response.data);
     return response.data;
   } catch (error: any) {
     console.error('[Chat API] Error fetching unread count:', error);
+    throw error;
+  }
+};
+
+/**
+ * Get total unread message count across all conversations
+ * GET /api/v1/messages/unread-count?receiverId={receiverId}
+ */
+export const getTotalUnreadMessageCountApi = async (
+  receiverId: string
+): Promise<TotalUnreadCountResponse> => {
+  try {
+    console.log(`[Chat API] Fetching total unread count for receiverId: ${receiverId}`);
+    const response = await api.get<TotalUnreadCountResponse>(
+      '/messages/unread-count',
+      { params: { receiverId } }
+    );
+    console.log('[Chat API] Total unread count fetched:', response.data);
+    return response.data;
+  } catch (error: any) {
+    console.error('[Chat API] Error fetching total unread count:', error);
     throw error;
   }
 };
