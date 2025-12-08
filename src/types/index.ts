@@ -6,3 +6,6 @@ export * from './legacy';
 
 // Re-export address types
 export * from './address';
+
+// Re-export additional fee types
+export * from './additionalFee';

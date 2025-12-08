@@ -750,9 +750,9 @@ const BookingSuccessPage: React.FC = () => {
                   <div key={index}>
                     <div className="flex items-center justify-between py-2">
                       <span className="font-medium text-brand-navy">
-                        {serviceDetail.service.name} × {serviceDetail.quantity}
+                        {serviceDetail.service?.name || serviceDetail.serviceName} × {serviceDetail.quantity || 1}
                       </span>
-                      <span className="font-semibold text-brand-navy">{serviceDetail.formattedSubTotal}</span>
+                      <span className="font-semibold text-brand-navy">{serviceDetail.formattedSubTotal || new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(serviceDetail.subTotal || serviceDetail.price || 0)}</span>
                     </div>
                     {serviceDetail.selectedChoices?.map((choice: any, choiceIndex: number) => (
                       <div key={choiceIndex} className="flex items-center justify-between py-1 pl-4 text-sm text-brand-text/70">
@@ -762,6 +762,55 @@ const BookingSuccessPage: React.FC = () => {
                     ))}
                   </div>
                 ))
+              )}
+              
+              {/* Subtotal (Base Amount) */}
+              {firstBooking?.baseAmount !== undefined && (
+                <div className="border-t border-brand-outline/20 pt-3">
+                  <div className="flex items-center justify-between py-1">
+                    <span className="text-brand-text/70">Tạm tính</span>
+                    <span className="font-medium text-brand-navy">
+                      {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(firstBooking.baseAmount)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Fee Breakdown */}
+              {firstBooking?.fees && firstBooking.fees.length > 0 && (
+                <div className="space-y-2">
+                  <h4 className="text-sm font-medium text-brand-text/70">Phụ phí</h4>
+                  {firstBooking.fees.map((fee: any, index: number) => (
+                    <div key={index} className="flex items-center justify-between py-1 pl-4">
+                      <span className="text-sm text-brand-text/70">
+                        {fee.name}
+                        {fee.type === 'PERCENT' && (
+                          <span className="ml-1 text-xs text-brand-text/50">
+                            ({(fee.value * 100).toFixed(0)}%)
+                          </span>
+                        )}
+                        {fee.systemSurcharge && (
+                          <span className="ml-2 rounded-full bg-blue-100 px-2 py-0.5 text-xs text-blue-700">
+                            Hệ thống
+                          </span>
+                        )}
+                      </span>
+                      <span className="font-medium text-amber-600">
+                        +{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(fee.amount)}
+                      </span>
+                    </div>
+                  ))}
+                  
+                  {/* Total Fees */}
+                  {firstBooking?.totalFees !== undefined && (
+                    <div className="flex items-center justify-between border-t border-dashed border-brand-outline/20 py-2 pl-4">
+                      <span className="text-sm font-medium text-brand-text/70">Tổng phụ phí</span>
+                      <span className="font-semibold text-amber-600">
+                        +{new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(firstBooking.totalFees)}
+                      </span>
+                    </div>
+                  )}
+                </div>
               )}
               
               <div className="border-t border-brand-outline/20 pt-4">

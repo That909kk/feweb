@@ -14,3 +14,4 @@ export * from './permission';
 export * from './notification';
 export * from './admin';
 export * from './chat';
+export * from './additionalFee';

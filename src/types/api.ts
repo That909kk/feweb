@@ -403,6 +403,7 @@ export interface CreateBookingRequest {
   bookingTime: string;
   note?: string | null;
   promoCode?: string | null;
+  additionalFeeIds?: string[]; // Danh sách ID các phụ phí được áp dụng (optional)
   // Booking Post Feature fields (khi không chọn nhân viên)
   title?: string | null;
   imageUrl?: string | null; // Deprecated: Kept for backward compatibility, use imageUrls instead
@@ -497,6 +498,16 @@ export interface BookingResponse extends ApiResponse {
     // Additional fields
     totalServices?: number;
     totalEmployees?: number;
+    // Fee breakdown fields (theo booking-fee-endpoints.md)
+    baseAmount?: number; // Tổng tiền dịch vụ trước phí
+    totalFees?: number; // Tổng phụ phí
+    fees?: Array<{
+      name: string;
+      type: 'PERCENT' | 'FLAT';
+      value: number;
+      amount: number;
+      systemSurcharge: boolean;
+    }>;
     customerInfo?: {
       customerId: string;
       fullName: string;

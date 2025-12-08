@@ -38,7 +38,8 @@ import {
   AdminServiceManagement,
   AdminBookingManagement,
   AdminContentManagement,
-  AdminPermissionManagement
+  AdminPermissionManagement,
+  AdminAdditionalFeeManagement
 } from './pages/admin';
 import BookingVerification from './pages/admin/BookingVerification';
 import AdminStatistics from './pages/admin/Statistics';
@@ -196,6 +197,11 @@ function App() {
             <Route path="/admin/permissions" element={
               <ProtectedRoute requiredRole="ADMIN">
                 <AdminPermissionManagement />
+              </ProtectedRoute>
+            } />
+            <Route path="/admin/additional-fees" element={
+              <ProtectedRoute requiredRole="ADMIN">
+                <AdminAdditionalFeeManagement />
               </ProtectedRoute>
             } />
             

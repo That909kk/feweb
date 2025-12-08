@@ -15,7 +15,8 @@ import {
   Sparkles,
   UserCog,
   UserRound,
-  Users
+  Users,
+  Receipt
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
@@ -155,6 +156,12 @@ const navigationConfig: Record<UserRole, NavItemConfig[]> = {
       label: 'Dịch vụ',
       description: 'Quản lý dịch vụ',
       icon: Settings
+    },
+    {
+      to: '/admin/additional-fees',
+      label: 'Phụ phí',
+      description: 'Quản lý phụ phí',
+      icon: Receipt
     },
     {
       to: '/admin/bookings',
