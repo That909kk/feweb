@@ -114,6 +114,34 @@ const AuthPage: React.FC = () => {
     }
   }, [mode]);
 
+  // ============= Forgot Password Handlers =============
+  // IMPORTANT: All hooks must be called before any early returns (Rules of Hooks)
+  const handleOpenForgotPassword = useCallback(() => {
+    setShowForgotPassword(true);
+    setForgotPasswordStep('email');
+    setForgotEmail('');
+    setOtp('');
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setForgotPasswordError('');
+    setForgotPasswordSuccess('');
+    setCountdown(0);
+    setCooldown(0);
+  }, []);
+
+  const handleCloseForgotPassword = useCallback(() => {
+    setShowForgotPassword(false);
+    setForgotPasswordStep('email');
+    setForgotEmail('');
+    setOtp('');
+    setNewPassword('');
+    setConfirmNewPassword('');
+    setForgotPasswordError('');
+    setForgotPasswordSuccess('');
+    setCountdown(0);
+    setCooldown(0);
+  }, []);
+
   // Show loading while checking authentication status or redirecting
   if (!isInitialized || isRedirecting) {
     return (
@@ -210,33 +238,6 @@ const AuthPage: React.FC = () => {
     alert('Đăng ký thành công! Vui lòng đăng nhập.');
     setMode('login');
   };
-
-  // ============= Forgot Password Handlers =============
-  const handleOpenForgotPassword = useCallback(() => {
-    setShowForgotPassword(true);
-    setForgotPasswordStep('email');
-    setForgotEmail('');
-    setOtp('');
-    setNewPassword('');
-    setConfirmNewPassword('');
-    setForgotPasswordError('');
-    setForgotPasswordSuccess('');
-    setCountdown(0);
-    setCooldown(0);
-  }, []);
-
-  const handleCloseForgotPassword = useCallback(() => {
-    setShowForgotPassword(false);
-    setForgotPasswordStep('email');
-    setForgotEmail('');
-    setOtp('');
-    setNewPassword('');
-    setConfirmNewPassword('');
-    setForgotPasswordError('');
-    setForgotPasswordSuccess('');
-    setCountdown(0);
-    setCooldown(0);
-  }, []);
 
   const handleSendOtp = async (e: React.FormEvent) => {
     e.preventDefault();
