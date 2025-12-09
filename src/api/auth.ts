@@ -217,15 +217,3 @@ export const resetPasswordApi = async (data: ResetPasswordRequest): Promise<Rese
   const response = await api.post<ResetPasswordResponse>('/otp/email/reset-password', data);
   return response.data;
 };
-
-// Check resend cooldown
-export interface ResendCooldownResponse {
-  success: boolean;
-  cooldownSeconds: number;
-  canResend: boolean;
-}
-
-export const checkResendCooldownApi = async (email: string): Promise<ResendCooldownResponse> => {
-  const response = await api.get<ResendCooldownResponse>(`/otp/email/resend-cooldown?email=${encodeURIComponent(email)}`);
-  return response.data;
-};
