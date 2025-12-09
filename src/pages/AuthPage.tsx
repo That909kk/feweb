@@ -184,8 +184,21 @@ const AuthPage: React.FC = () => {
         if (roles.length === 1) {
           // Auto login with single role
           console.log(`🔍 [DEBUG] Đăng nhập tự động với vai trò duy nhất: ${roles[0]}`);
-          const success = await login(formData.username, formData.password, roles[0]);
-          if (success) {
+          const loginResult = await login(formData.username, formData.password, roles[0]);
+          
+          // Kiểm tra nếu cần xác thực email
+          if (loginResult.requireEmailVerification && loginResult.email) {
+            console.log(`⚠️ [DEBUG] Cần xác thực email: ${loginResult.email}`);
+            navigate('/verify-email', { 
+              state: { 
+                email: loginResult.email, 
+                fromLogin: true 
+              } 
+            });
+            return;
+          }
+          
+          if (loginResult.success) {
             // Navigate based on role
             const role = roles[0];
             switch (role) {
@@ -200,6 +213,8 @@ const AuthPage: React.FC = () => {
                 navigate('/customer/dashboard');
                 break;
             }
+          } else if (loginResult.error) {
+            setError(loginResult.error);
           }
         } else {
           // Multiple roles - show role selection
@@ -329,8 +344,21 @@ const AuthPage: React.FC = () => {
 
   const handleRoleSelection = async (role: UserRole) => {
     try {
-      const success = await login(formData.username, formData.password, role);
-      if (success) {
+      const loginResult = await login(formData.username, formData.password, role);
+      
+      // Kiểm tra nếu cần xác thực email
+      if (loginResult.requireEmailVerification && loginResult.email) {
+        console.log(`⚠️ [DEBUG] Cần xác thực email: ${loginResult.email}`);
+        navigate('/verify-email', { 
+          state: { 
+            email: loginResult.email, 
+            fromLogin: true 
+          } 
+        });
+        return;
+      }
+      
+      if (loginResult.success) {
         switch (role) {
           case 'ADMIN':
             navigate('/admin/dashboard');
@@ -343,6 +371,8 @@ const AuthPage: React.FC = () => {
             navigate('/customer/dashboard');
             break;
         }
+      } else if (loginResult.error) {
+        setError(loginResult.error);
       }
     } catch (err) {
       setError('Đã xảy ra lỗi khi đăng nhập.');

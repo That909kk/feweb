@@ -817,7 +817,7 @@ const BookingSuccessPage: React.FC = () => {
               
               <div className="border-t border-brand-outline/20 pt-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-xl font-bold text-brand-navy">Tổng cộng</span>
+                  <span className="text-xl font-bold text-brand-navy">Tổng cộng khách hàng phải (Tạm tính+ Tổng phụ phí):</span>
                   <span className="text-2xl font-bold text-emerald-600">{displayAmount}</span>
                 </div>
               </div>

@@ -45,12 +45,17 @@ export const useBooking = () => {
     } catch (err: any) {
       let errorMessage;
       
-      if (err?.response?.data) {
-        errorMessage = err.response.data.message || 'Failed to create booking';
+      // Xử lý các loại lỗi khác nhau
+      if (err?.code === 'ECONNABORTED' || err?.message?.includes('timeout')) {
+        errorMessage = 'Kết nối tới server quá lâu. Vui lòng kiểm tra kết nối mạng và thử lại.';
+      } else if (err?.code === 'ERR_NETWORK' || err?.message?.includes('Network Error')) {
+        errorMessage = 'Không thể kết nối tới server. Vui lòng kiểm tra kết nối mạng.';
+      } else if (err?.response?.data) {
+        errorMessage = err.response.data.message || 'Đặt lịch thất bại';
       } else if (err?.message) {
         errorMessage = err.message;
       } else {
-        errorMessage = 'An unexpected error occurred';
+        errorMessage = 'Đã xảy ra lỗi không xác định';
       }
       
       setError(errorMessage);

@@ -14,6 +14,7 @@ import L from 'leaflet';
 import { useServices, useServiceOptions, useServicePriceCalculation, useSuitableEmployees } from '../../hooks/useServices';
 import { useBooking } from '../../hooks/useBooking';
 import { useRecurringBooking } from '../../hooks/useRecurringBooking';
+import { useBookingPreview } from '../../hooks/useBookingPreview';
 import { useAuth } from '../../contexts/AuthContext';
 import { useCategories } from '../../hooks/useCategories';
 import { useAddress } from '../../hooks/useAddress';
@@ -90,6 +91,20 @@ const BookingPage: React.FC = () => {
     createRecurringBooking,
     isLoading: recurringBookingLoading
   } = useRecurringBooking();
+  
+  // Hook cho booking preview (xem trước phí)
+  const {
+    previewData,
+    multiplePreviewData,
+    recurringPreviewData,
+    isLoading: previewLoading,
+    error: previewError,
+    getSinglePreview,
+    getMultiplePreview,
+    getRecurringPreview,
+    clearPreview
+  } = useBookingPreview();
+  
   const preselectedServiceId = searchParams.get('service');
   
   const [step, setStep] = useState(1);
@@ -1003,15 +1018,23 @@ const BookingPage: React.FC = () => {
   //   }
   // };
 
-  const handleNext = () => {
+  const handleNext = async () => {
     if (step < 4) {
-      setStep(step + 1);
+      const nextStep = step + 1;
+      setStep(nextStep);
+      
+      // Nếu chuyển sang step 4 (xác nhận), tự động gọi API preview
+      if (nextStep === 4) {
+        await fetchBookingPreview();
+      }
     }
   };
 
   const handlePrev = () => {
     if (step > 1) {
       setStep(step - 1);
+      // Clear preview khi quay lại
+      clearPreview();
     }
   };
   
@@ -1348,6 +1371,169 @@ const BookingPage: React.FC = () => {
       console.error('❌ [RECURRING BOOKING ERROR]:', error);
       const errorMessage = error.message || 'Không thể tạo lịch định kỳ. Vui lòng thử lại.';
       setErrorMessages([errorMessage]);
+    }
+  };
+
+  /**
+   * Hàm xây dựng thông tin địa chỉ để gửi cho preview/booking API
+   */
+  const buildAddressInfo = async (): Promise<{ addressId: string | null; newAddress: any }> => {
+    let addressId: string | null = null;
+    let newAddress: any = null;
+
+    if (!user?.customerId) {
+      throw new Error('Lỗi xác thực người dùng. Vui lòng đăng nhập lại.');
+    }
+
+    if (addressSource === 'profile') {
+      if (defaultAddressInfo?.addressId) {
+        addressId = defaultAddressInfo.addressId;
+      } else {
+        const defaultAddress = await getDefaultAddress(user.customerId);
+        if (defaultAddress && defaultAddress.addressId) {
+          addressId = defaultAddress.addressId;
+          setDefaultAddressInfo({
+            addressId: defaultAddress.addressId,
+            ward: defaultAddress.ward || '',
+            city: defaultAddress.city || '',
+            latitude: defaultAddress.latitude,
+            longitude: defaultAddress.longitude
+          });
+        } else {
+          throw new Error('Không thể lấy địa chỉ mặc định từ hệ thống.');
+        }
+      }
+    } else if (addressSource === 'current' || addressSource === 'custom') {
+      let finalAddress = '';
+      
+      if (addressSource === 'current') {
+        finalAddress = currentLocationAddress;
+      } else if (addressSource === 'custom') {
+        finalAddress = isManualAddress ? manualAddress : bookingData.address;
+      }
+      
+      const finalCoordinates = addressSource === 'current' ? mapCoordinates : null;
+      
+      if (!finalAddress || !finalAddress.trim()) {
+        throw new Error('Vui lòng nhập địa chỉ đầy đủ');
+      }
+
+      let ward = '';
+      let city = '';
+      
+      if (addressSource === 'custom' && !isManualAddress) {
+        ward = selectedCommuneName || '';
+        city = selectedProvinceName || '';
+      } else {
+        city = 'Thành phố Hồ Chí Minh';
+      }
+      
+      newAddress = {
+        customerId: user.customerId,
+        fullAddress: finalAddress,
+        ward: ward,
+        city: city,
+        latitude: finalCoordinates?.lat || null,
+        longitude: finalCoordinates?.lng || null
+      };
+    }
+
+    return { addressId, newAddress };
+  };
+
+  /**
+   * Hàm fetch preview booking để hiển thị thông tin phí trên màn hình xác nhận
+   */
+  const fetchBookingPreview = async () => {
+    try {
+      setErrorMessages([]);
+      clearPreview();
+
+      // Validate form trước
+      const validationErrors = validateBookingForm(bookingData);
+      if (validationErrors.length > 0) {
+        setErrorMessages(validationErrors);
+        return;
+      }
+
+      const serviceId = parseInt(bookingData.serviceId);
+      if (isNaN(serviceId) || serviceId <= 0) {
+        setErrorMessages(['Mã dịch vụ không hợp lệ']);
+        return;
+      }
+
+      // Build address info
+      const { addressId, newAddress } = await buildAddressInfo();
+
+      // Build booking details
+      const estimatedPrice = priceData?.finalPrice || (services.find(s => s.serviceId === serviceId)?.basePrice || 0);
+      const bookingDetails = [{
+        serviceId: serviceId,
+        quantity: 1,
+        selectedChoiceIds: selectedChoiceIds,
+        expectedPrice: estimatedPrice
+      }];
+
+      // paymentMethodId có thể null
+      const paymentMethodIdValue = bookingData.paymentMethod ? parseInt(bookingData.paymentMethod) : undefined;
+
+      if (isRecurringBooking) {
+        // Recurring booking preview
+        // Convert selectedWeekDays (0=CN, 1=T2,..., 6=T7) to API format (1=Monday, 7=Sunday)
+        const recurrenceDays = selectedWeekDays.map(d => d === 0 ? 7 : d);
+
+        const recurringRequest = {
+          addressId: addressId || undefined,
+          newAddress: newAddress || undefined,
+          recurrenceType: 'WEEKLY' as const,
+          recurrenceDays: recurrenceDays,
+          bookingTime: weekTime + ':00', // LocalTime format HH:mm:ss
+          startDate: recurringStartDate,
+          endDate: recurringEndDate || undefined,
+          promoCode: bookingData.promoCode || undefined,
+          bookingDetails: bookingDetails,
+          paymentMethodId: paymentMethodIdValue,
+          note: bookingData.notes || undefined,
+          title: recurringTitle || undefined
+        };
+
+        console.log('📋 [PREVIEW] Fetching recurring booking preview:', recurringRequest);
+        await getRecurringPreview(recurringRequest);
+      } else if (bookingData.bookingTimes.length > 1) {
+        // Multiple booking preview
+        const multipleRequest = {
+          addressId: addressId || undefined,
+          newAddress: newAddress || undefined,
+          bookingTimes: bookingData.bookingTimes,
+          promoCode: bookingData.promoCode || undefined,
+          bookingDetails: bookingDetails,
+          paymentMethodId: paymentMethodIdValue,
+          note: bookingData.notes || undefined,
+          additionalFeeIds: []
+        };
+
+        console.log('📋 [PREVIEW] Fetching multiple booking preview:', multipleRequest);
+        await getMultiplePreview(multipleRequest);
+      } else {
+        // Single booking preview
+        const singleRequest = {
+          addressId: addressId || undefined,
+          newAddress: newAddress || undefined,
+          bookingTime: bookingData.bookingTimes[0],
+          promoCode: bookingData.promoCode || undefined,
+          bookingDetails: bookingDetails,
+          paymentMethodId: paymentMethodIdValue,
+          note: bookingData.notes || undefined,
+          additionalFeeIds: []
+        };
+
+        console.log('📋 [PREVIEW] Fetching single booking preview:', singleRequest);
+        await getSinglePreview(singleRequest);
+      }
+
+    } catch (error: any) {
+      console.error('❌ [PREVIEW ERROR]:', error);
+      setErrorMessages([error.message || 'Không thể tải thông tin phí. Vui lòng thử lại.']);
     }
   };
 
@@ -1836,7 +2022,7 @@ const BookingPage: React.FC = () => {
                       )}
                       <div className="border-t pt-3">
                         <div className="flex justify-between items-center">
-                          <span className="text-lg font-semibold text-gray-900">Tổng cộng:</span>
+                          <span className="text-lg font-semibold text-gray-900">Tổng cộng</span>
                           <span className="text-2xl font-bold text-blue-600">{priceData.finalPrice.toLocaleString('vi-VN')}đ</span>
                         </div>
                       </div>
@@ -3376,13 +3562,140 @@ const BookingPage: React.FC = () => {
                 </div>
                 
                 <div className="mt-6 pt-6 border-t border-gray-200">
-                  <div className="flex justify-between items-center">
-                    <span className="text-lg font-semibold text-gray-900">Tổng chi phí:</span>
-                    <span className="text-2xl font-bold text-blue-600">
-                      {(priceData?.finalPrice || estimatedPrice).toLocaleString('vi-VN')}đ
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-500 mt-1">
+                  {/* Hiển thị chi tiết phí từ API Preview */}
+                  {previewLoading ? (
+                    <div className="flex items-center justify-center py-4">
+                      <div className="animate-spin w-6 h-6 border-2 border-blue-600 border-t-transparent rounded-full mr-3"></div>
+                      <span className="text-gray-600">Đang tính phí...</span>
+                    </div>
+                  ) : previewError ? (
+                    <div className="bg-red-50 border border-red-200 rounded-lg p-4 mb-4">
+                      <p className="text-red-600 text-sm">{previewError}</p>
+                      <button 
+                        onClick={fetchBookingPreview}
+                        className="mt-2 text-sm text-red-700 underline hover:no-underline"
+                      >
+                        Thử lại
+                      </button>
+                    </div>
+                  ) : (previewData || multiplePreviewData || recurringPreviewData) ? (
+                    <div className="space-y-3">
+                      {/* Chi tiết dịch vụ */}
+                      {(previewData?.serviceItems || multiplePreviewData?.serviceItems || recurringPreviewData?.serviceItems)?.map((service, index) => (
+                        <div key={index} className="flex justify-between items-start text-sm">
+                          <div className="flex-1">
+                            <span className="text-gray-700">{service.serviceName}</span>
+                            {service.selectedChoices && service.selectedChoices.length > 0 && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                {service.selectedChoices.map(c => c.choiceName).join(', ')}
+                              </div>
+                            )}
+                          </div>
+                          <span className="text-gray-900 font-medium ml-4">
+                            {service.formattedSubTotal || `${service.subTotal?.toLocaleString('vi-VN')}đ`}
+                          </span>
+                        </div>
+                      ))}
+                      
+                      {/* Tạm tính */}
+                      <div className="flex justify-between text-sm pt-2 border-t border-gray-100">
+                        <span className="text-gray-600">Tạm tính</span>
+                        <span className="text-gray-900">
+                          {previewData?.formattedSubtotal || 
+                           multiplePreviewData?.formattedSubtotalPerBooking || 
+                           recurringPreviewData?.formattedSubtotalPerOccurrence ||
+                           `${(previewData?.subtotal || multiplePreviewData?.subtotalPerBooking || recurringPreviewData?.subtotalPerOccurrence || 0).toLocaleString('vi-VN')}đ`}
+                        </span>
+                      </div>
+                      
+                      {/* Khuyến mãi nếu có */}
+                      {(previewData?.promotionInfo || multiplePreviewData?.promotionInfo || recurringPreviewData?.promotionInfo) && (
+                        <div className="flex justify-between text-sm">
+                          <span className="text-green-600 flex items-center">
+                            <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" />
+                            </svg>
+                            {previewData?.promotionInfo?.promoCode || 
+                             multiplePreviewData?.promotionInfo?.promoCode || 
+                             recurringPreviewData?.promotionInfo?.promoCode}
+                          </span>
+                          <span className="text-green-600 font-medium">
+                            -{previewData?.formattedDiscountAmount || 
+                              multiplePreviewData?.formattedDiscountPerBooking || 
+                              recurringPreviewData?.formattedDiscountPerOccurrence}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Chi tiết phí */}
+                      {(previewData?.feeBreakdowns || multiplePreviewData?.feeBreakdowns || recurringPreviewData?.feeBreakdowns)?.map((fee, index) => {
+                        const feeAmount = fee.amount ?? 0;
+                        const displayAmount = fee.formattedAmount || `${feeAmount.toLocaleString('vi-VN')}đ`;
+                        return (
+                          <div key={index} className="flex justify-between text-sm">
+                            <span className="text-gray-600">
+                              {fee.name}
+                              {fee.type === 'PERCENT' && fee.value && (
+                                <span className="text-gray-400 text-xs ml-1">({(fee.value * 100).toFixed(0)}%)</span>
+                              )}
+                            </span>
+                            <span className="text-gray-900 font-medium">+{displayAmount}</span>
+                          </div>
+                        );
+                      })}
+                      
+                      {/* Số lượng booking (nếu nhiều) */}
+                      {multiplePreviewData && multiplePreviewData.bookingCount > 1 && (
+                        <div className="flex justify-between text-sm pt-2 border-t border-gray-100">
+                          <span className="text-gray-600">Số lượng đặt lịch</span>
+                          <span className="text-gray-900">{multiplePreviewData.bookingCount} lần</span>
+                        </div>
+                      )}
+                      
+                      {/* Số lần định kỳ */}
+                      {recurringPreviewData && recurringPreviewData.occurrenceCount > 0 && (
+                        <div className="flex justify-between text-sm pt-2 border-t border-gray-100">
+                          <span className="text-gray-600">Số lần định kỳ</span>
+                          <span className="text-gray-900">
+                            {recurringPreviewData.occurrenceCount} lần
+                            {recurringPreviewData.hasMoreOccurrences && '+'}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Tổng cộng */}
+                      <div className="flex justify-between items-center pt-3 border-t-2 border-gray-200">
+                        <span className="text-lg font-semibold text-gray-900">Tổng chi phí:</span>
+                        <span className="text-2xl font-bold text-blue-600">
+                          {previewData?.formattedGrandTotal || 
+                           multiplePreviewData?.formattedTotalEstimatedPrice || 
+                           recurringPreviewData?.formattedTotalEstimatedPrice ||
+                           `${(previewData?.grandTotal || multiplePreviewData?.totalEstimatedPrice || recurringPreviewData?.totalEstimatedPrice || 0).toLocaleString('vi-VN')}đ`}
+                        </span>
+                      </div>
+                      
+                      {/* Giá mỗi lần (nếu nhiều booking hoặc recurring) */}
+                      {(multiplePreviewData?.bookingCount && multiplePreviewData.bookingCount > 1) && (
+                        <p className="text-xs text-gray-500 text-right">
+                          ({multiplePreviewData.formattedPricePerBooking} × {multiplePreviewData.bookingCount} lần)
+                        </p>
+                      )}
+                      {recurringPreviewData && recurringPreviewData.occurrenceCount > 1 && (
+                        <p className="text-xs text-gray-500 text-right">
+                          ({recurringPreviewData.formattedPricePerOccurrence} × {recurringPreviewData.occurrenceCount} lần)
+                        </p>
+                      )}
+                    </div>
+                  ) : (
+                    /* Fallback: hiển thị giá ước tính khi chưa có preview */
+                    <div className="flex justify-between items-center">
+                      <span className="text-lg font-semibold text-gray-900">Tổng chi phí:</span>
+                      <span className="text-2xl font-bold text-blue-600">
+                        {(priceData?.finalPrice || estimatedPrice).toLocaleString('vi-VN')}đ
+                      </span>
+                    </div>
+                  )}
+                  <p className="text-sm text-gray-500 mt-2">
                     * Giá cuối cùng có thể thay đổi tùy thuộc vào thực tế công việc
                   </p>
                 </div>
@@ -3675,14 +3988,14 @@ const BookingPage: React.FC = () => {
               ) : (
                 <button
                   onClick={handleSubmit}
-                  disabled={bookingLoading || recurringBookingLoading}
+                  disabled={bookingLoading || recurringBookingLoading || previewLoading}
                   className="flex items-center justify-center px-4 sm:px-8 py-2 sm:py-2.5 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 font-semibold shadow-sm transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed text-sm sm:text-base w-full sm:w-auto"
                 >
                   {(bookingLoading || recurringBookingLoading) ? (
                     <>
                       <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full mr-2"></div>
                       <span className="hidden sm:inline">Đang xử lý...</span>
-                      <span className="sm:hidden">Xử lý...</span>
+                      <span className="sm:hidden">Đang xử lý...</span>
                     </>
                   ) : (
                     <>

@@ -31,6 +31,14 @@ interface AuthUser {
   profileData?: CustomerData | EmployeeData | AdminData;
 }
 
+// Login result với thông tin verification
+export interface LoginResult {
+  success: boolean;
+  requireEmailVerification?: boolean;
+  email?: string;
+  error?: string;
+}
+
 interface AuthContextType {
   user: AuthUser | null;
   selectedRole: UserRole | null;
@@ -43,8 +51,8 @@ interface AuthContextType {
   // Step 1: Get roles
   getRoles: (username: string, password: string) => Promise<UserRole[]>;
   
-  // Step 2: Login with role
-  login: (username: string, password: string, role: UserRole) => Promise<boolean>;
+  // Step 2: Login with role (trả về LoginResult với thông tin verification)
+  login: (username: string, password: string, role: UserRole) => Promise<LoginResult>;
   
   selectRole: (role: UserRole) => void;
   logout: (deviceType?: DeviceType) => Promise<boolean>;
@@ -194,7 +202,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   // Step 2: Login with selected role
-  const login = async (username: string, password: string, role: UserRole): Promise<boolean> => {
+  const login = async (username: string, password: string, role: UserRole): Promise<LoginResult> => {
     setIsLoading(true);
     setError(null);
     
@@ -227,6 +235,25 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         const { accessToken, refreshToken, expireIn, data: profileData, role: userRole, deviceType } = loginResponse.data;
         
         console.log(`✅ [API] Login successful, role: ${userRole}, deviceType: ${deviceType}`);
+        
+        // Kiểm tra isEmailVerified cho CUSTOMER role
+        if (userRole === 'CUSTOMER') {
+          const customerData = profileData as CustomerData;
+          if (customerData.isEmailVerified === false) {
+            console.log(`⚠️ [API] Email not verified for customer: ${customerData.email}`);
+            // Lưu tạm thời token để có thể verify email
+            localStorage.setItem('accessToken', accessToken);
+            localStorage.setItem('refreshToken', refreshToken);
+            localStorage.setItem('pendingEmailVerification', 'true');
+            localStorage.setItem('pendingVerificationEmail', customerData.email);
+            
+            return {
+              success: false,
+              requireEmailVerification: true,
+              email: customerData.email
+            };
+          }
+        }
         
         // Store tokens
         localStorage.setItem('accessToken', accessToken);
@@ -281,7 +308,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem('user', JSON.stringify(authUser));
         localStorage.setItem('selectedRole', role);
         
-        return true;
+        return { success: true };
       } else {
         throw new Error(loginResponse.message || 'Đăng nhập thất bại');
       }
@@ -289,7 +316,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const errorMessage = error?.response?.data?.message || error.message || 'Đăng nhập thất bại';
       console.error('❌ Login error:', errorMessage);
       setError(errorMessage);
-      return false;
+      return { success: false, error: errorMessage };
     } finally {
       setIsLoading(false);
     }

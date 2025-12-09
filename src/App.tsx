@@ -6,6 +6,7 @@ import HomeRedirect from './components/HomeRedirect';
 // Public pages
 import AuthPage from './pages/AuthPage';
 import RegisterPage from './pages/RegisterPage';
+import EmailOtpVerificationPage from './pages/EmailOtpVerificationPage';
 
 // Customer pages
 import CustomerDashboard from './pages/customer/Dashboard';
@@ -58,6 +59,7 @@ function App() {
             {/* Public routes */}
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/register" element={<RegisterPage />} />
+            <Route path="/verify-email" element={<EmailOtpVerificationPage />} />
             
             {/* Customer routes */}
             <Route path="/customer/dashboard" element={

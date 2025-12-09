@@ -104,10 +104,12 @@ export const createBookingApi = async (
     
     console.log(`[API] Using endpoint: ${endpoint}`);
     
+    // Tăng timeout cho booking request vì có thể upload ảnh và xử lý nhiều booking
     const response = await api.post<BookingResponse | any>(endpoint, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
+      timeout: 60000, // 60 seconds timeout cho booking với ảnh
     });
     console.log('Booking API response:', response.data);
     return response.data;

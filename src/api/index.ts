@@ -1,8 +1,10 @@
 // API Services
 export * from './auth';
+export * from './otp';
 export * from './services';
 export * from './schedule';
 export * from './booking';
+export * from './bookingPreview';
 export * from './payment';
 export * from './client';
 export * from './categories';

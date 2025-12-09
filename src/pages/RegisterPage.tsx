@@ -4,6 +4,8 @@ import registerData from '../static-data/pages/register.json';
 import { useRegister } from '../hooks/useRegister';
 import Notification from '../shared/components/Notification';
 import type { RegisterRequest, UserRole } from '../types/api';
+import type { Province, Commune } from '../types/address';
+import { fetchProvinces, fetchCommunes, formatAddress } from '../api/address';
 
 interface FormData {
   username: string;
@@ -13,6 +15,10 @@ interface FormData {
   email: string;
   phoneNumber: string;
   role: UserRole | '';
+  // Address fields
+  provinceCode: string;
+  communeCode: string;
+  streetAddress: string;
 }
 
 interface FormErrors {
@@ -31,17 +37,64 @@ const RegisterPage = () => {
     fullName: '',
     email: '',
     phoneNumber: '',
-    role: ''
+    role: '',
+    provinceCode: '',
+    communeCode: '',
+    streetAddress: ''
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [apiError, setApiError] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  
+  // Address data
+  const [provinces, setProvinces] = useState<Province[]>([]);
+  const [communes, setCommunes] = useState<Commune[]>([]);
+  const [loadingProvinces, setLoadingProvinces] = useState(false);
+  const [loadingCommunes, setLoadingCommunes] = useState(false);
 
   // Clear any existing auth tokens when visiting register page
   useEffect(() => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
   }, []);
+  
+  // Load provinces on mount
+  useEffect(() => {
+    const loadProvinces = async () => {
+      setLoadingProvinces(true);
+      try {
+        const data = await fetchProvinces();
+        setProvinces(data);
+      } catch (error) {
+        console.error('Failed to load provinces:', error);
+      } finally {
+        setLoadingProvinces(false);
+      }
+    };
+    loadProvinces();
+  }, []);
+  
+  // Load communes when province changes
+  useEffect(() => {
+    if (formData.provinceCode) {
+      const loadCommunes = async () => {
+        setLoadingCommunes(true);
+        setCommunes([]);
+        setFormData(prev => ({ ...prev, communeCode: '' }));
+        try {
+          const data = await fetchCommunes(formData.provinceCode);
+          setCommunes(data);
+        } catch (error) {
+          console.error('Failed to load communes:', error);
+        } finally {
+          setLoadingCommunes(false);
+        }
+      };
+      loadCommunes();
+    } else {
+      setCommunes([]);
+    }
+  }, [formData.provinceCode]);
 
   const data = registerData.vi; // Có thể thay đổi theo ngôn ngữ người dùng
 
@@ -85,6 +138,19 @@ const RegisterPage = () => {
       
       case 'role':
         if (!value) return validationErrors.roleRequired;
+        break;
+      
+      case 'provinceCode':
+        if (!value) return 'Vui lòng chọn Tỉnh/Thành phố';
+        break;
+      
+      case 'communeCode':
+        if (!value) return 'Vui lòng chọn Phường/Xã';
+        break;
+      
+      case 'streetAddress':
+        if (!value) return 'Vui lòng nhập số nhà, tên đường';
+        if (value.length > 200) return 'Địa chỉ không được vượt quá 200 ký tự';
         break;
     }
     return '';
@@ -136,22 +202,42 @@ const RegisterPage = () => {
     if (!validateForm()) return;
 
     try {
+      // Lấy thông tin địa chỉ
+      const selectedProvince = provinces.find(p => p.code === formData.provinceCode);
+      const selectedCommune = communes.find(c => c.code === formData.communeCode);
+      
+      const fullAddress = formatAddress(
+        formData.streetAddress,
+        selectedCommune?.name || '',
+        selectedProvince?.name || ''
+      );
+      
       const registerRequest: RegisterRequest = {
         username: formData.username,
         password: formData.password,
         fullName: formData.fullName,
         email: formData.email,
         phoneNumber: formData.phoneNumber,
-        role: formData.role as UserRole
+        role: formData.role as UserRole,
+        address: {
+          fullAddress: fullAddress,
+          ward: selectedCommune?.name || '',
+          city: selectedProvince?.name || '',
+          latitude: null,
+          longitude: null
+        }
       };
 
       const response = await register(registerRequest);
       
       if (response.success) {
-        setSuccessMessage(data.messages.registerSuccess);
-        setTimeout(() => {
-          navigate('/auth', { state: { tab: 'login' } });
-        }, 2000);
+        // Đăng ký thành công, chuyển sang trang xác thực OTP
+        navigate('/verify-email', { 
+          state: { 
+            email: formData.email,
+            fromRegister: true 
+          } 
+        });
       } else {
         setApiError(response.message || data.messages.registerError);
       }
@@ -217,6 +303,36 @@ const RegisterPage = () => {
           )}
 
           <form className="space-y-5" onSubmit={handleSubmit}>
+            {/* Role - Đưa lên đầu */}
+            <div>
+              <label htmlFor="role" className="block text-sm font-medium text-brand-navy mb-2">
+                {data.form.role.label} <span className="text-status-danger">*</span>
+              </label>
+              <select
+                id="role"
+                name="role"
+                required
+                value={formData.role}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                className={`block w-full px-3 py-2.5 border ${
+                  errors.role ? 'border-status-danger/50' : 'border-brand-outline/40'
+                } bg-white text-brand-navy rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm`}
+              >
+                <option value="">-- Chọn loại tài khoản --</option>
+                <option value="CUSTOMER">{data.form.role.options.CUSTOMER}</option>
+                <option value="EMPLOYEE">{data.form.role.options.EMPLOYEE}</option>
+              </select>
+              {errors.role && (
+                <p className="mt-1.5 text-sm text-status-danger flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {errors.role}
+                </p>
+              )}
+            </div>
+
             {/* Username */}
             <div>
               <label htmlFor="username" className="block text-sm font-medium text-brand-navy mb-2">
@@ -436,32 +552,114 @@ const RegisterPage = () => {
               )}
             </div>
 
-            {/* Role */}
+            {/* Address Section Header */}
+            <div className="border-t border-brand-outline/40 pt-5 mt-2">
+              <h3 className="text-sm font-semibold text-brand-navy mb-4 flex items-center gap-2">
+                <svg className="w-5 h-5 text-brand-teal" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Địa chỉ
+              </h3>
+            </div>
+
+            {/* Province */}
             <div>
-              <label htmlFor="role" className="block text-sm font-medium text-brand-navy mb-2">
-                {data.form.role.label} <span className="text-status-danger">*</span>
+              <label htmlFor="provinceCode" className="block text-sm font-medium text-brand-navy mb-2">
+                Tỉnh/Thành phố <span className="text-status-danger">*</span>
               </label>
               <select
-                id="role"
-                name="role"
+                id="provinceCode"
+                name="provinceCode"
                 required
-                value={formData.role}
+                value={formData.provinceCode}
                 onChange={handleInputChange}
                 onBlur={handleBlur}
+                disabled={loadingProvinces}
                 className={`block w-full px-3 py-2.5 border ${
-                  errors.role ? 'border-status-danger/50' : 'border-brand-outline/40'
-                } bg-white text-brand-navy rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm`}
+                  errors.provinceCode ? 'border-status-danger/50' : 'border-brand-outline/40'
+                } bg-white text-brand-navy rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm disabled:bg-gray-100 disabled:cursor-wait`}
               >
-                <option value="">-- Chọn loại tài khoản --</option>
-                <option value="CUSTOMER">{data.form.role.options.CUSTOMER}</option>
-                <option value="EMPLOYEE">{data.form.role.options.EMPLOYEE}</option>
+                <option value="">
+                  {loadingProvinces ? 'Đang tải...' : '-- Chọn Tỉnh/Thành phố --'}
+                </option>
+                {provinces.map(province => (
+                  <option key={province.code} value={province.code}>
+                    {province.name}
+                  </option>
+                ))}
               </select>
-              {errors.role && (
+              {errors.provinceCode && (
                 <p className="mt-1.5 text-sm text-status-danger flex items-center gap-1">
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  {errors.role}
+                  {errors.provinceCode}
+                </p>
+              )}
+            </div>
+
+            {/* Commune/Ward */}
+            <div>
+              <label htmlFor="communeCode" className="block text-sm font-medium text-brand-navy mb-2">
+                Phường/Xã <span className="text-status-danger">*</span>
+              </label>
+              <select
+                id="communeCode"
+                name="communeCode"
+                required
+                value={formData.communeCode}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                disabled={!formData.provinceCode || loadingCommunes}
+                className={`block w-full px-3 py-2.5 border ${
+                  errors.communeCode ? 'border-status-danger/50' : 'border-brand-outline/40'
+                } bg-white text-brand-navy rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed`}
+              >
+                <option value="">
+                  {loadingCommunes ? 'Đang tải...' : !formData.provinceCode ? 'Vui lòng chọn Tỉnh/Thành phố trước' : '-- Chọn Phường/Xã --'}
+                </option>
+                {communes.map(commune => (
+                  <option key={commune.code} value={commune.code}>
+                    {commune.name}
+                  </option>
+                ))}
+              </select>
+              {errors.communeCode && (
+                <p className="mt-1.5 text-sm text-status-danger flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {errors.communeCode}
+                </p>
+              )}
+            </div>
+
+            {/* Street Address */}
+            <div>
+              <label htmlFor="streetAddress" className="block text-sm font-medium text-brand-navy mb-2">
+                Số nhà, Tên đường <span className="text-status-danger">*</span>
+              </label>
+              <input
+                id="streetAddress"
+                name="streetAddress"
+                type="text"
+                required
+                value={formData.streetAddress}
+                onChange={handleInputChange}
+                onBlur={handleBlur}
+                placeholder="Ví dụ: 123 Nguyễn Văn Cừ"
+                className={`appearance-none relative block w-full px-3 py-2.5 border ${
+                  errors.streetAddress ? 'border-status-danger/50' : 'border-brand-outline/40'
+                } placeholder-brand-text/40 text-brand-navy rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-teal focus:border-transparent transition-all sm:text-sm`}
+              />
+              <p className="mt-1.5 text-xs text-brand-text/60">Nhập số nhà và tên đường (không cần nhập Phường/Xã, Tỉnh/Thành phố)</p>
+              {errors.streetAddress && (
+                <p className="mt-1.5 text-sm text-status-danger flex items-center gap-1">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {errors.streetAddress}
                 </p>
               )}
             </div>

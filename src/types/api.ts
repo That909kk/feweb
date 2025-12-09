@@ -50,6 +50,13 @@ export interface RegisterRequest {
   email: string;
   phoneNumber: string;
   role: UserRole;
+  address?: {
+    fullAddress: string;
+    ward: string;
+    city: string;
+    latitude: number | null;
+    longitude: number | null;
+  };
 }
 
 export interface RegisterResponse extends ApiResponse {
@@ -101,6 +108,8 @@ export interface CustomerData {
   status: string;
   address?: string;
   addressId?: string;
+  isEmailVerified?: boolean;
+  isPhoneVerified?: boolean;
 }
 
 // Customer Update Types

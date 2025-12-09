@@ -9,3 +9,6 @@ export * from './address';
 
 // Re-export additional fee types
 export * from './additionalFee';
+
+// Re-export booking preview types
+export * from './bookingPreview';

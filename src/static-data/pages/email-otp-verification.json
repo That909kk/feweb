@@ -1,0 +1,82 @@
+{
+  "vi": {
+    "title": "Xác thực Email",
+    "subtitle": "Nhập mã OTP đã được gửi đến email của bạn",
+    "emailSentTo": "Mã xác thực đã được gửi đến:",
+    "form": {
+      "otp": {
+        "label": "Mã OTP",
+        "placeholder": "Nhập mã 6 chữ số"
+      }
+    },
+    "actions": {
+      "verify": "Xác thực",
+      "resend": "Gửi lại mã",
+      "resendIn": "Gửi lại sau",
+      "back": "Quay lại",
+      "skip": "Bỏ qua, đăng nhập ngay"
+    },
+    "timer": {
+      "expires": "Mã hết hạn sau:",
+      "expired": "Mã đã hết hạn",
+      "minutes": "phút",
+      "seconds": "giây"
+    },
+    "messages": {
+      "verifying": "Đang xác thực...",
+      "sendingOtp": "Đang gửi mã OTP...",
+      "otpSent": "Mã OTP đã được gửi đến email của bạn",
+      "verifySuccess": "Email đã được xác thực thành công!",
+      "verifyError": "Xác thực thất bại. Vui lòng thử lại.",
+      "resendSuccess": "Đã gửi lại mã OTP mới",
+      "otpExpired": "Mã OTP đã hết hạn. Vui lòng yêu cầu mã mới.",
+      "maxAttempts": "Bạn đã nhập sai OTP quá nhiều lần, vui lòng yêu cầu OTP mới",
+      "redirecting": "Đang chuyển hướng đến trang đăng nhập...",
+      "validationErrors": {
+        "otpRequired": "Vui lòng nhập mã OTP",
+        "otpLength": "Mã OTP phải có 6 chữ số",
+        "otpFormat": "Mã OTP chỉ được chứa số"
+      }
+    }
+  },
+  "en": {
+    "title": "Email Verification",
+    "subtitle": "Enter the OTP code sent to your email",
+    "emailSentTo": "Verification code sent to:",
+    "form": {
+      "otp": {
+        "label": "OTP Code",
+        "placeholder": "Enter 6-digit code"
+      }
+    },
+    "actions": {
+      "verify": "Verify",
+      "resend": "Resend code",
+      "resendIn": "Resend in",
+      "back": "Go back",
+      "skip": "Skip, login now"
+    },
+    "timer": {
+      "expires": "Code expires in:",
+      "expired": "Code has expired",
+      "minutes": "minutes",
+      "seconds": "seconds"
+    },
+    "messages": {
+      "verifying": "Verifying...",
+      "sendingOtp": "Sending OTP code...",
+      "otpSent": "OTP code has been sent to your email",
+      "verifySuccess": "Email verified successfully!",
+      "verifyError": "Verification failed. Please try again.",
+      "resendSuccess": "New OTP code sent",
+      "otpExpired": "OTP code has expired. Please request a new one.",
+      "maxAttempts": "Too many incorrect attempts, please request a new OTP",
+      "redirecting": "Redirecting to login page...",
+      "validationErrors": {
+        "otpRequired": "Please enter OTP code",
+        "otpLength": "OTP code must be 6 digits",
+        "otpFormat": "OTP code must contain only numbers"
+      }
+    }
+  }
+}

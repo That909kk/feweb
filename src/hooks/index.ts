@@ -1,6 +1,7 @@
 // API Hooks exports
 export * from './useServices';
 export * from './useBooking';
+export * from './useBookingPreview';
 export * from './useVoiceBooking';
 export * from './useRecurringBooking';
 export * from './usePayment';
@@ -9,6 +10,7 @@ export * from './useAuthSession';
 export * from './useEmployeeBookings';
 export * from './useCategories';
 export * from './useRegister';
+export * from './useEmailOtp';
 export * from './useCustomer';
 export * from './useEmployeeProfile';
 export * from './useAddress';
