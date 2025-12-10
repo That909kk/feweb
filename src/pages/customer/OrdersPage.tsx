@@ -11,6 +11,7 @@ import {
   MessageCircle,
   NotebookText,
   RefreshCcw,
+  RotateCcw,
   Star,
   X
 } from 'lucide-react';
@@ -93,6 +94,61 @@ type BookingItem = {
     categoryName?: string;
     isActive?: boolean;
   }>;
+  // Fee & Pricing fields
+  totalAmount?: number;
+  baseAmount?: number;
+  totalFees?: number;
+  fees?: Array<{
+    name: string;
+    type: string;
+    value: number;
+    amount: number;
+    systemSurcharge?: boolean;
+  }>;
+  // Booking Details
+  bookingDetails?: Array<{
+    bookingDetailId: string;
+    service: {
+      serviceId: number;
+      name: string;
+      description?: string;
+      basePrice?: number;
+      unit?: string;
+      estimatedDurationHours?: number;
+      iconUrl?: string;
+      categoryName?: string;
+      isActive?: boolean;
+    };
+    quantity: number;
+    pricePerUnit: number;
+    formattedPricePerUnit?: string;
+    subTotal: number;
+    formattedSubTotal?: string;
+    selectedChoices?: Array<{
+      choiceId?: number;
+      choiceName?: string;
+      additionalPrice?: number;
+    }>;
+    duration?: string;
+    formattedDuration?: string;
+    assignments?: Array<{
+      assignmentId: string;
+      employee: {
+        employeeId: string;
+        fullName: string;
+        email: string;
+        phoneNumber: string;
+        avatar?: string;
+        rating?: string | null;
+        employeeStatus: string;
+        skills?: string[];
+        bio?: string;
+      };
+      status: string;
+      checkInTime?: string;
+      checkOutTime?: string;
+    }>;
+  }>;
   [key: string]: any;
 };
 
@@ -133,7 +189,7 @@ const normalizeStatus = (status?: string): StatusKey => {
 
 const OrdersPage: React.FC = () => {
   const { user } = useAuth();
-  const { getCustomerBookings, cancelBooking, convertBookingToPost } = useBooking();
+  const { getCustomerBookings, cancelBooking, convertBookingToPost, createBooking } = useBooking();
   const [bookings, setBookings] = useState<BookingItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [selectedFilter, setSelectedFilter] = useState<StatusKey>('ALL');
@@ -195,6 +251,14 @@ const OrdersPage: React.FC = () => {
   const [reviewComment, setReviewComment] = useState('');
   const [isSubmittingReview, setIsSubmittingReview] = useState(false);
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string | null>(null);
+
+  // State for rebook feature
+  const [showRebookDialog, setShowRebookDialog] = useState(false);
+  const [rebookDateTime, setRebookDateTime] = useState('');
+  const [isRebooking, setIsRebooking] = useState(false);
+  const [bookingToRebook, setBookingToRebook] = useState<BookingItem | null>(null);
+  const [showRebookSuccess, setShowRebookSuccess] = useState(false);
+  const [newBookingResult, setNewBookingResult] = useState<any>(null);
 
   const loadBookings = async (page: number = 0, applyDateFilter: boolean = true) => {
     if (!user?.id) {
@@ -273,7 +337,7 @@ const OrdersPage: React.FC = () => {
 
   // Prevent body scroll when any modal is open
   useEffect(() => {
-    const isAnyModalOpen = selectedBooking !== null || showCancelDialog || showConvertDialog || showReviewDialog;
+    const isAnyModalOpen = selectedBooking !== null || showCancelDialog || showConvertDialog || showReviewDialog || showRebookDialog || showRebookSuccess;
     
     if (isAnyModalOpen) {
       // Save current scroll position
@@ -307,7 +371,7 @@ const OrdersPage: React.FC = () => {
         window.scrollTo(0, yPosition);
       }
     };
-  }, [selectedBooking, showCancelDialog, showConvertDialog, showReviewDialog]);
+  }, [selectedBooking, showCancelDialog, showConvertDialog, showReviewDialog, showRebookDialog, showRebookSuccess]);
 
   const loadReviewCriteria = async (): Promise<ReviewCriteria[]> => {
     try {
@@ -505,6 +569,138 @@ const OrdersPage: React.FC = () => {
     }
   };
 
+  // Handle rebook - create a new booking based on completed booking
+  const handleOpenRebookDialog = (booking: BookingItem) => {
+    setBookingToRebook(booking);
+    // Set default datetime to tomorrow at the same time as original booking
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    // Get the time from original booking
+    let originalTime = '09:00';
+    if (booking.bookingTime) {
+      const bookingDate = new Date(booking.bookingTime);
+      originalTime = bookingDate.toTimeString().slice(0, 5);
+    }
+    
+    const year = tomorrow.getFullYear();
+    const month = String(tomorrow.getMonth() + 1).padStart(2, '0');
+    const day = String(tomorrow.getDate()).padStart(2, '0');
+    setRebookDateTime(`${year}-${month}-${day}T${originalTime}`);
+    setShowRebookDialog(true);
+  };
+
+  const handleRebook = async () => {
+    if (!bookingToRebook || !rebookDateTime) {
+      setError('Vui lòng chọn thời gian đặt lịch');
+      return;
+    }
+
+    // Check if we have booking details or services to rebook
+    const hasBookingDetails = bookingToRebook.bookingDetails && bookingToRebook.bookingDetails.length > 0;
+    const hasServices = bookingToRebook.services && bookingToRebook.services.length > 0;
+    
+    if (!hasBookingDetails && !hasServices) {
+      setError('Không tìm thấy thông tin dịch vụ để đặt lại');
+      return;
+    }
+
+    setIsRebooking(true);
+    setError(null);
+
+    try {
+      // Build booking request from completed booking
+      let bookingDetails;
+      
+      if (hasBookingDetails) {
+        // Use bookingDetails if available (has more info)
+        bookingDetails = bookingToRebook.bookingDetails!.map(detail => ({
+          serviceId: detail.service.serviceId,
+          quantity: detail.quantity,
+          expectedPrice: detail.subTotal,
+          expectedPricePerUnit: detail.pricePerUnit,
+          selectedChoiceIds: detail.selectedChoices?.map(c => c.choiceId).filter(Boolean) as number[] || []
+        }));
+      } else {
+        // Fallback to services
+        bookingDetails = bookingToRebook.services!.map(service => ({
+          serviceId: service.serviceId,
+          quantity: 1,
+          expectedPrice: service.basePrice || 0,
+          expectedPricePerUnit: service.basePrice || 0,
+          selectedChoiceIds: []
+        }));
+      }
+
+      // Format bookingTime as local ISO string without timezone (yyyy-MM-ddTHH:mm:ss)
+      // API expects format like "2025-09-26T10:00:00" without Z suffix
+      const bookingTime = rebookDateTime.length === 16 
+        ? `${rebookDateTime}:00` // Add seconds if not present (datetime-local gives "yyyy-MM-ddTHH:mm")
+        : rebookDateTime;
+
+      // Build assignments from previous booking's employees
+      let assignments: Array<{ serviceId: number; employeeId: string }> = [];
+      
+      if (hasBookingDetails && bookingToRebook.bookingDetails) {
+        // Get assignments from bookingDetails
+        bookingToRebook.bookingDetails.forEach(detail => {
+          if (detail.assignments && detail.assignments.length > 0) {
+            detail.assignments.forEach(assignment => {
+              assignments.push({
+                serviceId: detail.service.serviceId,
+                employeeId: assignment.employee.employeeId
+              });
+            });
+          }
+        });
+      } else if (bookingToRebook.assignedEmployees && bookingToRebook.assignedEmployees.length > 0) {
+        // Fallback: assign first employee to all services
+        const firstEmployee = bookingToRebook.assignedEmployees[0];
+        bookingDetails.forEach((detail: any) => {
+          assignments.push({
+            serviceId: detail.serviceId,
+            employeeId: firstEmployee.employeeId
+          });
+        });
+      }
+
+      const request: any = {
+        addressId: bookingToRebook.address?.addressId || null,
+        bookingTime,
+        note: bookingToRebook.note || null,
+        promoCode: null, // Don't reuse promo code
+        bookingDetails,
+        paymentMethodId: 1 // Default payment method, user can change later
+      };
+
+      // Add assignments if we have any
+      if (assignments.length > 0) {
+        request.assignments = assignments;
+      }
+
+      console.log('[Rebook] Creating new booking:', request);
+      
+      const result = await createBooking(request);
+      
+      if (result) {
+        // Store new booking result for success dialog
+        setNewBookingResult(result);
+        // Close rebook dialog and show success
+        setShowRebookDialog(false);
+        setShowRebookSuccess(true);
+        setBookingToRebook(null);
+        setRebookDateTime('');
+        setSelectedBooking(null);
+        await loadBookings();
+      }
+    } catch (err: any) {
+      console.error('Failed to rebook:', err);
+      setError(err.message || 'Không thể đặt lại. Vui lòng thử lại sau.');
+    } finally {
+      setIsRebooking(false);
+    }
+  };
+
   const renderDetailSheet = () => {
     // Don't render detail sheet if review dialog is open
     if (!selectedBooking || showReviewDialog) return null;
@@ -632,15 +828,215 @@ const OrdersPage: React.FC = () => {
                     </div>
                   </div>
                   <div className="rounded-xl bg-gradient-to-br from-emerald-50 to-emerald-100/50 p-4 border border-emerald-100">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600 mb-2">Chi phí</p>
+                    <p className="text-xs font-semibold uppercase tracking-wide text-emerald-600 mb-2">Tổng chi phí</p>
                     <p className="text-lg font-bold text-emerald-700">
                       {resolveTotalAmount(selectedBooking)}
                     </p>
                   </div>
                 </div>
 
-              {/* Services Details */}
-              {selectedBooking.services && selectedBooking.services.length > 0 && (
+                {/* Chi tiết phí - Fee Breakdown */}
+                {(selectedBooking.baseAmount || selectedBooking.fees?.length) && (
+                  <div className="rounded-2xl border border-orange-100 bg-orange-50/50 p-4">
+                    <h4 className="mb-3 text-sm font-semibold text-orange-900">Chi tiết chi phí</h4>
+                    <div className="space-y-2 text-sm">
+                      {/* Base Amount */}
+                      {selectedBooking.baseAmount && (
+                        <div className="flex justify-between">
+                          <span className="text-slate-600">Phí dịch vụ cơ bản:</span>
+                          <span className="font-semibold text-slate-900">
+                            {selectedBooking.baseAmount.toLocaleString('vi-VN')}₫
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Individual Fees */}
+                      {selectedBooking.fees && selectedBooking.fees.length > 0 && (
+                        <>
+                          <div className="my-2 border-t border-dashed border-orange-200" />
+                          {selectedBooking.fees.map((fee, index) => (
+                            <div key={index} className="flex justify-between">
+                              <span className="text-slate-600 flex items-center gap-1">
+                                {fee.name}
+                                {fee.systemSurcharge && (
+                                  <span className="text-[10px] bg-orange-200 text-orange-800 px-1.5 py-0.5 rounded">Hệ thống</span>
+                                )}
+                                {fee.type === 'PERCENT' && (
+                                  <span className="text-xs text-slate-400">({(fee.value * 100).toFixed(0)}%)</span>
+                                )}
+                              </span>
+                              <span className="font-semibold text-orange-700">
+                                +{fee.amount.toLocaleString('vi-VN')}₫
+                              </span>
+                            </div>
+                          ))}
+                        </>
+                      )}
+                      
+                      {/* Total Fees */}
+                      {selectedBooking.totalFees !== undefined && selectedBooking.totalFees > 0 && (
+                        <div className="flex justify-between pt-2 border-t border-orange-200">
+                          <span className="text-slate-700 font-medium">Tổng phụ phí:</span>
+                          <span className="font-semibold text-orange-700">
+                            +{selectedBooking.totalFees.toLocaleString('vi-VN')}₫
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Promotion Discount (if any) */}
+                      {selectedBooking.promotion && (
+                        <div className="flex justify-between text-purple-700">
+                          <span className="flex items-center gap-1">
+                            Khuyến mãi ({selectedBooking.promotion.promoCode})
+                          </span>
+                          <span className="font-semibold">
+                            -{selectedBooking.promotion.discountType === 'FIXED_AMOUNT' 
+                              ? selectedBooking.promotion.discountValue.toLocaleString('vi-VN')
+                              : (selectedBooking.baseAmount && selectedBooking.promotion.discountValue 
+                                  ? Math.min(
+                                      selectedBooking.baseAmount * selectedBooking.promotion.discountValue / 100,
+                                      selectedBooking.promotion.maxDiscountAmount || Infinity
+                                    ).toLocaleString('vi-VN')
+                                  : selectedBooking.promotion.discountValue)
+                            }₫
+                          </span>
+                        </div>
+                      )}
+                      
+                      {/* Final Total */}
+                      <div className="flex justify-between pt-2 mt-2 border-t-2 border-orange-300">
+                        <span className="text-slate-900 font-bold">Thành tiền:</span>
+                        <span className="text-lg font-bold text-emerald-700">
+                          {resolveTotalAmount(selectedBooking)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+              {/* Booking Details - Chi tiết đơn đặt */}
+              {selectedBooking.bookingDetails && selectedBooking.bookingDetails.length > 0 ? (
+                <div className="rounded-2xl border border-teal-100 bg-teal-50/50 p-4">
+                  <h4 className="mb-3 text-sm font-semibold text-teal-900">
+                    Chi tiết đơn đặt ({selectedBooking.bookingDetails.length} dịch vụ)
+                  </h4>
+                  <div className="space-y-4">
+                    {selectedBooking.bookingDetails.map((detail) => (
+                      <div 
+                        key={detail.bookingDetailId}
+                        className="rounded-xl bg-white p-4 border border-teal-50"
+                      >
+                        <div className="flex items-start gap-3">
+                          {detail.service.iconUrl && (
+                            <img 
+                              src={detail.service.iconUrl} 
+                              alt={detail.service.name}
+                              className="h-14 w-14 rounded-lg object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).style.display = 'none';
+                              }}
+                            />
+                          )}
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <p className="font-semibold text-slate-900">{detail.service.name}</p>
+                                {detail.service.categoryName && (
+                                  <p className="text-xs text-slate-500">{detail.service.categoryName}</p>
+                                )}
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-semibold text-teal-700">
+                                  {detail.formattedSubTotal || `${detail.subTotal.toLocaleString('vi-VN')}₫`}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            {/* Quantity & Price Details */}
+                            <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-slate-600">
+                              <span>
+                                Số lượng: <strong>{detail.quantity}</strong> {detail.service.unit || 'Gói'}
+                              </span>
+                              <span>
+                                Đơn giá: <strong>{detail.formattedPricePerUnit || `${detail.pricePerUnit.toLocaleString('vi-VN')}₫`}</strong>
+                              </span>
+                              {detail.formattedDuration && (
+                                <span>
+                                  Thời gian: <strong>{detail.formattedDuration}</strong>
+                                </span>
+                              )}
+                            </div>
+                            
+                            {detail.service.description && (
+                              <p className="mt-2 text-xs text-slate-600">{detail.service.description}</p>
+                            )}
+                            
+                            {/* Selected Choices */}
+                            {detail.selectedChoices && detail.selectedChoices.length > 0 && (
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {detail.selectedChoices.map((choice, idx) => (
+                                  <span key={idx} className="inline-flex items-center gap-1 rounded-full bg-teal-100 px-2 py-0.5 text-xs text-teal-800">
+                                    {choice.choiceName}
+                                    {choice.additionalPrice && choice.additionalPrice > 0 && (
+                                      <span className="text-teal-600">+{choice.additionalPrice.toLocaleString('vi-VN')}₫</span>
+                                    )}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {/* Assignment info for this service */}
+                        {detail.assignments && detail.assignments.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-teal-100">
+                            <p className="text-xs font-semibold text-teal-700 mb-2">Nhân viên thực hiện:</p>
+                            <div className="space-y-2">
+                              {detail.assignments.map((assignment) => (
+                                <div key={assignment.assignmentId} className="flex items-center gap-2 text-sm">
+                                  {assignment.employee.avatar ? (
+                                    <img
+                                      src={assignment.employee.avatar}
+                                      alt={assignment.employee.fullName}
+                                      className="h-8 w-8 rounded-full object-cover"
+                                      onError={(e) => {
+                                        (e.target as HTMLImageElement).src = `https://ui-avatars.com/api/?name=${encodeURIComponent(assignment.employee.fullName)}&background=14b8a6&color=fff`;
+                                      }}
+                                    />
+                                  ) : (
+                                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-teal-500 text-white text-xs font-bold">
+                                      {assignment.employee.fullName.charAt(0).toUpperCase()}
+                                    </div>
+                                  )}
+                                  <div className="flex-1">
+                                    <p className="font-medium text-slate-900">{assignment.employee.fullName}</p>
+                                    <div className="flex flex-wrap gap-x-3 text-xs text-slate-500">
+                                      <span className={`font-medium ${
+                                        assignment.status === 'COMPLETED' ? 'text-emerald-600' : 
+                                        assignment.status === 'IN_PROGRESS' ? 'text-amber-600' : 'text-slate-500'
+                                      }`}>
+                                        {assignment.status === 'COMPLETED' ? 'Hoàn thành' : 
+                                         assignment.status === 'IN_PROGRESS' ? 'Đang làm' : assignment.status}
+                                      </span>
+                                      {assignment.checkInTime && (
+                                        <span>Check-in: {assignment.checkInTime}</span>
+                                      )}
+                                      {assignment.checkOutTime && (
+                                        <span>Check-out: {assignment.checkOutTime}</span>
+                                      )}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : selectedBooking.services && selectedBooking.services.length > 0 && (
+                /* Fallback to services if bookingDetails is not available */
                 <div className="rounded-2xl border border-teal-100 bg-teal-50/50 p-4">
                   <h4 className="mb-3 text-sm font-semibold text-teal-900">
                     Chi tiết dịch vụ ({selectedBooking.services.length})
@@ -875,6 +1271,16 @@ const OrdersPage: React.FC = () => {
                 >
                   <Star className="h-4 w-4" />
                   Đánh giá
+                </button>
+              )}
+              {statusKey === 'COMPLETED' && (
+                <button
+                  type="button"
+                  onClick={() => handleOpenRebookDialog(selectedBooking)}
+                  className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-teal-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-teal-200 transition hover:-translate-y-0.5 hover:bg-teal-500"
+                >
+                  <RotateCcw className="h-4 w-4" />
+                  Đặt lại
                 </button>
               )}
               {statusKey === 'AWAITING_EMPLOYEE' && !selectedBooking.title && (
@@ -1246,6 +1652,15 @@ const OrdersPage: React.FC = () => {
                           >
                             <Star className="h-4 w-4" />
                             Đánh giá
+                          </button>
+                        )}
+                        {statusKey === 'COMPLETED' && (
+                          <button
+                            onClick={() => handleOpenRebookDialog(booking)}
+                            className="rounded-full bg-teal-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-teal-500 inline-flex items-center gap-2"
+                          >
+                            <RotateCcw className="h-4 w-4" />
+                            Đặt lại
                           </button>
                         )}
                         {(statusKey === 'CONFIRMED' || statusKey === 'IN_PROGRESS') && (
@@ -1623,6 +2038,306 @@ const OrdersPage: React.FC = () => {
                         Gửi đánh giá
                       </>
                     )}
+                  </button>
+                </div>
+              </div>
+            </SectionCard>
+          </div>
+        </div>, document.body
+      )}
+
+      {/* Rebook Dialog */}
+      {showRebookDialog && bookingToRebook && ReactDOM.createPortal(
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 px-4 py-8 backdrop-blur-sm" 
+          onClick={() => {
+            setShowRebookDialog(false);
+            setBookingToRebook(null);
+            setRebookDateTime('');
+          }}
+        >
+          <div className="relative w-full max-w-lg" onClick={(e) => e.stopPropagation()}>
+            <SectionCard
+              title="Đặt lại dịch vụ"
+              description={`Dựa trên đơn ${bookingToRebook?.bookingCode || bookingToRebook?.bookingId}`}
+              actions={
+                <button
+                  onClick={() => {
+                    setShowRebookDialog(false);
+                    setBookingToRebook(null);
+                    setRebookDateTime('');
+                  }}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200"
+                  aria-label="Đóng"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              }
+            >
+              <div className="space-y-5">
+                {/* Original Booking Info */}
+                <div className="rounded-2xl border border-teal-100 bg-teal-50/50 p-4">
+                  <h4 className="mb-3 text-sm font-semibold text-teal-900">Thông tin đơn gốc</h4>
+                  <div className="space-y-2 text-sm">
+                    {/* Services from bookingDetails */}
+                    {bookingToRebook.bookingDetails && bookingToRebook.bookingDetails.length > 0 ? (
+                      <div className="space-y-2">
+                        {bookingToRebook.bookingDetails.map((detail) => (
+                          <div key={detail.bookingDetailId} className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {detail.service.iconUrl && (
+                                <img 
+                                  src={detail.service.iconUrl} 
+                                  alt={detail.service.name}
+                                  className="h-8 w-8 rounded-lg object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                              )}
+                              <div>
+                                <p className="font-medium text-slate-900">{detail.service.name}</p>
+                                <p className="text-xs text-slate-500">
+                                  SL: {detail.quantity} {detail.service.unit || 'Gói'}
+                                </p>
+                              </div>
+                            </div>
+                            <span className="font-semibold text-teal-700">
+                              {detail.formattedSubTotal || `${detail.subTotal.toLocaleString('vi-VN')}₫`}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    ) : bookingToRebook.services && bookingToRebook.services.length > 0 ? (
+                      /* Fallback to services if no bookingDetails */
+                      <div className="space-y-2">
+                        {bookingToRebook.services.map((service) => (
+                          <div key={service.serviceId} className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {service.iconUrl && (
+                                <img 
+                                  src={service.iconUrl} 
+                                  alt={service.name}
+                                  className="h-8 w-8 rounded-lg object-cover"
+                                  onError={(e) => {
+                                    (e.target as HTMLImageElement).style.display = 'none';
+                                  }}
+                                />
+                              )}
+                              <div>
+                                <p className="font-medium text-slate-900">{service.name}</p>
+                                <p className="text-xs text-slate-500">{service.categoryName || service.unit || 'Dịch vụ'}</p>
+                              </div>
+                            </div>
+                            {service.basePrice && (
+                              <span className="font-semibold text-teal-700">
+                                {service.basePrice.toLocaleString('vi-VN')}₫
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-slate-500">Không có thông tin dịch vụ</p>
+                    )}
+                    
+                    {/* Address */}
+                    {bookingToRebook.address?.fullAddress && (
+                      <div className="flex items-start gap-2 pt-2 border-t border-teal-100">
+                        <MapPin className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
+                        <span className="text-slate-700">{bookingToRebook.address.fullAddress}</span>
+                      </div>
+                    )}
+                    
+                    {/* Note */}
+                    {bookingToRebook.note && (
+                      <div className="flex items-start gap-2 pt-2 border-t border-teal-100">
+                        <NotebookText className="h-4 w-4 text-teal-600 flex-shrink-0 mt-0.5" />
+                        <span className="text-slate-700">{bookingToRebook.note}</span>
+                      </div>
+                    )}
+                    
+                    {/* Total */}
+                    <div className="flex justify-between pt-2 border-t border-teal-100">
+                      <span className="font-medium text-slate-700">Tổng chi phí dự kiến:</span>
+                      <span className="font-bold text-teal-700">
+                        {resolveTotalAmount(bookingToRebook)}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* New Booking Time */}
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">
+                    Chọn thời gian mới <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={rebookDateTime}
+                    onChange={(e) => setRebookDateTime(e.target.value)}
+                    min={new Date().toISOString().slice(0, 16)}
+                    className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-900 transition focus:border-teal-500 focus:outline-none focus:ring-2 focus:ring-teal-500/20"
+                  />
+                  <p className="mt-2 text-xs text-slate-500">
+                    Chọn ngày và giờ bạn muốn đặt lại dịch vụ. Các thông tin khác sẽ được giữ nguyên từ đơn gốc.
+                  </p>
+                </div>
+
+                {/* Notice */}
+                <div className="rounded-2xl border border-amber-100 bg-amber-50 p-4 text-sm text-amber-700">
+                  <AlertCircle className="mr-2 inline h-4 w-4 align-text-top" />
+                  Lưu ý: Đơn mới sẽ được tạo với thời gian bạn chọn. Giá có thể thay đổi tùy theo chính sách giá hiện tại.
+                </div>
+
+                {error && (
+                  <div className="rounded-2xl border border-rose-100 bg-rose-50 p-4 text-sm text-rose-700">
+                    <AlertCircle className="mr-2 inline h-4 w-4 align-text-top" />
+                    {error}
+                  </div>
+                )}
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowRebookDialog(false);
+                      setBookingToRebook(null);
+                      setRebookDateTime('');
+                      setError(null);
+                    }}
+                    disabled={isRebooking}
+                    className="flex-1 rounded-full border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:border-slate-300 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    Hủy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleRebook}
+                    disabled={isRebooking || !rebookDateTime}
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-teal-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-teal-200 transition hover:-translate-y-0.5 hover:bg-teal-500 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {isRebooking ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Đang đặt...
+                      </>
+                    ) : (
+                      <>
+                        <RotateCcw className="h-4 w-4" />
+                        Xác nhận đặt lại
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </SectionCard>
+          </div>
+        </div>, document.body
+      )}
+
+      {/* Rebook Success Dialog */}
+      {showRebookSuccess && newBookingResult && ReactDOM.createPortal(
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 px-4 py-8 backdrop-blur-sm" 
+          onClick={() => {
+            setShowRebookSuccess(false);
+            setNewBookingResult(null);
+          }}
+        >
+          <div className="relative w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <SectionCard
+              title="Đặt lịch thành công!"
+              description="Đơn đặt lịch mới đã được tạo"
+              actions={
+                <button
+                  onClick={() => {
+                    setShowRebookSuccess(false);
+                    setNewBookingResult(null);
+                  }}
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-slate-100 text-slate-600 transition hover:bg-slate-200"
+                  aria-label="Đóng"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              }
+            >
+              <div className="space-y-5">
+                {/* Success Icon */}
+                <div className="flex justify-center">
+                  <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-100">
+                    <CheckCircle2 className="h-10 w-10 text-emerald-600" />
+                  </div>
+                </div>
+
+                {/* Booking Info */}
+                <div className="rounded-2xl border border-emerald-100 bg-emerald-50/50 p-4 text-center">
+                  <p className="text-sm text-slate-600 mb-1">Mã đơn mới</p>
+                  <p className="text-xl font-bold text-emerald-700">
+                    {newBookingResult.bookingCode || newBookingResult.bookingId}
+                  </p>
+                </div>
+
+                <div className="space-y-3 text-sm">
+                  {/* Time */}
+                  <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-3">
+                    <CalendarClock className="h-5 w-5 text-sky-600" />
+                    <div>
+                      <p className="text-xs text-slate-500">Thời gian</p>
+                      <p className="font-semibold text-slate-900">
+                        {newBookingResult.bookingTime 
+                          ? new Date(newBookingResult.bookingTime).toLocaleString('vi-VN')
+                          : 'Chưa xác định'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Address */}
+                  {(newBookingResult.customerInfo?.fullAddress || newBookingResult.address?.fullAddress) && (
+                    <div className="flex items-center gap-3 rounded-xl bg-slate-50 p-3">
+                      <MapPin className="h-5 w-5 text-sky-600" />
+                      <div>
+                        <p className="text-xs text-slate-500">Địa chỉ</p>
+                        <p className="font-semibold text-slate-900">
+                          {newBookingResult.customerInfo?.fullAddress || newBookingResult.address?.fullAddress}
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Total */}
+                  <div className="flex items-center gap-3 rounded-xl bg-emerald-50 p-3">
+                    <CreditCard className="h-5 w-5 text-emerald-600" />
+                    <div>
+                      <p className="text-xs text-emerald-600">Tổng chi phí</p>
+                      <p className="font-bold text-emerald-700">
+                        {newBookingResult.formattedTotalAmount || 
+                         (newBookingResult.totalAmount ? `${newBookingResult.totalAmount.toLocaleString('vi-VN')}₫` : '—')}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <div className="flex items-center justify-center gap-2 pt-2">
+                    <span className="inline-flex items-center rounded-full bg-violet-100 px-3 py-1 text-xs font-semibold text-violet-700">
+                      {newBookingResult.status === 'PENDING' ? 'Chờ xử lý' : 
+                       newBookingResult.status === 'CONFIRMED' ? 'Đã xác nhận' : 
+                       newBookingResult.status || 'Đang xử lý'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowRebookSuccess(false);
+                      setNewBookingResult(null);
+                    }}
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-full bg-emerald-600 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-200 transition hover:-translate-y-0.5 hover:bg-emerald-500"
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    Hoàn tất
                   </button>
                 </div>
               </div>

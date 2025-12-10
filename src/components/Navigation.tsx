@@ -229,8 +229,8 @@ const Navigation: React.FC<NavigationProps> = ({ role, collapsed, onNavigate }) 
                     : 'text-brand-navy'
                 ].join(' ')}
               />
-              {/* Badge hiển thị số tin nhắn chưa đọc */}
-              {showBadge && (
+              {/* Badge hiển thị số tin nhắn chưa đọc - chỉ hiển thị khi collapsed */}
+              {showBadge && collapsed && (
                 <span className="absolute -top-2 -right-2 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white shadow-sm">
                   {chatUnreadCount > 99 ? '99+' : chatUnreadCount}
                 </span>
