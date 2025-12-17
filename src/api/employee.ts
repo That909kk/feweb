@@ -92,6 +92,20 @@ interface Assignment {
   note: string | null;
   customerEmail?: string;
   customerAvatar?: string;
+  // New fields from updated API (coordinates + media)
+  checkInLatitude?: number | null;
+  checkInLongitude?: number | null;
+  checkOutLatitude?: number | null;
+  checkOutLongitude?: number | null;
+  media?: Array<{
+    mediaId: string;
+    assignmentId: string;
+    mediaUrl: string;
+    publicId: string;
+    mediaType: 'CHECK_IN_IMAGE' | 'CHECK_OUT_IMAGE' | string;
+    description?: string | null;
+    uploadedAt?: string | null;
+  }>;
 }
 
 // Employee Bookings API Response Interfaces

@@ -1,24 +1,24 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   AlertCircle,
   CalendarClock,
   CheckCircle2,
   Clock8,
+  ExternalLink,
   HardHat,
   Loader2,
   MapPin,
-  PlayCircle,
   RefreshCcw,
   ShieldCheck,
-  X,
-  XCircle
+  X
 } from 'lucide-react';
 import { DashboardLayout } from '../../layouts';
 import { useAuth } from '../../contexts/AuthContext';
 import { useEmployeeAssignments } from '../../hooks/useEmployee';
 // import EmployeeBookings from '../../components/EmployeeBookings'; // Tạm thời comment do API lỗi
 import { SectionCard, MetricCard } from '../../shared/components';
-import { cancelAssignmentApi, checkInAssignmentApi, checkOutAssignmentApi, acceptAssignmentApi } from '../../api/employee';
+
 
 type AssignmentStatus =
   | 'ALL'
@@ -41,6 +41,7 @@ const statusDescriptors: Record<AssignmentStatus, { label: string; badge: string
 
 const EmployeeDashboard: React.FC = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const {
     assignments,
     stats,
@@ -52,9 +53,6 @@ const EmployeeDashboard: React.FC = () => {
 
   const [statusFilter, setStatusFilter] = useState<AssignmentStatus>('ALL');
   const [isActioning, setIsActioning] = useState(false);
-  const [showCancelModal, setShowCancelModal] = useState(false);
-  const [selectedAssignmentId, setSelectedAssignmentId] = useState<string | null>(null);
-  const [cancelReason, setCancelReason] = useState('');
   const [statusBanner, setStatusBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const employeeId = useMemo(() => {
@@ -85,111 +83,6 @@ const EmployeeDashboard: React.FC = () => {
         getAssignments(employeeId, statusFilter === 'ALL' ? undefined : statusFilter),
         getStatistics(employeeId)
       ]);
-    } finally {
-      setIsActioning(false);
-    }
-  };
-
-  const openCancelModal = (assignmentId: string) => {
-    setSelectedAssignmentId(assignmentId);
-    setCancelReason('');
-    setShowCancelModal(true);
-  };
-
-  const closeCancelModal = () => {
-    setShowCancelModal(false);
-    setCancelReason('');
-    setSelectedAssignmentId(null);
-  };
-
-  const confirmCancelAssignment = async () => {
-    if (!selectedAssignmentId || !employeeId || !cancelReason.trim()) {
-      return;
-    }
-    setIsActioning(true);
-    try {
-      await cancelAssignmentApi(selectedAssignmentId, {
-        reason: cancelReason.trim(),
-        employeeId
-      });
-      await getAssignments(employeeId, statusFilter === 'ALL' ? undefined : statusFilter);
-      setStatusBanner({
-        type: 'success',
-        text: 'Bạn đã hủy công việc thành công. Điều phối viên sẽ ghi nhận lý do của bạn.'
-      });
-      closeCancelModal();
-    } catch (err: any) {
-      console.error('Cancel assignment error:', err);
-      setStatusBanner({
-        type: 'error',
-        text: err?.response?.data?.message || err?.message || 'Không thể hủy công việc lúc này. Vui lòng thử lại sau.'
-      });
-    } finally {
-      setIsActioning(false);
-    }
-  };
-
-  const handleCheckIn = async (assignmentId: string) => {
-    if (!employeeId) return;
-    
-    setIsActioning(true);
-    try {
-      await checkInAssignmentApi(assignmentId, employeeId);
-      await getAssignments(employeeId, statusFilter === 'ALL' ? undefined : statusFilter);
-      setStatusBanner({
-        type: 'success',
-        text: 'Check-in thành công! Chúc bạn làm việc hiệu quả.'
-      });
-    } catch (err: any) {
-      console.error('Check-in error:', err);
-      setStatusBanner({
-        type: 'error',
-        text: err?.message || 'Không thể check-in lúc này. Vui lòng thử lại sau.'
-      });
-    } finally {
-      setIsActioning(false);
-    }
-  };
-
-  const handleAcceptAssignment = async (assignmentId: string) => {
-    if (!employeeId) return;
-    
-    setIsActioning(true);
-    try {
-      await acceptAssignmentApi(assignmentId, employeeId);
-      await getAssignments(employeeId, statusFilter === 'ALL' ? undefined : statusFilter);
-      setStatusBanner({
-        type: 'success',
-        text: 'Đã nhận việc thành công! Hãy chuẩn bị và đến đúng giờ nhé.'
-      });
-    } catch (err: any) {
-      console.error('Accept assignment error:', err);
-      setStatusBanner({
-        type: 'error',
-        text: err?.response?.data?.message || err?.message || 'Không thể nhận việc lúc này. Vui lòng thử lại sau.'
-      });
-    } finally {
-      setIsActioning(false);
-    }
-  };
-
-  const handleCheckOut = async (assignmentId: string) => {
-    if (!employeeId) return;
-    
-    setIsActioning(true);
-    try {
-      await checkOutAssignmentApi(assignmentId, employeeId);
-      await getAssignments(employeeId, statusFilter === 'ALL' ? undefined : statusFilter);
-      setStatusBanner({
-        type: 'success',
-        text: 'Check-out thành công! Công việc đã được hoàn thành.'
-      });
-    } catch (err: any) {
-      console.error('Check-out error:', err);
-      setStatusBanner({
-        type: 'error',
-        text: err?.message || 'Không thể check-out lúc này. Vui lòng thử lại sau.'
-      });
     } finally {
       setIsActioning(false);
     }
@@ -355,63 +248,13 @@ const EmployeeDashboard: React.FC = () => {
                         {(assignment.totalAmount ?? 0).toLocaleString('vi-VN')}₫
                       </span>
                     </div>
-                    <div className="flex flex-wrap gap-2">
-                      {/* Nút Nhận việc - hiển thị cho PENDING */}
-                      {assignment.status === 'PENDING' && (
-                        <button
-                          onClick={() => handleAcceptAssignment(assignment.assignmentId)}
-                          disabled={isActioning}
-                          className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          <CheckCircle2 className="h-4 w-4" />
-                          Nhận việc
-                        </button>
-                      )}
-                      
-                      {/* Nút Check-in - hiển thị cho ASSIGNED (đã nhận việc, chưa bắt đầu) */}
-                      {assignment.status === 'ASSIGNED' && !assignment.checkInTime && (
-                        <button
-                          onClick={() => handleCheckIn(assignment.assignmentId)}
-                          disabled={isActioning}
-                          className="inline-flex items-center gap-2 rounded-full bg-sky-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-sky-500 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          <PlayCircle className="h-4 w-4" />
-                          Check-in
-                        </button>
-                      )}
-                      
-                      {/* Nút Check-out - hiển thị cho IN_PROGRESS */}
-                      {assignment.status === 'IN_PROGRESS' && assignment.checkInTime && !assignment.checkOutTime && (
-                        <button
-                          onClick={() => handleCheckOut(assignment.assignmentId)}
-                          disabled={isActioning}
-                          className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-500 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                          <CheckCircle2 className="h-4 w-4" />
-                          Check-out
-                        </button>
-                      )}
-                      
-                      {/* Nút Từ chối - hiển thị cho PENDING */}
-                      {assignment.status === 'PENDING' && (
-                        <button
-                          onClick={() => openCancelModal(assignment.assignmentId)}
-                          className="rounded-full border border-rose-200 px-4 py-2 text-sm font-semibold text-rose-600 transition hover:-translate-y-0.5 hover:border-rose-300"
-                        >
-                          Từ chối
-                        </button>
-                      )}
-                      
-                      {/* Nút Hủy - hiển thị cho ASSIGNED (đã nhận nhưng chưa check-in) */}
-                      {assignment.status === 'ASSIGNED' && !assignment.checkInTime && (
-                        <button
-                          onClick={() => openCancelModal(assignment.assignmentId)}
-                          className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:-translate-y-0.5 hover:border-slate-300"
-                        >
-                          Hủy
-                        </button>
-                      )}
-                    </div>
+                    <button
+                      onClick={() => navigate('/employee/assignments')}
+                      className="inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-emerald-500"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                      Theo dõi
+                    </button>
                   </div>
                 </div>
               );
@@ -427,56 +270,6 @@ const EmployeeDashboard: React.FC = () => {
       >
         <EmployeeBookings />
       </SectionCard> */}
-
-      {showCancelModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 px-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-3xl border border-slate-100 bg-white p-6 shadow-2xl">
-            <div className="flex items-start justify-between">
-              <div>
-                <h3 className="text-lg font-semibold text-slate-900">Hủy nhận công việc</h3>
-                <p className="mt-1 text-sm text-slate-500">
-                  Vui lòng cho biết lý do để chúng tôi sắp xếp lịch phù hợp hơn trong tương lai.
-                </p>
-              </div>
-              <button
-                onClick={closeCancelModal}
-                className="rounded-full bg-slate-100 p-2 text-slate-500 transition hover:bg-slate-200"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <textarea
-              value={cancelReason}
-              onChange={event => setCancelReason(event.target.value)}
-              rows={4}
-              className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 transition focus:border-emerald-300 focus:bg-white focus:outline-none focus:ring-2 focus:ring-emerald-200"
-              placeholder="Ví dụ: Trùng lịch cá nhân, sức khỏe không đảm bảo..."
-            />
-
-            <div className="mt-6 flex justify-end gap-3">
-              <button
-                onClick={closeCancelModal}
-                className="rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-600 transition hover:-translate-y-0.5 hover:border-slate-300"
-              >
-                Giữ lại
-              </button>
-              <button
-                onClick={confirmCancelAssignment}
-                disabled={!cancelReason.trim() || isActioning}
-                className="inline-flex items-center gap-2 rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-lg shadow-rose-200 transition hover:-translate-y-0.5 hover:bg-rose-500 disabled:cursor-not-allowed disabled:opacity-60"
-              >
-                {isActioning ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <XCircle className="h-4 w-4" />
-                )}
-                {isActioning ? 'Đang gửi...' : 'Hủy công việc'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </DashboardLayout>
   );
 };

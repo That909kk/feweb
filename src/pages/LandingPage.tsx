@@ -7,7 +7,10 @@ import {
   CheckCircle,
   Facebook,
   Instagram,
-  MessageCircle
+  MessageCircle,
+  Download,
+  Smartphone,
+  QrCode
 } from 'lucide-react';
 
 // Static landing page content
@@ -198,6 +201,96 @@ const LandingPage: React.FC = () => {
                 alt="Dịch vụ giúp việc"
                 className="relative rounded-2xl sm:rounded-3xl shadow-xl sm:shadow-2xl border border-brand-outline/40 w-full"
               />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Download App Section */}
+      <section id="download" className="py-12 sm:py-16 lg:py-20 bg-gradient-to-br from-brand-navy via-brand-navy to-brand-teal relative overflow-hidden">
+        {/* Background decoration */}
+        <div className="absolute inset-0 opacity-10">
+          <div className="absolute top-10 left-10 w-32 h-32 bg-white rounded-full blur-3xl"></div>
+          <div className="absolute bottom-10 right-10 w-40 h-40 bg-brand-teal rounded-full blur-3xl"></div>
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-white rounded-full blur-3xl"></div>
+        </div>
+        
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="text-center mb-10 sm:mb-12">
+            <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 rounded-full px-4 py-2 mb-4 backdrop-blur-sm">
+              <Smartphone className="w-4 h-4 text-brand-secondary" />
+              <span className="text-sm font-semibold text-white">Tải ứng dụng miễn phí</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-white mb-3 sm:mb-4">
+              Tải App <span className="text-brand-secondary">Home Mate</span> ngay!
+            </h2>
+            <p className="text-base sm:text-lg lg:text-xl text-white/80 max-w-2xl mx-auto">
+              Quét mã QR hoặc tải trực tiếp file APK để cài đặt ứng dụng trên điện thoại Android
+            </p>
+          </div>
+          
+          <div className="flex flex-col lg:flex-row items-center justify-center gap-8 lg:gap-16">
+            {/* QR Code */}
+            <div className="flex flex-col items-center">
+              <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-2xl border-4 border-brand-secondary/30 hover:scale-105 transition-transform duration-300">
+                <img 
+                  src="/QR-download-homemate-app.png" 
+                  alt="QR Code tải app Home Mate" 
+                  className="w-48 h-48 sm:w-56 sm:h-56 lg:w-64 lg:h-64"
+                />
+              </div>
+              <div className="mt-4 flex items-center gap-2 text-white/90">
+                <QrCode className="w-5 h-5 text-brand-secondary" />
+                <span className="font-medium">Quét mã QR để tải App</span>
+              </div>
+            </div>
+            
+            {/* Divider */}
+            <div className="hidden lg:flex flex-col items-center gap-4">
+              <div className="h-24 w-px bg-white/30"></div>
+              <span className="text-white/60 font-medium text-sm">HOẶC</span>
+              <div className="h-24 w-px bg-white/30"></div>
+            </div>
+            <div className="lg:hidden flex items-center gap-4 w-full max-w-xs">
+              <div className="flex-1 h-px bg-white/30"></div>
+              <span className="text-white/60 font-medium text-sm">HOẶC</span>
+              <div className="flex-1 h-px bg-white/30"></div>
+            </div>
+            
+            {/* Download APK Button */}
+            <div className="flex flex-col items-center">
+              <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl sm:rounded-3xl p-6 sm:p-8 text-center hover:bg-white/15 transition-colors">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-brand-secondary to-yellow-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                  <Download className="w-8 h-8 sm:w-10 sm:h-10 text-white" />
+                </div>
+                <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">Tải file APK</h3>
+                <p className="text-white/70 mb-6 text-sm sm:text-base">Dành cho Android 7.0+</p>
+                <a 
+                  href="/homemate.apk" 
+                  download="homemate.apk"
+                  className="inline-flex items-center gap-3 bg-gradient-to-r from-brand-secondary to-yellow-500 text-brand-navy px-6 sm:px-8 py-3 sm:py-4 rounded-xl sm:rounded-2xl font-bold text-base sm:text-lg hover:-translate-y-1 hover:shadow-xl transition-all duration-300 shadow-lg"
+                >
+                  <Download className="w-5 h-5 sm:w-6 sm:h-6" />
+                  Tải xuống APK
+                </a>
+                <p className="text-white/50 text-xs sm:text-sm mt-4">homemate.apk • ~100MB</p>
+              </div>
+            </div>
+          </div>
+          
+          {/* Installation Guide */}
+          <div className="mt-10 sm:mt-12 text-center">
+            <div className="inline-flex flex-wrap justify-center items-center gap-2 sm:gap-4 text-white/70 text-xs sm:text-sm">
+              <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-full">
+                <span className="w-5 h-5 bg-brand-secondary text-brand-navy rounded-full flex items-center justify-center text-xs font-bold">1</span>
+                Tải file APK
+              </span>
+              <span className="text-white/40">→</span>
+              
+              <span className="flex items-center gap-1.5 bg-white/10 px-3 py-1.5 rounded-full">
+                <span className="w-5 h-5 bg-brand-secondary text-brand-navy rounded-full flex items-center justify-center text-xs font-bold">2</span>
+                Cài đặt & Sử dụng
+              </span>
             </div>
           </div>
         </div>

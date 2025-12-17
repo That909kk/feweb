@@ -2607,7 +2607,7 @@ const BookingPage: React.FC = () => {
                           <div>
                             <h4 className="font-bold text-purple-900 mb-1">Đặt lịch định kỳ tự động</h4>
                             <p className="text-sm text-purple-700">
-                              Hệ thống sẽ tự động tạo các booking theo lịch trình bạn thiết lập. Các booking mới sẽ được tạo hàng ngày lúc 2:00 AM.
+                              Hệ thống sẽ tự động tạo các lần đặt lịch theo lịch trình bạn thiết lập. Các lần đặt lịch mới sẽ được tạo hàng ngày lúc 2:00 AM.
                             </p>
                           </div>
                         </div>
@@ -2890,7 +2890,7 @@ const BookingPage: React.FC = () => {
                       </svg>
                       <span>
                         Hệ thống sẽ tạo <strong className="mx-1 text-lg">{bookingData.bookingTimes.length} booking riêng biệt</strong> với cùng thông tin dịch vụ và địa chỉ. 
-                        Mỗi booking sẽ có mã đơn hàng và thanh toán riêng.
+                        Mỗi lần đặt sẽ có mã đơn hàng và thanh toán riêng.
                       </span>
                     </p>
                   </div>
@@ -3390,7 +3390,7 @@ const BookingPage: React.FC = () => {
                               
                               <div className="mt-3 pt-3 border-t border-purple-200">
                                 <p className="text-xs text-purple-700">
-                                  <strong>Lưu ý:</strong> Hệ thống sẽ tự động tạo các booking theo lịch trình đã thiết lập. Các booking mới sẽ được tạo hàng ngày lúc 2:00 AM.
+                                  <strong>Lưu ý:</strong> Hệ thống sẽ tự động tạo các lần đặt lịch theo lịch trình đã thiết lập. Các lần đặt lịch mới sẽ được tạo hàng ngày lúc 2:00 AM.
                                 </p>
                               </div>
                             </div>

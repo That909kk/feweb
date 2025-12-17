@@ -3,11 +3,14 @@ import {
   AlertCircle,
   CalendarClock,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock8,
   Loader2,
   MapPin,
   PlayCircle,
   RefreshCcw,
+  Search,
   ShieldCheck,
   Timer,
   Upload,
@@ -109,6 +112,8 @@ const statusDescriptors: Record<AssignmentStatus, { label: string; selectedClass
   }
 };
 
+const PAGE_SIZE = 20; // Số công việc mỗi trang
+
 const EmployeeAssignments: React.FC = () => {
   const { user } = useAuth();
   const {
@@ -119,6 +124,8 @@ const EmployeeAssignments: React.FC = () => {
   } = useEmployeeAssignments();
 
   const [statusFilter, setStatusFilter] = useState<AssignmentStatus>('ALL');
+  const [currentPage, setCurrentPage] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
   const [isActioning, setIsActioning] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [showAcceptWarningModal, setShowAcceptWarningModal] = useState(false);
@@ -131,6 +138,36 @@ const EmployeeAssignments: React.FC = () => {
   const [checkOutDescription, setCheckOutDescription] = useState('');
   const [checkOutImages, setCheckOutImages] = useState<File[]>([]);
   const [statusBanner, setStatusBanner] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  // Cache địa chỉ từ tọa độ để tránh gọi API lặp lại
+  const [addressCache, setAddressCache] = useState<Record<string, string>>({});
+
+  // Reverse geocode: lat/long -> địa chỉ chữ (vi)
+  const reverseGeocode = async (lat?: number | null, lon?: number | null): Promise<string | null> => {
+    if (lat == null || lon == null) return null;
+    const key = `${lat},${lon}`;
+    if (addressCache[key]) return addressCache[key];
+    try {
+      const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&zoom=16&addressdetails=1&accept-language=vi`;
+      const res = await fetch(url, {
+        headers: {
+          // Best-effort User-Agent per Nominatim policy
+          'Accept': 'application/json'
+        }
+      });
+      if (!res.ok) throw new Error('reverse geocode failed');
+      const data = await res.json();
+      const address: string = data?.display_name || '';
+      if (address) {
+        setAddressCache(prev => ({ ...prev, [key]: address }));
+        return address;
+      }
+      return null;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  // Prefetch địa chỉ cho danh sách đang hiển thị
 
   const employeeId = useMemo(() => {
     if (!user) return null;
@@ -143,20 +180,63 @@ const EmployeeAssignments: React.FC = () => {
   useEffect(() => {
     if (employeeId) {
       // Luôn lấy tất cả assignments để tính số lượng cho các tab
-      getAssignments(employeeId, undefined);
+      // Tăng size lên 100 để lấy nhiều công việc hơn
+      getAssignments(employeeId, undefined, 0, 100);
     }
   }, [employeeId]);
 
-  const filteredAssignments = useMemo(() => {
+  // Reset về trang đầu khi đổi filter hoặc search
+  useEffect(() => {
+    setCurrentPage(0);
+  }, [statusFilter, searchQuery]);
+
+  // Lọc và sắp xếp tất cả assignments
+  const allFilteredAssignments = useMemo(() => {
     let filtered = statusFilter === 'ALL' 
       ? assignments 
       : assignments.filter(item => item.status === statusFilter);
     
-    // Sắp xếp theo khoảng cách thời gian so với hiện tại
+    // Lọc theo booking code nếu có search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.trim().toLowerCase();
+      filtered = filtered.filter(item => 
+        item.bookingCode?.toLowerCase().includes(query) ||
+        item.serviceName?.toLowerCase().includes(query) ||
+        item.customerName?.toLowerCase().includes(query)
+      );
+    }
+    
+    // Thứ tự ưu tiên trạng thái cho tab "Tất cả"
+    const statusPriority: Record<string, number> = {
+      'IN_PROGRESS': 1,  // Đang thực hiện
+      'ASSIGNED': 2,     // Đã nhận việc
+      'PENDING': 3,      // Chờ xác nhận
+      'COMPLETED': 4,    // Đã hoàn thành
+      'CANCELLED': 5,    // Đã hủy
+      'NO_SHOW': 6,      // Không đến
+    };
+
+    // Sắp xếp
     return filtered.sort((a, b) => {
       const now = new Date().getTime();
       const timeA = a.bookingTime ? new Date(a.bookingTime).getTime() : 0;
       const timeB = b.bookingTime ? new Date(b.bookingTime).getTime() : 0;
+      
+      // Đối với tab "Tất cả": sắp xếp theo ưu tiên trạng thái trước, sau đó theo thời gian gần nhất
+      if (statusFilter === 'ALL') {
+        const priorityA = statusPriority[a.status] ?? 99;
+        const priorityB = statusPriority[b.status] ?? 99;
+        
+        // Nếu khác trạng thái, sắp xếp theo ưu tiên
+        if (priorityA !== priorityB) {
+          return priorityA - priorityB;
+        }
+        
+        // Cùng trạng thái: sắp xếp theo thời gian gần nhất so với hiện tại
+        const distanceA = Math.abs(timeA - now);
+        const distanceB = Math.abs(timeB - now);
+        return distanceA - distanceB;
+      }
       
       // Đối với trạng thái ASSIGNED: sắp xếp theo khoảng cách thời gian so với hiện tại
       // Công việc nào gần giờ hiện tại nhất (sắp tới) sẽ lên đầu
@@ -169,13 +249,62 @@ const EmployeeAssignments: React.FC = () => {
       // Các trạng thái khác: sắp xếp theo thời gian tăng dần (sắp diễn ra trước)
       return timeA - timeB;
     });
-  }, [assignments, statusFilter]);
+  }, [assignments, statusFilter, searchQuery]);
+
+  // Tính toán phân trang
+  const totalPages = Math.ceil(allFilteredAssignments.length / PAGE_SIZE);
+  const filteredAssignments = useMemo(() => {
+    const startIndex = currentPage * PAGE_SIZE;
+    return allFilteredAssignments.slice(startIndex, startIndex + PAGE_SIZE);
+  }, [allFilteredAssignments, currentPage]);
+
+  const handlePageChange = (newPage: number) => {
+    if (newPage >= 0 && newPage < totalPages) {
+      setCurrentPage(newPage);
+      // Scroll lên đầu danh sách
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  };
+
+  // Prefetch địa chỉ cho danh sách đang hiển thị (sau khi đã có filteredAssignments)
+  useEffect(() => {
+    const fetchAddresses = async () => {
+      const tasks: Array<Promise<void>> = [];
+      filteredAssignments.forEach(a => {
+        if (a.checkInLatitude != null && a.checkInLongitude != null) {
+          const k = `${a.checkInLatitude},${a.checkInLongitude}`;
+          if (!addressCache[k]) {
+            tasks.push(
+              reverseGeocode(a.checkInLatitude, a.checkInLongitude).then(addr => {
+                if (addr) setAddressCache(prev => ({ ...prev, [k]: addr }));
+              })
+            );
+          }
+        }
+        if (a.checkOutLatitude != null && a.checkOutLongitude != null) {
+          const k = `${a.checkOutLatitude},${a.checkOutLongitude}`;
+          if (!addressCache[k]) {
+            tasks.push(
+              reverseGeocode(a.checkOutLatitude, a.checkOutLongitude).then(addr => {
+                if (addr) setAddressCache(prev => ({ ...prev, [k]: addr }));
+              })
+            );
+          }
+        }
+      });
+      if (tasks.length > 0) {
+        await Promise.allSettled(tasks);
+      }
+    };
+    fetchAddresses();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filteredAssignments]);
 
   const handleRefresh = async () => {
     if (!employeeId) return;
     setIsActioning(true);
     try {
-      await getAssignments(employeeId, undefined);
+      await getAssignments(employeeId, undefined, 0, 100);
     } finally {
       setIsActioning(false);
     }
@@ -208,7 +337,7 @@ const EmployeeAssignments: React.FC = () => {
       });
       closeCancelModal();
       if (employeeId) {
-        await getAssignments(employeeId, undefined);
+        await getAssignments(employeeId, undefined, 0, 100);
       }
     } catch (err: any) {
       const message = err?.response?.data?.message || 'Không thể hủy công việc. Vui lòng thử lại.';
@@ -231,7 +360,7 @@ const EmployeeAssignments: React.FC = () => {
       });
       closeCheckInModal();
       if (employeeId) {
-        await getAssignments(employeeId, undefined);
+        await getAssignments(employeeId, undefined, 0, 100);
       }
     } catch (err: any) {
       const message = err?.response?.data?.message || 'Check-in không thành công. Vui lòng thử lại.';
@@ -321,7 +450,7 @@ const EmployeeAssignments: React.FC = () => {
       });
       closeCheckOutModal();
       if (employeeId) {
-        await getAssignments(employeeId, undefined);
+        await getAssignments(employeeId, undefined, 0, 100);
       }
     } catch (err: any) {
       const message = err?.response?.data?.message || 'Check-out không thành công. Vui lòng thử lại.';
@@ -411,7 +540,7 @@ const EmployeeAssignments: React.FC = () => {
       });
       setShowAcceptWarningModal(false);
       setSelectedAssignmentId(null);
-      await getAssignments(employeeId, undefined);
+      await getAssignments(employeeId, undefined, 0, 100);
     } catch (err: any) {
       const message = err?.response?.data?.message || 'Không thể nhận công việc. Vui lòng thử lại.';
       setStatusBanner({ type: 'error', text: message });
@@ -434,6 +563,20 @@ const EmployeeAssignments: React.FC = () => {
   const confirmAcceptAssignment = () => {
     if (!selectedAssignmentId) return;
     handleAcceptAssignment(selectedAssignmentId);
+  };
+
+  const formatWorkedDuration = (checkIn?: string | null, checkOut?: string | null) => {
+    if (!checkIn || !checkOut) return null;
+    const start = new Date(checkIn).getTime();
+    const end = new Date(checkOut).getTime();
+    if (isNaN(start) || isNaN(end) || end <= start) return null;
+    const diffMs = end - start;
+    const totalMinutes = Math.floor(diffMs / 60000);
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    const h = hours > 0 ? `${hours} giờ` : '';
+    const m = minutes > 0 ? `${minutes} phút` : hours === 0 ? '0 phút' : '';
+    return [h, m].filter(Boolean).join(' ');
   };
 
   return (
@@ -478,6 +621,33 @@ const EmployeeAssignments: React.FC = () => {
         </div>
       )}
 
+      {/* Search Box */}
+      <div className="mb-4 sm:mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Tìm theo mã booking, tên dịch vụ, tên khách hàng..."
+            className="w-full rounded-full border border-slate-200 bg-white py-2.5 pl-10 pr-10 text-sm text-slate-700 placeholder:text-slate-400 transition focus:border-emerald-300 focus:outline-none focus:ring-2 focus:ring-emerald-200"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        {searchQuery && (
+          <p className="mt-2 text-xs text-slate-500">
+            Tìm thấy <span className="font-semibold text-emerald-600">{allFilteredAssignments.length}</span> kết quả cho "{searchQuery}"
+          </p>
+        )}
+      </div>
+
       {/* Filter Tabs */}
       <div className="mb-4 sm:mb-6 flex overflow-x-auto pb-2 gap-1.5 sm:gap-2 scrollbar-hide">
         {(Object.keys(statusDescriptors) as AssignmentStatus[]).map(status => {
@@ -489,7 +659,10 @@ const EmployeeAssignments: React.FC = () => {
           return (
             <button
               key={status}
-              onClick={() => setStatusFilter(status)}
+              onClick={() => {
+                setStatusFilter(status);
+                setCurrentPage(0); // Reset về trang đầu khi đổi filter
+              }}
               className={`px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-semibold transition whitespace-nowrap flex-shrink-0 ${
                 statusFilter === status
                   ? descriptor.selectedClass
@@ -511,13 +684,36 @@ const EmployeeAssignments: React.FC = () => {
       ) : filteredAssignments.length === 0 ? (
         <div className="flex flex-col items-center justify-center rounded-3xl border border-slate-100 bg-slate-50 py-16 text-center text-slate-500">
           <ShieldCheck className="mb-4 h-10 w-10 text-slate-400" />
-          <h3 className="text-lg font-semibold text-slate-900">Chưa có công việc ở trạng thái này</h3>
+          <h3 className="text-lg font-semibold text-slate-900">
+            {searchQuery ? 'Không tìm thấy công việc phù hợp' : 'Chưa có công việc ở trạng thái này'}
+          </h3>
           <p className="mt-2 max-w-sm text-sm text-slate-500">
-            Hãy kiểm tra các bộ lọc khác hoặc nhận thêm công việc mới.
+            {searchQuery 
+              ? `Không có công việc nào khớp với "${searchQuery}". Thử tìm kiếm khác hoặc xóa bộ lọc.`
+              : 'Hãy kiểm tra các bộ lọc khác hoặc nhận thêm công việc mới.'
+            }
           </p>
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="mt-4 inline-flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500"
+            >
+              <X className="h-4 w-4" />
+              Xóa tìm kiếm
+            </button>
+          )}
         </div>
       ) : (
         <div className="grid gap-3 sm:gap-4">
+          {/* Thông tin phân trang */}
+          {allFilteredAssignments.length > PAGE_SIZE && (
+            <div className="mb-4 flex items-center justify-between text-sm text-slate-600">
+              <span>
+                Hiển thị {currentPage * PAGE_SIZE + 1} - {Math.min((currentPage + 1) * PAGE_SIZE, allFilteredAssignments.length)} / {allFilteredAssignments.length} công việc
+              </span>
+            </div>
+          )}
+
           {filteredAssignments.map(assignment => {
             const descriptor = statusDescriptors[assignment.status as AssignmentStatus] ?? statusDescriptors.ALL;
             
@@ -577,7 +773,8 @@ const EmployeeAssignments: React.FC = () => {
                   <p className="text-xs sm:text-sm font-semibold text-emerald-900">
                     Khách hàng: {assignment.customerName}
                   </p>
-                  {assignment.customerPhone && (
+                  {/* Ẩn SĐT khi ở trạng thái Chờ xác nhận (PENDING) */}
+                  {assignment.customerPhone && assignment.status !== 'PENDING' && (
                     <p className="mt-0.5 sm:mt-1 text-[10px] sm:text-xs text-emerald-700">
                       SĐT: {assignment.customerPhone}
                     </p>
@@ -616,6 +813,42 @@ const EmployeeAssignments: React.FC = () => {
                       <p className="text-blue-600 font-medium mt-1">
                         Đang tính giờ... Nhấn Check-out khi hoàn thành!
                       </p>
+                    </div>
+
+                    {/* Đang làm việc hiển thị ảnh check-in và địa chỉ check-in */}
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
+                      {/* Ảnh check-in (lấy ảnh đầu tiên nếu có) */}
+                      {(() => {
+                        const checkInMedias = (assignment.media || []).filter(m => m.mediaType === 'CHECK_IN_IMAGE');
+                        const first = checkInMedias[0];
+                        return first ? (
+                          <div className="sm:col-span-1">
+                            <img src={first.mediaUrl} alt="Ảnh check-in" className="w-full h-32 object-cover rounded-xl border border-blue-100" />
+                            <p className="mt-1 text-[11px] text-blue-700 truncate">Ảnh check-in</p>
+                          </div>
+                        ) : null;
+                      })()}
+
+                      {/* Địa chỉ check-in (ưu tiên từ tọa độ) */}
+                      <div className="sm:col-span-2 rounded-xl border border-blue-100 bg-white/70 p-3">
+                        <div className="flex items-start gap-2 text-[12px] text-blue-800">
+                          <MapPin className="h-4 w-4 text-blue-600 mt-0.5" />
+                          <div className="space-y-1">
+                            <p className="font-semibold">Địa chỉ check-in</p>
+                            <p className="leading-snug">
+                              {(() => {
+                                const lat = assignment.checkInLatitude ?? null;
+                                const lon = assignment.checkInLongitude ?? null;
+                                const key = lat != null && lon != null ? `${lat},${lon}` : '';
+                                if (lat != null && lon != null) {
+                                  return addressCache[key] || 'Đang xác định địa chỉ...';
+                                }
+                                return assignment.serviceAddress || 'Chưa có địa chỉ';
+                              })()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -667,6 +900,78 @@ const EmployeeAssignments: React.FC = () => {
                           Có thể check-in ngay bây giờ
                         </p>
                       )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Đã hoàn thành: hình ảnh check-in/out, địa chỉ và thời gian thực hiện */}
+                {assignment.status === 'COMPLETED' && (
+                  <div className="rounded-2xl border border-emerald-100 bg-emerald-50/60 p-4">
+                    <p className="text-sm font-semibold text-emerald-900 mb-2">
+                      ✅ Thông tin hoàn thành
+                    </p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Check-in */}
+                      <div className="rounded-xl border border-emerald-100 bg-white p-3">
+                        <p className="text-[12px] font-semibold text-emerald-800 mb-2">Check-in</p>
+                        {(() => {
+                          const list = (assignment.media || []).filter(m => m.mediaType === 'CHECK_IN_IMAGE');
+                          const first = list[0];
+                          return first ? (
+                            <img src={first.mediaUrl} alt="Ảnh check-in" className="w-full h-32 object-cover rounded-lg border border-emerald-100" />
+                          ) : (
+                            <p className="text-[12px] text-emerald-700">Không có ảnh check-in</p>
+                          );
+                        })()}
+                        <div className="mt-2 flex items-start gap-2 text-[12px] text-emerald-800">
+                          <MapPin className="h-4 w-4 text-emerald-600 mt-0.5" />
+                          <span>
+                            {(() => {
+                              const lat = assignment.checkInLatitude ?? null;
+                              const lon = assignment.checkInLongitude ?? null;
+                              const key = lat != null && lon != null ? `${lat},${lon}` : '';
+                              if (lat != null && lon != null) {
+                                return addressCache[key] || 'Đang xác định địa chỉ...';
+                              }
+                              return assignment.serviceAddress || 'Chưa có địa chỉ';
+                            })()}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Check-out */}
+                      <div className="rounded-xl border border-emerald-100 bg-white p-3">
+                        <p className="text-[12px] font-semibold text-emerald-800 mb-2">Check-out</p>
+                        {(() => {
+                          const list = (assignment.media || []).filter(m => m.mediaType === 'CHECK_OUT_IMAGE');
+                          const first = list[0];
+                          return first ? (
+                            <img src={first.mediaUrl} alt="Ảnh check-out" className="w-full h-32 object-cover rounded-lg border border-emerald-100" />
+                          ) : (
+                            <p className="text-[12px] text-emerald-700">Không có ảnh check-out</p>
+                          );
+                        })()}
+                        <div className="mt-2 flex items-start gap-2 text-[12px] text-emerald-800">
+                          <MapPin className="h-4 w-4 text-emerald-600 mt-0.5" />
+                          <span>
+                            {(() => {
+                              const lat = assignment.checkOutLatitude ?? null;
+                              const lon = assignment.checkOutLongitude ?? null;
+                              const key = lat != null && lon != null ? `${lat},${lon}` : '';
+                              if (lat != null && lon != null) {
+                                return addressCache[key] || 'Đang xác định địa chỉ...';
+                              }
+                              return assignment.serviceAddress || 'Chưa có địa chỉ';
+                            })()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Thời gian thực hiện */}
+                    <div className="mt-3 rounded-xl border border-emerald-100 bg-emerald-50 p-3 text-[12px] text-emerald-900">
+                      <span className="font-semibold">Thời gian thực hiện:</span>{' '}
+                      {formatWorkedDuration(assignment.checkInTime, assignment.checkOutTime) || 'Không xác định'}
                     </div>
                   </div>
                 )}
@@ -740,6 +1045,67 @@ const EmployeeAssignments: React.FC = () => {
               </div>
             );
           })}
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="mt-6 flex items-center justify-center gap-2">
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={currentPage === 0}
+                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                <span className="hidden sm:inline">Trước</span>
+              </button>
+
+              <div className="flex items-center gap-1">
+                {Array.from({ length: totalPages }, (_, i) => i).map(page => {
+                  // Hiển thị tối đa 5 nút trang xung quanh trang hiện tại
+                  const showPage = 
+                    page === 0 || 
+                    page === totalPages - 1 || 
+                    Math.abs(page - currentPage) <= 1;
+                  
+                  const showEllipsis = 
+                    (page === 1 && currentPage > 3) || 
+                    (page === totalPages - 2 && currentPage < totalPages - 4);
+
+                  if (showEllipsis && !showPage) {
+                    return (
+                      <span key={page} className="px-2 text-slate-400">
+                        ...
+                      </span>
+                    );
+                  }
+
+                  if (!showPage) return null;
+
+                  return (
+                    <button
+                      key={page}
+                      onClick={() => handlePageChange(page)}
+                      className={`h-9 w-9 rounded-full text-sm font-medium transition ${
+                        page === currentPage
+                          ? 'bg-emerald-600 text-white shadow-md'
+                          : 'bg-white text-slate-600 hover:bg-slate-100 border border-slate-200'
+                      }`}
+                    >
+                      {page + 1}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={currentPage >= totalPages - 1}
+                className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                <span className="hidden sm:inline">Sau</span>
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          )}
         </div>
       )}
 
